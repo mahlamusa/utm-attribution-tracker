@@ -95,6 +95,11 @@ class Tracker {
 	/**
 	 * Determine whether the current request should be tracked.
 	 *
+	 * Cron, AJAX, and REST API requests are never page views, so they are
+	 * always excluded — otherwise an unrelated plugin/theme AJAX or REST
+	 * call that happens to forward `utm_campaign` in its query string would
+	 * get recorded as a click, inflating campaign stats with noise.
+	 *
 	 * By default logged-in admins are also excluded.
 	 * Return `true` from the `utmat_track_logged_in_users` filter to override.
 	 *
@@ -102,6 +107,15 @@ class Tracker {
 	 * @return bool
 	 */
 	private static function should_track(): bool {
+		if ( wp_doing_ajax() || wp_doing_cron() ) {
+			return false;
+		}
+
+		$request_uri = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) );
+		if ( false !== strpos( $request_uri, '/' . rest_get_url_prefix() . '/' ) ) {
+			return false;
+		}
+
 		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
 			/**
 			 * Whether to track clicks from logged-in administrators.
