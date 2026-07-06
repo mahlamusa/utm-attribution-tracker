@@ -1,0 +1,5 @@
+node_modules/
+releases/
+.release/
+.claude/
+.DS_Store

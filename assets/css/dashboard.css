@@ -1,0 +1,373 @@
+/* ==========================================================================
+   UTM & Attribution Tracker — Dashboard Styles
+
+   Follows the house design language: light, WP-admin-native with
+   polish, primary blue (#0d5ea3) for primary actions and active states,
+   neutral WP admin grays everywhere else.
+   ========================================================================== */
+
+.utmat-wrap {
+	--utmat-primary:     #0d5ea3;
+	--utmat-primary-dark: #094b82;
+	--utmat-border:      #dcdcde;
+	--utmat-text:        #1d2327;
+	--utmat-muted:       #646970;
+	--utmat-surface:     #fff;
+	--utmat-surface-muted: #f6f7f7;
+	max-width: 1200px;
+	margin-left:  auto;
+	margin-right: auto;
+}
+
+/* Header
+   ========================================================================== */
+.utmat-header {
+	margin: 20px 0 16px;
+}
+
+.utmat-header h1 {
+	font-size:   23px;
+	font-weight: 400;
+	color:       var(--utmat-text);
+	margin:      0;
+	padding:     0;
+}
+
+.utmat-header__sub {
+	color:     var(--utmat-muted);
+	font-size: 14px;
+	margin:    6px 0 0;
+}
+
+/* Controls bar
+   ========================================================================== */
+.utmat-controls {
+	display:       flex;
+	align-items:   center;
+	gap:           12px;
+	flex-wrap:     wrap;
+	padding:       12px 16px;
+	margin-bottom: 20px;
+	background:    var(--utmat-surface);
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+}
+
+.utmat-period-btns {
+	display: inline-flex;
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+	overflow:      hidden;
+}
+
+.utmat-period-btn {
+	background:  var(--utmat-surface);
+	border:      none;
+	border-right: 1px solid var(--utmat-border);
+	color:       var(--utmat-text);
+	padding:     6px 14px;
+	cursor:      pointer;
+	font-size:   13px;
+	line-height: 1.4;
+}
+
+.utmat-period-btn:last-child {
+	border-right: none;
+}
+
+.utmat-period-btn:hover {
+	background: var(--utmat-surface-muted);
+}
+
+.utmat-period-btn.active {
+	background: var(--utmat-primary);
+	color:      #fff;
+}
+
+.utmat-period-btn:focus-visible {
+	outline:        2px solid var(--utmat-primary);
+	outline-offset: -2px;
+}
+
+#utmat-campaign-filter {
+	min-width: 180px;
+}
+
+.utmat-total {
+	margin:      0 0 0 auto;
+	color:       var(--utmat-muted);
+	font-size:   13px;
+}
+
+.utmat-total strong {
+	color:       var(--utmat-text);
+	font-size:   16px;
+}
+
+/* Loading / error states
+   ========================================================================== */
+.utmat-loading {
+	display:         flex;
+	align-items:     center;
+	justify-content: center;
+	gap:             10px;
+	padding:         48px 0;
+	color:           var(--utmat-muted);
+}
+
+.utmat-loading[hidden] { display: none; }
+
+.utmat-loading .spinner {
+	float: none;
+	visibility: visible;
+}
+
+#utmat-error {
+	margin: 0 0 20px;
+}
+
+/* Charts
+   ========================================================================== */
+.utmat-charts {
+	display:               grid;
+	grid-template-columns: 2fr 1fr;
+	gap:                   16px;
+	margin-bottom:         24px;
+}
+
+.utmat-charts[hidden] { display: none; }
+
+.utmat-card {
+	background:    var(--utmat-surface);
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+}
+
+.utmat-card--wide {
+	grid-column: 1 / -1;
+}
+
+.utmat-card__title {
+	font-size:   14px;
+	font-weight: 600;
+	color:       var(--utmat-text);
+	margin:      0;
+	padding:     14px 18px;
+	border-bottom: 1px solid var(--utmat-border);
+}
+
+.utmat-card__body {
+	padding: 18px;
+}
+
+.utmat-card__body--center {
+	display:         flex;
+	justify-content: center;
+	align-items:     center;
+	min-height:      240px;
+}
+
+#utmat-chart-line {
+	max-height: 240px;
+}
+
+#utmat-chart-source {
+	max-height: 220px;
+	max-width:  220px;
+}
+
+#utmat-chart-campaign,
+#utmat-chart-medium {
+	max-height: 200px;
+}
+
+/* Sections (links table, shortcode reference)
+   ========================================================================== */
+.utmat-section {
+	background:    var(--utmat-surface);
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+	padding:       18px;
+	margin-bottom: 20px;
+}
+
+.utmat-section[hidden] { display: none; }
+
+.utmat-section--muted {
+	background: var(--utmat-surface-muted);
+}
+
+.utmat-section h2 {
+	font-size:   14px;
+	font-weight: 600;
+	color:       var(--utmat-text);
+	margin:      0 0 4px;
+	padding:     0;
+}
+
+.utmat-section__desc {
+	font-size: 13px;
+	color:     var(--utmat-muted);
+	margin:    0 0 16px;
+}
+
+/* Links table
+   ========================================================================== */
+#utmat-links-table {
+	margin-bottom: 24px;
+}
+
+.utmat-col-label {
+	width: 16%;
+}
+
+.utmat-col-campaign {
+	width: 12%;
+}
+
+.utmat-col-clicks {
+	width: 80px;
+}
+
+.utmat-col-url {
+	width: 32%;
+}
+
+.utmat-col-actions {
+	width: 70px;
+}
+
+.utmat-clicks-badge {
+	font-weight: 600;
+	color:       var(--utmat-primary);
+}
+
+.utmat-copy-btn {
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.utmat-copy-btn.copied {
+	color: #007017;
+}
+
+.utmat-delete-btn {
+	color: #b32d2e;
+}
+
+.utmat-url-cell {
+	display:     flex;
+	align-items: flex-start;
+	gap:         8px;
+	flex-wrap:   wrap;
+}
+
+.utmat-url-text {
+	color:           var(--utmat-muted);
+	font-size:       12px;
+	overflow-wrap:   anywhere;
+	word-break:      break-all;
+	flex:            1 1 auto;
+	min-width:       0;
+}
+
+/* Add-link form
+   ========================================================================== */
+.utmat-add-form {
+	border-top: 1px solid var(--utmat-border);
+	padding-top: 18px;
+}
+
+.utmat-add-form h3 {
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0 0 12px;
+}
+
+.utmat-add-form__grid {
+	display:               grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap:                   0 20px;
+}
+
+.utmat-add-form__grid p {
+	margin: 0 0 12px;
+}
+
+.utmat-add-form__grid label {
+	display:      block;
+	font-size:    12px;
+	font-weight:  600;
+	color:        var(--utmat-text);
+	margin-bottom: 4px;
+}
+
+.utmat-add-form__grid input {
+	width: 100%;
+}
+
+.utmat-add-form__advanced {
+	margin-bottom: 12px;
+}
+
+.utmat-add-form__advanced summary {
+	cursor:      pointer;
+	font-size:   13px;
+	color:       var(--utmat-primary);
+	margin-bottom: 12px;
+}
+
+.utmat-add-form__actions {
+	display:     flex;
+	align-items: center;
+	gap:         12px;
+	margin:      0;
+}
+
+.utmat-add-form__msg {
+	font-size: 13px;
+	color:     var(--utmat-muted);
+}
+
+.utmat-add-form__msg.is-error {
+	color: #b32d2e;
+}
+
+.utmat-add-form__msg.is-success {
+	color: #007017;
+}
+
+/* Shortcode reference
+   ========================================================================== */
+.utmat-code {
+	display:       block;
+	background:    var(--utmat-surface);
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+	padding:       10px 14px;
+	font-size:     13px;
+	margin:        8px 0;
+	user-select:   all;
+	width:         fit-content;
+}
+
+/* Responsive
+   ========================================================================== */
+@media (max-width: 960px) {
+	.utmat-charts {
+		grid-template-columns: 1fr;
+	}
+	.utmat-add-form__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 640px) {
+	.utmat-controls {
+		flex-direction: column;
+		align-items:    flex-start;
+	}
+	.utmat-total {
+		margin-left: 0;
+	}
+}
