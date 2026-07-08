@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "bash bin/build.sh",
-    "release": "bash bin/release.sh"
+    "release": "bash bin/release.sh",
+    "wporg:publish": "bash bin/wp-org-publish.sh"
   }
 }
