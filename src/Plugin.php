@@ -14,6 +14,7 @@ use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\RestController;
+use UTMAT\Rest\CollectController;
 use UTMAT\Shortcode\TrackedLink;
 
 defined( 'ABSPATH' ) || exit;
@@ -78,6 +79,10 @@ class Plugin {
 
 		// REST API.
 		add_action( 'rest_api_init', array( RestController::class, 'register_routes' ) );
+		add_action( 'rest_api_init', array( CollectController::class, 'register_routes' ) );
+
+		// Front-end tracking beacon.
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_beacon' ) );
 
 		// Admin dashboard.
 		if ( is_admin() ) {
@@ -104,6 +109,42 @@ class Plugin {
 
 		// Shortcode: [utmat_link].
 		add_shortcode( 'utmat_link', array( TrackedLink::class, 'render' ) );
+	}
+
+	/**
+	 * Enqueue the front-end tracking beacon on every front-end page.
+	 *
+	 * The script must be present in ALL front-end HTML — including pages
+	 * rendered without UTM params — because page caches serve that same
+	 * cached HTML for UTM-tagged URLs; the beacon self-gates in JS by
+	 * inspecting location.search. No nonce is passed: the collect endpoint
+	 * is public, and a nonce baked into cached HTML would go stale.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public static function enqueue_beacon(): void {
+		// Version off the file's own mtime so edits always bust browser caches.
+		$js_path = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/beacon.js';
+
+		wp_enqueue_script(
+			'utmat-beacon',
+			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/beacon.js',
+			array(),
+			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTM_ATTRIBUTION_TRACKER_VERSION,
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
+		);
+
+		wp_localize_script(
+			'utmat-beacon',
+			'utmatBeacon',
+			array(
+				'endpoint' => rest_url( 'utmat/v1/collect' ),
+			)
+		);
 	}
 
 	/**

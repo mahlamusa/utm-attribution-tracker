@@ -4,7 +4,8 @@
  *
  * Two tracking modes:
  *  1. Outbound redirect: /?utmat_track=<slug> → records event then wp_redirect().
- *  2. Passive incoming: any page load with utm_campaign present is recorded.
+ *  2. Passive incoming: any page load with a whitelisted UTM param or ad
+ *     click ID present is recorded (no-JS fallback to the front-end beacon).
  *
  * Filter `utmat_track_logged_in_users` (bool, default false) controls whether
  * administrator clicks are recorded.
@@ -22,6 +23,30 @@ defined( 'ABSPATH' ) || exit;
  * Tracker
  */
 class Tracker {
+
+	/**
+	 * Query parameters that trigger and populate tracking events.
+	 *
+	 * Shared by the passive PHP path, the public collect REST endpoint, and
+	 * the front-end beacon (duplicated there as a JS const — keep in sync
+	 * with assets/js/beacon.js).
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	public const PARAM_WHITELIST = array(
+		'utm_source',
+		'utm_medium',
+		'utm_campaign',
+		'utm_id',
+		'utm_term',
+		'utm_content',
+		'gclid',
+		'fbclid',
+		'msclkid',
+		'ttclid',
+	);
 
 	/**
 	 * Register the utmat_track query variable so WordPress parses it.
@@ -46,6 +71,12 @@ class Tracker {
 			return;
 		}
 
+		// Bots are redirected (so social link-preview unfurls still resolve)
+		// but their clicks are never recorded. Detected once, applied at each
+		// record() call site below.
+		$ua     = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		$is_bot = self::is_bot( $ua );
+
 		// --- 1. Outbound redirect ---
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$track_id = isset( $_GET['utmat_track'] ) ? sanitize_key( wp_unslash( $_GET['utmat_track'] ) ) : '';
@@ -54,51 +85,62 @@ class Tracker {
 			$link = LinkManager::get( $track_id );
 			if ( $link ) {
 				$destination = LinkManager::build_url( $link );
-				self::record(
-					array(
-						'link_id'      => $track_id,
-						'utm_source'   => $link['utm_source'] ?? '',
-						'utm_medium'   => $link['utm_medium'] ?? '',
-						'utm_campaign' => $link['utm_campaign'] ?? '',
-						'utm_id'       => $link['utm_id'] ?? '',
-						'utm_term'     => $link['utm_term'] ?? '',
-						'utm_content'  => $link['utm_content'] ?? '',
-						'destination'  => $destination,
-					)
+				$data        = array(
+					'link_id'      => $track_id,
+					'utm_source'   => $link['utm_source'] ?? '',
+					'utm_medium'   => $link['utm_medium'] ?? '',
+					'utm_campaign' => $link['utm_campaign'] ?? '',
+					'utm_id'       => $link['utm_id'] ?? '',
+					'utm_term'     => $link['utm_term'] ?? '',
+					'utm_content'  => $link['utm_content'] ?? '',
+					'destination'  => $destination,
 				);
+				if ( ! $is_bot && ! self::is_duplicate( $data ) ) {
+					self::record( $data );
+				}
 				wp_redirect( $destination, 302 ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 				exit;
 			}
 		}
 
-		// --- 2. Passive incoming UTM tracking ---
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$utm_campaign = isset( $_GET['utm_campaign'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_campaign'] ) ) : '';
-		if ( ! empty( $utm_campaign ) ) {
-			// phpcs:disable WordPress.Security.NonceVerification.Recommended
-			self::record(
+		// --- 2. Passive incoming UTM tracking (any whitelisted param) ---
+		$params = array();
+		foreach ( self::PARAM_WHITELIST as $key ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$value = isset( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
+			if ( '' !== $value ) {
+				$params[ $key ] = $value;
+			}
+		}
+
+		if ( ! $is_bot && ! empty( $params ) ) {
+			$data = array_merge(
+				$params,
 				array(
-					'link_id'      => 'incoming',
-					'utm_source'   => isset( $_GET['utm_source'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_source'] ) ) : '',
-					'utm_medium'   => isset( $_GET['utm_medium'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_medium'] ) ) : '',
-					'utm_campaign' => $utm_campaign,
-					'utm_id'       => isset( $_GET['utm_id'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_id'] ) ) : '',
-					'utm_term'     => isset( $_GET['utm_term'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_term'] ) ) : '',
-					'utm_content'  => isset( $_GET['utm_content'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_content'] ) ) : '',
-					'destination'  => esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ) ),
+					'link_id'     => 'incoming',
+					'destination' => esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ) ),
 				)
 			);
-			// phpcs:enable WordPress.Security.NonceVerification.Recommended
+			if ( ! self::is_duplicate( $data ) ) {
+				self::record( $data );
+			}
 		}
 	}
 
 	/**
 	 * Determine whether the current request should be tracked.
 	 *
-	 * Cron, AJAX, and REST API requests are never page views, so they are
-	 * always excluded — otherwise an unrelated plugin/theme AJAX or REST
-	 * call that happens to forward `utm_campaign` in its query string would
-	 * get recorded as a click, inflating campaign stats with noise.
+	 * Cron, AJAX, XML-RPC, and REST API requests are never page views, so
+	 * they are always excluded — otherwise an unrelated plugin/theme AJAX or
+	 * REST call that happens to forward a UTM param in its query string would
+	 * get recorded as a click, inflating campaign stats with noise. REST is
+	 * detected via the pretty-permalink path prefix, the plain-permalink
+	 * `rest_route` query var, and `wp_is_serving_rest_request()` (WP 6.5+).
+	 *
+	 * Bot/crawler user agents are NOT excluded here: bots must still receive
+	 * the 302 on the redirect path (so social link-preview unfurls resolve).
+	 * The bot check is applied at each record() call site in
+	 * handle_incoming_request() instead, so a bot is redirected but not logged.
 	 *
 	 * By default logged-in admins are also excluded.
 	 * Return `true` from the `utmat_track_logged_in_users` filter to override.
@@ -108,6 +150,20 @@ class Tracker {
 	 */
 	private static function should_track(): bool {
 		if ( wp_doing_ajax() || wp_doing_cron() ) {
+			return false;
+		}
+
+		if ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST ) {
+			return false;
+		}
+
+		if ( function_exists( 'wp_is_serving_rest_request' ) && wp_is_serving_rest_request() ) {
+			return false;
+		}
+
+		// Plain-permalink REST calls (/?rest_route=/...) have no path prefix.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['rest_route'] ) ) {
 			return false;
 		}
 
@@ -137,6 +193,13 @@ class Tracker {
 	 * absent. `order_total` is only written when present and numeric, so the
 	 * column stays NULL for plain click rows.
 	 *
+	 * A `referrer` key in $data overrides the Referer request header — the
+	 * collect endpoint passes the original document.referrer this way (the
+	 * beacon POST's own Referer header is just the page URL).
+	 *
+	 * After a successful insert the deduplication transient is set so an
+	 * identical event within the dedup window is skipped (see is_duplicate()).
+	 *
 	 * @since 1.0.0
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
@@ -144,9 +207,12 @@ class Tracker {
 	public static function record( array $data ): void {
 		global $wpdb;
 
-		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated
+		$ip  = self::client_ip();
 		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
 		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+		if ( isset( $data['referrer'] ) && '' !== $data['referrer'] ) {
+			$ref = esc_url_raw( (string) $data['referrer'] );
+		}
 
 		$row = array(
 			'link_id'       => substr( $data['link_id'] ?? '', 0, 64 ),
@@ -177,11 +243,156 @@ class Tracker {
 			$formats[]          = '%f';
 		}
 
-		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			Schema::table(),
 			$row,
 			$formats
 		);
+
+		$window = self::dedup_window();
+		if ( false !== $inserted && $window > 0 ) {
+			set_transient( 'utmat_dd_' . self::dedup_key( $data ), 1, $window );
+		}
+	}
+
+	/**
+	 * Whether an identical event was already recorded within the dedup window.
+	 *
+	 * Identity = same hashed client IP + same link_id + same set of
+	 * UTM/click-ID values. Checked against a transient
+	 * (`utmat_dd_{md5}`) so no table scan is needed; record() sets the
+	 * transient after a successful insert. A window of 0 disables dedup.
+	 *
+	 * @since 1.0.0
+	 * @param array<string, mixed> $data Event fields (same shape as record()).
+	 * @return bool
+	 */
+	public static function is_duplicate( array $data ): bool {
+		if ( self::dedup_window() <= 0 ) {
+			return false;
+		}
+		return false !== get_transient( 'utmat_dd_' . self::dedup_key( $data ) );
+	}
+
+	/**
+	 * Build the deduplication cache key for an event.
+	 *
+	 * The key is the md5 of hashed IP + link_id + the key-sorted JSON of
+	 * the whitelisted UTM/click-ID values present in the event.
+	 *
+	 * @since 1.0.0
+	 * @param array<string, mixed> $data Event fields.
+	 * @return string
+	 */
+	private static function dedup_key( array $data ): string {
+		$subset = array();
+		foreach ( self::PARAM_WHITELIST as $key ) {
+			if ( isset( $data[ $key ] ) && '' !== $data[ $key ] ) {
+				$subset[ $key ] = (string) $data[ $key ];
+			}
+		}
+		ksort( $subset );
+
+		return md5( self::hash_ip( self::client_ip() ) . '|' . ( $data['link_id'] ?? '' ) . '|' . wp_json_encode( $subset ) );
+	}
+
+	/**
+	 * The deduplication window in seconds.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	private static function dedup_window(): int {
+		/**
+		 * Filter the deduplication window in seconds. Return 0 to disable
+		 * deduplication entirely.
+		 *
+		 * @var int $window
+		 */
+		return (int) apply_filters( 'utmat_dedup_window', 30 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Whether a user agent string looks like a bot, crawler, or link preview.
+	 *
+	 * Case-insensitive keyword match; an empty user agent also counts as a
+	 * bot. Override the verdict via the `utmat_is_bot` filter.
+	 *
+	 * @since 1.0.0
+	 * @param string $ua The user agent string.
+	 * @return bool
+	 */
+	public static function is_bot( string $ua ): bool {
+		$verdict = false;
+
+		if ( '' === trim( $ua ) ) {
+			$verdict = true;
+		} else {
+			$keywords = array(
+				'bot',
+				'crawl',
+				'spider',
+				'slurp',
+				'preview',
+				'monitor',
+				'curl',
+				'wget',
+				'python-requests',
+				'headless',
+				'lighthouse',
+				'pingdom',
+				'uptime',
+				'facebookexternalhit',
+				'whatsapp',
+				'telegrambot',
+				'twitterbot',
+				'slackbot',
+				'discordbot',
+				'linkedinbot',
+				'skypeuripreview',
+				'embedly',
+				'vkshare',
+				'pinterest',
+				'bingpreview',
+			);
+			$haystack = strtolower( $ua );
+			foreach ( $keywords as $keyword ) {
+				if ( false !== strpos( $haystack, $keyword ) ) {
+					$verdict = true;
+					break;
+				}
+			}
+		}
+
+		/**
+		 * Filter the bot verdict for a user agent.
+		 *
+		 * @var bool $verdict
+		 */
+		return (bool) apply_filters( 'utmat_is_bot', $verdict, $ua );
+	}
+
+	/**
+	 * Resolve the client IP address.
+	 *
+	 * Returns REMOTE_ADDR by default. Sites behind a trusted reverse proxy
+	 * may substitute a forwarded header's value via the
+	 * `utmat_client_ip` filter — but forwarded headers (X-Forwarded-For
+	 * etc.) are client-spoofable, so only trust them when every request
+	 * passes through a proxy that overwrites the header.
+	 *
+	 * @since 1.0.0
+	 * @return string
+	 */
+	public static function client_ip(): string {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated
+
+		/**
+		 * Filter the resolved client IP address.
+		 *
+		 * @var string $ip
+		 */
+		return (string) apply_filters( 'utmat_client_ip', $ip );
 	}
 
 	/**
@@ -194,7 +405,7 @@ class Tracker {
 	 * @param string $ip The visitor IP address.
 	 * @return string The salted SHA-256 hash.
 	 */
-	private static function hash_ip( string $ip ): string {
+	public static function hash_ip( string $ip ): string {
 		$salt = (string) get_option( 'utmat_salt', '' );
 		if ( '' === $salt ) {
 			$salt = wp_generate_password( 64, true, true );

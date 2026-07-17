@@ -30,6 +30,7 @@ class Bootstrap {
 		require_once $base . 'Privacy/PrivacyPolicy.php';
 		require_once $base . 'Tracking/LinkManager.php';
 		require_once $base . 'Tracking/Tracker.php';
+		require_once $base . 'Rest/CollectController.php';
 		require_once $base . 'Admin/RestController.php';
 		require_once $base . 'Admin/Dashboard.php';
 		require_once $base . 'Shortcode/TrackedLink.php';
