@@ -8,6 +8,8 @@
 namespace UTMAT;
 
 use UTMAT\DB\Schema;
+use UTMAT\DB\Retention;
+use UTMAT\Privacy\PrivacyPolicy;
 use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Admin\Dashboard;
@@ -65,6 +67,15 @@ class Plugin {
 		// Track incoming requests at priority 1 (before most other code).
 		add_action( 'init', array( Tracker::class, 'handle_incoming_request' ), 1 );
 
+		// Translations.
+		add_action( 'init', array( self::class, 'load_textdomain' ) );
+
+		// Daily retention pruning.
+		add_action( Retention::HOOK, array( Retention::class, 'prune' ) );
+
+		// Suggested privacy policy text.
+		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );
+
 		// REST API.
 		add_action( 'rest_api_init', array( RestController::class, 'register_routes' ) );
 
@@ -96,24 +107,40 @@ class Plugin {
 	}
 
 	/**
-	 * Plugin activation — install DB and seed example link.
+	 * Load the plugin text domain for translations.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public static function load_textdomain(): void {
+		load_plugin_textdomain( 'utm-attribution-tracker', false, dirname( UTM_ATTRIBUTION_TRACKER_BASENAME ) . '/languages' );
+	}
+
+	/**
+	 * Plugin activation — install DB, create the IP salt, seed example link,
+	 * and schedule retention pruning.
 	 *
 	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function activate(): void {
 		Schema::install();
+		if ( ! get_option( 'utmat_salt' ) ) {
+			add_option( 'utmat_salt', wp_generate_password( 64, true, true ) );
+		}
 		LinkManager::seed_defaults();
+		Retention::schedule();
 		flush_rewrite_rules();
 	}
 
 	/**
-	 * Plugin deactivation.
+	 * Plugin deactivation — unschedule retention pruning.
 	 *
 	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function deactivate(): void {
+		Retention::unschedule();
 		flush_rewrite_rules();
 	}
 }

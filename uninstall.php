@@ -4,19 +4,59 @@
  *
  * Drops the events table and deletes all plugin options when the plugin is
  * deleted via the WordPress admin. Only runs on uninstall, not deactivation.
+ * On multisite every site is cleaned up individually.
  *
  * @package UTMAT
  */
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
-global $wpdb;
+/**
+ * Remove the events table, options, transients, and cron hook for the current site.
+ *
+ * @since 1.0.0
+ * @return void
+ */
+function utmat_uninstall_site(): void {
+	global $wpdb;
 
-// Drop the events table.
-$table = $wpdb->prefix . 'utmat_events';
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
+	// Drop the events table.
+	$table = $wpdb->prefix . 'utmat_events';
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 
-// Delete all plugin options.
-delete_option( 'utmat_db_version' );
-delete_option( 'utmat_links' );
+	// Delete all plugin options.
+	delete_option( 'utmat_db_version' );
+	delete_option( 'utmat_links' );
+	delete_option( 'utmat_salt' );
+	delete_option( 'utmat_retention_days' );
+
+	// Delete any transients with the plugin prefix.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+			$wpdb->esc_like( '_transient_utmat_' ) . '%',
+			$wpdb->esc_like( '_transient_timeout_utmat_' ) . '%'
+		)
+	);
+
+	// Clear the retention cron event.
+	wp_clear_scheduled_hook( 'utmat_prune_events' );
+}
+
+if ( is_multisite() ) {
+	$utmat_site_ids = get_sites(
+		array(
+			'fields' => 'ids',
+			'number' => 0,
+		)
+	);
+	foreach ( $utmat_site_ids as $utmat_site_id ) {
+		switch_to_blog( $utmat_site_id );
+		utmat_uninstall_site();
+		restore_current_blog();
+	}
+} else {
+	utmat_uninstall_site();
+}

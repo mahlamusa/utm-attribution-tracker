@@ -49,7 +49,7 @@ add_filter( 'utmat_track_logged_in_users', '__return_true' );
 
 = Does this plugin store personal data? =
 
-IP addresses are hashed with SHA-256 before storage and cannot be reversed. User agents and referrer URLs are stored as-is. Review your privacy policy if needed.
+Raw IP addresses are never stored. Each IP address is combined with a secret per-site salt and hashed with SHA-256 before storage, so the stored hashes cannot be correlated with hashes from other sites. User agents and referrer URLs are stored as-is. Events are pruned automatically after a retention period (180 days by default). Suggested privacy policy text is provided under Settings → Privacy → Policy Guide.
 
 = How do I create a tracked redirect link? =
 

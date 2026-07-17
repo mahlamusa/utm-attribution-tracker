@@ -26,6 +26,8 @@ class Bootstrap {
 		$base = UTM_ATTRIBUTION_TRACKER_PATH . 'src/';
 
 		require_once $base . 'DB/Schema.php';
+		require_once $base . 'DB/Retention.php';
+		require_once $base . 'Privacy/PrivacyPolicy.php';
 		require_once $base . 'Tracking/LinkManager.php';
 		require_once $base . 'Tracking/Tracker.php';
 		require_once $base . 'Admin/RestController.php';

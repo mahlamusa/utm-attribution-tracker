@@ -133,8 +133,12 @@ class Tracker {
 	/**
 	 * Insert a tracking event row into the database.
 	 *
+	 * Click-ID, conversion, and revenue fields default to empty/0/NULL when
+	 * absent. `order_total` is only written when present and numeric, so the
+	 * column stays NULL for plain click rows.
+	 *
 	 * @since 1.0.0
-	 * @param array<string, string> $data Event fields.
+	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
 	public static function record( array $data ): void {
@@ -144,23 +148,58 @@ class Tracker {
 		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
 		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
 
+		$row = array(
+			'link_id'       => substr( $data['link_id'] ?? '', 0, 64 ),
+			'utm_source'    => substr( $data['utm_source'] ?? '', 0, 100 ),
+			'utm_medium'    => substr( $data['utm_medium'] ?? '', 0, 100 ),
+			'utm_campaign'  => substr( $data['utm_campaign'] ?? '', 0, 100 ),
+			'utm_id'        => substr( $data['utm_id'] ?? '', 0, 100 ),
+			'utm_term'      => substr( $data['utm_term'] ?? '', 0, 100 ),
+			'utm_content'   => substr( $data['utm_content'] ?? '', 0, 255 ),
+			'destination'   => substr( $data['destination'] ?? '', 0, 2083 ),
+			'gclid'         => substr( $data['gclid'] ?? '', 0, 255 ),
+			'fbclid'        => substr( $data['fbclid'] ?? '', 0, 255 ),
+			'msclkid'       => substr( $data['msclkid'] ?? '', 0, 255 ),
+			'ttclid'        => substr( $data['ttclid'] ?? '', 0, 255 ),
+			'is_conversion' => empty( $data['is_conversion'] ) ? 0 : 1,
+			'touch'         => substr( $data['touch'] ?? '', 0, 10 ),
+			'ip_hash'       => self::hash_ip( $ip ),
+			'user_agent'    => $ua,
+			'referrer'      => substr( $ref, 0, 2083 ),
+			'clicked_at'    => current_time( 'mysql', true ),
+		);
+
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+
+		// $wpdb->insert() cannot pass a typed NULL, so omit the column instead.
+		if ( isset( $data['order_total'] ) && is_numeric( $data['order_total'] ) ) {
+			$row['order_total'] = (float) $data['order_total'];
+			$formats[]          = '%f';
+		}
+
 		$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			Schema::table(),
-			array(
-				'link_id'      => substr( $data['link_id'] ?? '', 0, 64 ),
-				'utm_source'   => substr( $data['utm_source'] ?? '', 0, 100 ),
-				'utm_medium'   => substr( $data['utm_medium'] ?? '', 0, 100 ),
-				'utm_campaign' => substr( $data['utm_campaign'] ?? '', 0, 100 ),
-				'utm_id'       => substr( $data['utm_id'] ?? '', 0, 100 ),
-				'utm_term'     => substr( $data['utm_term'] ?? '', 0, 100 ),
-				'utm_content'  => substr( $data['utm_content'] ?? '', 0, 255 ),
-				'destination'  => substr( $data['destination'] ?? '', 0, 2083 ),
-				'ip_hash'      => hash( 'sha256', $ip ),
-				'user_agent'   => $ua,
-				'referrer'     => substr( $ref, 0, 2083 ),
-				'clicked_at'   => current_time( 'mysql', true ),
-			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			$row,
+			$formats
 		);
+	}
+
+	/**
+	 * Hash an IP address with the per-site secret salt.
+	 *
+	 * The salt is created on activation; if it is missing (sites activated
+	 * before the salt existed) it is lazily created here.
+	 *
+	 * @since 1.0.0
+	 * @param string $ip The visitor IP address.
+	 * @return string The salted SHA-256 hash.
+	 */
+	private static function hash_ip( string $ip ): string {
+		$salt = (string) get_option( 'utmat_salt', '' );
+		if ( '' === $salt ) {
+			$salt = wp_generate_password( 64, true, true );
+			add_option( 'utmat_salt', $salt );
+		}
+		return hash( 'sha256', $salt . $ip );
 	}
 }
