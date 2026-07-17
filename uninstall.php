@@ -14,7 +14,7 @@ global $wpdb;
 
 // Drop the events table.
 $table = $wpdb->prefix . 'utmat_events';
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 $wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 
 // Delete all plugin options.

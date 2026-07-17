@@ -51,10 +51,10 @@ class TrackedLink {
 			return '';
 		}
 
-		$label       = ! empty( $atts['label'] ) ? $atts['label'] : ( $link['label'] ?? $id );
-		$redirect    = esc_url( LinkManager::redirect_url( $id ) );
-		$class_attr  = ! empty( $atts['class'] ) ? ' class="' . esc_attr( $atts['class'] ) . '"' : '';
-		$rel_attr    = ! empty( $atts['rel'] ) ? ' rel="' . esc_attr( $atts['rel'] ) . '"' : '';
+		$label      = ! empty( $atts['label'] ) ? $atts['label'] : ( $link['label'] ?? $id );
+		$redirect   = esc_url( LinkManager::redirect_url( $id ) );
+		$class_attr = ! empty( $atts['class'] ) ? ' class="' . esc_attr( $atts['class'] ) . '"' : '';
+		$rel_attr   = ! empty( $atts['rel'] ) ? ' rel="' . esc_attr( $atts['rel'] ) . '"' : '';
 
 		return sprintf(
 			'<a href="%s"%s%s>%s</a>',
