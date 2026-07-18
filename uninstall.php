@@ -30,6 +30,7 @@ function utmat_uninstall_site(): void {
 	delete_option( 'utmat_links' );
 	delete_option( 'utmat_salt' );
 	delete_option( 'utmat_retention_days' );
+	delete_option( 'utmat_weekly_email' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -41,8 +42,9 @@ function utmat_uninstall_site(): void {
 		)
 	);
 
-	// Clear the retention cron event.
+	// Clear the retention and weekly report cron events.
 	wp_clear_scheduled_hook( 'utmat_prune_events' );
+	wp_clear_scheduled_hook( 'utmat_weekly_report' );
 }
 
 if ( is_multisite() ) {

@@ -8,6 +8,8 @@
  *   POST   utmat/v1/links       — create a managed link
  *   PUT    utmat/v1/links/<id>  — update a managed link
  *   DELETE utmat/v1/links/<id>  — delete a managed link
+ *   GET    utmat/v1/export      — raw event rows for CSV export
+ *   POST   utmat/v1/settings    — save retention days + weekly email toggle
  *
  * All routes require the `manage_options` capability.
  *
@@ -19,6 +21,7 @@ namespace UTMAT\Admin;
 use DateTimeImmutable;
 use DateTimeZone;
 use UTMAT\DB\Schema;
+use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -100,6 +103,46 @@ class RestController {
 				),
 			)
 		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/export',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'export_events' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array(
+					'period'   => array(
+						'default'           => 30,
+						'sanitize_callback' => 'absint',
+					),
+					'campaign' => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/settings',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'save_settings' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array(
+					'retention_days' => array(
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+					'weekly_email'   => array(
+						'default'           => false,
+						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -134,16 +177,11 @@ class RestController {
 		$period   = max( 1, min( 365, (int) $request->get_param( 'period' ) ) );
 		$campaign = (string) $request->get_param( 'campaign' );
 
-		$timezone    = wp_timezone();
-		$now_local   = new DateTimeImmutable( 'now', $timezone );
-		$offset      = (int) $timezone->getOffset( $now_local );
-		$since_local = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
-		$since       = $since_local->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+		$timezone  = wp_timezone();
+		$now_local = new DateTimeImmutable( 'now', $timezone );
+		$offset    = (int) $timezone->getOffset( $now_local );
 
-		$where = $wpdb->prepare( 'clicked_at >= %s', $since );
-		if ( ! empty( $campaign ) ) {
-			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
-		}
+		$where       = self::build_where( $period, $campaign );
 		$click_where = $where . ' AND is_conversion = 0';
 
 		// Clicks by day, grouped on the site-local date.
@@ -264,12 +302,109 @@ class RestController {
 	}
 
 	/**
+	 * Build the prepared WHERE clause shared by the stats and export queries.
+	 *
+	 * The period boundary is midnight (site-local) `$period` days ago,
+	 * converted to UTC to match the stored `clicked_at` values. An optional
+	 * campaign filter is appended.
+	 *
+	 * @since 1.0.0
+	 * @param int    $period   Period length in days.
+	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
+	 */
+	private static function build_where( int $period, string $campaign ): string {
+		global $wpdb;
+
+		$timezone    = wp_timezone();
+		$now_local   = new DateTimeImmutable( 'now', $timezone );
+		$since_local = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
+		$since       = $since_local->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+
+		$where = $wpdb->prepare( 'clicked_at >= %s', $since );
+		if ( ! empty( $campaign ) ) {
+			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
+		}
+
+		return $where;
+	}
+
+	/**
+	 * GET utmat/v1/export
+	 *
+	 * Returns raw event rows for the period as JSON; the dashboard assembles
+	 * the CSV client-side. Exports are privacy-light by design: `ip_hash` and
+	 * `user_agent` are never included. Capped at the newest 10,000 rows.
+	 * Conversion rows are included and flagged via the `is_conversion` column.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function export_events( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+		$table    = Schema::table();
+		$period   = max( 1, min( 365, (int) $request->get_param( 'period' ) ) );
+		$campaign = (string) $request->get_param( 'campaign' );
+		$where    = self::build_where( $period, $campaign );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results(
+			"SELECT clicked_at, link_id, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
+			        gclid, fbclid, msclkid, ttclid, destination, referrer, is_conversion, order_total
+			 FROM {$table}
+			 WHERE {$where}
+			 ORDER BY clicked_at DESC
+			 LIMIT 10000",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		return new WP_REST_Response( array( 'rows' => array_values( (array) $rows ) ), 200 );
+	}
+
+	/**
+	 * POST utmat/v1/settings
+	 *
+	 * Saves the retention window (0 = keep forever) and the weekly email
+	 * toggle. The weekly report cron is scheduled or unscheduled here, at
+	 * save time, so no scheduling work happens on normal page loads.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
+		$retention = absint( $request->get_param( 'retention_days' ) );
+		$weekly    = (bool) $request->get_param( 'weekly_email' );
+
+		update_option( 'utmat_retention_days', $retention );
+		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
+
+		if ( $weekly ) {
+			WeeklyEmail::schedule();
+		} else {
+			WeeklyEmail::unschedule();
+		}
+
+		return new WP_REST_Response(
+			array(
+				'retention_days' => $retention,
+				'weekly_email'   => $weekly,
+			),
+			200
+		);
+	}
+
+	/**
 	 * GET utmat/v1/links
 	 *
 	 * Click counts for all links come from a single GROUP BY query instead
-	 * of one COUNT query per link.
+	 * of one COUNT query per link. The response also carries a `suggestions`
+	 * map of previously used source/medium/campaign values for the add-link
+	 * form datalists.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Response shape changed from a bare array to `{ links, suggestions }`.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -295,7 +430,56 @@ class RestController {
 			$result[] = self::format_link( $id, $link, $counts[ $id ] ?? 0 );
 		}
 
-		return new WP_REST_Response( $result, 200 );
+		return new WP_REST_Response(
+			array(
+				'links'       => $result,
+				'suggestions' => self::suggestions( $links ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Collect previously used UTM values for the add-link form datalists.
+	 *
+	 * Merges distinct values from recorded events (any row type — a value is
+	 * a useful suggestion regardless of whether it came from a click or a
+	 * conversion) with the values stored on managed links, deduped and capped
+	 * at 20 per field.
+	 *
+	 * @since 1.0.0
+	 * @param array<string, array<string, string>> $links Managed links keyed by slug.
+	 * @return array<string, string[]> Keys `sources`, `mediums`, `campaigns`.
+	 */
+	private static function suggestions( array $links ): array {
+		global $wpdb;
+		$table = Schema::table();
+
+		$columns = array(
+			'sources'   => 'utm_source',
+			'mediums'   => 'utm_medium',
+			'campaigns' => 'utm_campaign',
+		);
+
+		$out = array();
+		foreach ( $columns as $key => $column ) {
+			// $column comes from the fixed map above, never from user input.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$values = (array) $wpdb->get_col(
+				"SELECT DISTINCT {$column} FROM {$table} WHERE {$column} != '' ORDER BY {$column} LIMIT 20"
+			);
+			// phpcs:enable
+
+			foreach ( $links as $link ) {
+				if ( ! empty( $link[ $column ] ) ) {
+					$values[] = (string) $link[ $column ];
+				}
+			}
+
+			$out[ $key ] = array_slice( array_values( array_unique( array_map( 'strval', $values ) ) ), 0, 20 );
+		}
+
+		return $out;
 	}
 
 	/**
@@ -331,9 +515,12 @@ class RestController {
 	 * Validate and sanitize the link fields shared by create and update.
 	 *
 	 * Sanitizes the label and the six UTM fields and validates the
-	 * destination as an http(s) URL.
+	 * destination as an http(s) URL. UTM values are normalized for
+	 * consistent reporting (lowercase, whitespace collapsed to `-`) — the
+	 * dashboard JS applies the same normalization for immediate feedback,
+	 * but this server-side pass is authoritative.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Added UTM value normalization.
 	 * @param WP_REST_Request $request REST request.
 	 * @return array<string, string>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
 	 */
@@ -352,10 +539,31 @@ class RestController {
 			'destination' => $destination,
 		);
 		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ) as $key ) {
-			$link[ $key ] = sanitize_text_field( (string) $request->get_param( $key ) );
+			$link[ $key ] = self::normalize_utm( sanitize_text_field( (string) $request->get_param( $key ) ) );
 		}
 
 		return $link;
+	}
+
+	/**
+	 * Normalize a UTM value for consistent reporting.
+	 *
+	 * Lowercases the value and replaces whitespace runs with `-` so
+	 * `My Newsletter` and `my-newsletter` never fragment into two report
+	 * rows. Mirrors the normalization in assets/js/dashboard.js — keep in
+	 * sync.
+	 *
+	 * @since 1.0.0
+	 * @param string $value Sanitized UTM value.
+	 * @return string
+	 */
+	private static function normalize_utm( string $value ): string {
+		$value = trim( $value );
+		if ( '' === $value ) {
+			return '';
+		}
+		$value = (string) preg_replace( '/\s+/u', '-', $value );
+		return function_exists( 'mb_strtolower' ) ? mb_strtolower( $value ) : strtolower( $value );
 	}
 
 	/**

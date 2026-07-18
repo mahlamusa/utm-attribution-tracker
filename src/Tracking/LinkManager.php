@@ -110,11 +110,18 @@ class LinkManager {
 	/**
 	 * Build the on-site redirect URL for a given link slug.
 	 *
-	 * @since 1.0.0
+	 * Returns the pretty `/go/{slug}/` form when pretty permalinks are
+	 * enabled (the rewrite rule in Rewrites only works then); falls back to
+	 * the query-string form on plain permalinks.
+	 *
+	 * @since 1.0.0 Added the pretty `/go/{slug}/` form.
 	 * @param string $id Link slug.
 	 * @return string
 	 */
 	public static function redirect_url( string $id ): string {
+		if ( get_option( 'permalink_structure' ) ) {
+			return home_url( '/go/' . rawurlencode( $id ) . '/' );
+		}
 		return add_query_arg( 'utmat_track', rawurlencode( $id ), home_url( '/' ) );
 	}
 

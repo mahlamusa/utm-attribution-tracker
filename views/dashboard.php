@@ -43,6 +43,11 @@ defined( 'ABSPATH' ) || exit;
 			<option value=""><?php esc_html_e( 'All campaigns', 'utm-attribution-tracker' ); ?></option>
 		</select>
 
+		<button type="button" class="button" id="utmat-export-btn"
+			title="<?php esc_attr_e( 'Download the raw events for the selected period as CSV (up to 10,000 rows).', 'utm-attribution-tracker' ); ?>">
+			<?php esc_html_e( 'Export CSV', 'utm-attribution-tracker' ); ?>
+		</button>
+
 		<p class="utmat-total" aria-live="polite">
 			<strong id="utmat-total-count">—</strong>
 			<?php esc_html_e( 'clicks in this period', 'utm-attribution-tracker' ); ?>
@@ -156,19 +161,33 @@ defined( 'ABSPATH' ) || exit;
 				</p>
 				<p>
 					<label for="utmat-new-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></label>
-					<input type="text" id="utmat-new-campaign" name="utm_campaign"
+					<input type="text" id="utmat-new-campaign" name="utm_campaign" list="utmat-list-campaign"
 						placeholder="spring-sale" />
 				</p>
 				<p>
 					<label for="utmat-new-source"><?php esc_html_e( 'Source', 'utm-attribution-tracker' ); ?></label>
-					<input type="text" id="utmat-new-source" name="utm_source"
+					<input type="text" id="utmat-new-source" name="utm_source" list="utmat-list-source"
 						placeholder="newsletter" />
 				</p>
 				<p>
 					<label for="utmat-new-medium"><?php esc_html_e( 'Medium', 'utm-attribution-tracker' ); ?></label>
-					<input type="text" id="utmat-new-medium" name="utm_medium"
+					<input type="text" id="utmat-new-medium" name="utm_medium" list="utmat-list-medium"
 						placeholder="email" />
 				</p>
+			</div>
+
+			<!-- Suggestion datalists — populated by JS from previously used values -->
+			<datalist id="utmat-list-campaign"></datalist>
+			<datalist id="utmat-list-source"></datalist>
+			<datalist id="utmat-list-medium"></datalist>
+
+			<!-- Shown by JS when a UTM value was normalized on blur/submit -->
+			<div class="utmat-normalize-notice" id="utmat-normalize-notice" hidden>
+				<p>
+					<?php esc_html_e( 'Some values were normalized for consistent reporting (lowercase, spaces replaced with "-").', 'utm-attribution-tracker' ); ?>
+				</p>
+				<button type="button" class="utmat-normalize-notice__dismiss" id="utmat-normalize-dismiss"
+					aria-label="<?php esc_attr_e( 'Dismiss this notice', 'utm-attribution-tracker' ); ?>">&times;</button>
 			</div>
 
 			<details class="utmat-add-form__advanced">
@@ -193,6 +212,33 @@ defined( 'ABSPATH' ) || exit;
 				<button type="submit" class="button button-primary" id="utmat-submit-btn"><?php esc_html_e( 'Add link', 'utm-attribution-tracker' ); ?></button>
 				<button type="button" class="button" id="utmat-cancel-edit" hidden><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
 				<span class="utmat-add-form__msg" id="utmat-add-msg" role="status"></span>
+			</p>
+		</form>
+	</div>
+
+	<!-- Settings -->
+	<div class="utmat-section" id="utmat-settings-section">
+		<h2><?php esc_html_e( 'Settings', 'utm-attribution-tracker' ); ?></h2>
+		<p class="utmat-section__desc">
+			<?php esc_html_e( 'Data retention and reporting preferences.', 'utm-attribution-tracker' ); ?>
+		</p>
+
+		<form id="utmat-settings-form" class="utmat-settings-form">
+			<p>
+				<label for="utmat-retention-days"><?php esc_html_e( 'Keep events for (days)', 'utm-attribution-tracker' ); ?></label>
+				<input type="number" id="utmat-retention-days" name="retention_days" min="0" step="1" class="small-text" />
+				<span class="description"><?php esc_html_e( 'Events older than this are deleted daily. 0 keeps events forever.', 'utm-attribution-tracker' ); ?></span>
+			</p>
+			<p>
+				<label for="utmat-weekly-email">
+					<input type="checkbox" id="utmat-weekly-email" name="weekly_email" />
+					<?php esc_html_e( 'Send a weekly campaign summary email', 'utm-attribution-tracker' ); ?>
+				</label>
+				<span class="description"><?php esc_html_e( 'Sent to the site admin email address every week. Off by default.', 'utm-attribution-tracker' ); ?></span>
+			</p>
+			<p class="utmat-settings-form__actions">
+				<button type="submit" class="button button-primary" id="utmat-settings-save"><?php esc_html_e( 'Save settings', 'utm-attribution-tracker' ); ?></button>
+				<span class="utmat-add-form__msg" id="utmat-settings-msg" role="status"></span>
 			</p>
 		</form>
 	</div>
@@ -226,6 +272,13 @@ defined( 'ABSPATH' ) || exit;
 			'addLink'       => __( 'Add link', 'utm-attribution-tracker' ),
 			'revenueLabel'  => __( 'Revenue', 'utm-attribution-tracker' ),
 			'ordersLabel'   => __( 'Orders', 'utm-attribution-tracker' ),
+			'qr'            => __( 'QR', 'utm-attribution-tracker' ),
+			'qrCode'        => __( 'QR code', 'utm-attribution-tracker' ),
+			'downloadPng'   => __( 'Download PNG', 'utm-attribution-tracker' ),
+			'exporting'     => __( 'Exporting…', 'utm-attribution-tracker' ),
+			'exportCsv'     => __( 'Export CSV', 'utm-attribution-tracker' ),
+			'exportEmpty'   => __( 'No events to export for this period.', 'utm-attribution-tracker' ),
+			'settingsSaved' => __( 'Settings saved.', 'utm-attribution-tracker' ),
 		)
 	);
 	?>

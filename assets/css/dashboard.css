@@ -237,8 +237,38 @@
 	width: 120px;
 }
 
-.utmat-edit-btn {
+.utmat-edit-btn,
+.utmat-qr-btn {
 	margin-right: 6px;
+}
+
+/* QR expander row
+   ========================================================================== */
+.utmat-qr-row td {
+	background: var(--utmat-surface-muted);
+}
+
+.utmat-qr-box {
+	display:     flex;
+	align-items: center;
+	gap:         16px;
+	padding:     10px 4px;
+}
+
+.utmat-qr-canvas {
+	width:         120px;
+	height:        120px;
+	image-rendering: pixelated;
+	background:    #fff;
+	border:        1px solid var(--utmat-border);
+	border-radius: 4px;
+}
+
+.utmat-qr-meta {
+	display:        flex;
+	flex-direction: column;
+	align-items:    flex-start;
+	gap:            8px;
 }
 
 .utmat-clicks-badge {
@@ -339,6 +369,68 @@
 
 .utmat-add-form__msg.is-success {
 	color: #007017;
+}
+
+/* Normalization notice
+   ========================================================================== */
+.utmat-normalize-notice {
+	display:       flex;
+	align-items:   flex-start;
+	gap:           8px;
+	background:    #f0f6fc;
+	border-left:   4px solid var(--utmat-primary);
+	border-radius: 2px;
+	padding:       8px 12px;
+	margin:        0 0 12px;
+}
+
+.utmat-normalize-notice[hidden] { display: none; }
+
+.utmat-normalize-notice p {
+	margin:    0;
+	font-size: 13px;
+	color:     var(--utmat-text);
+	flex:      1 1 auto;
+}
+
+.utmat-normalize-notice__dismiss {
+	background:  none;
+	border:      none;
+	cursor:      pointer;
+	color:       var(--utmat-muted);
+	font-size:   16px;
+	line-height: 1;
+	padding:     0 2px;
+}
+
+.utmat-normalize-notice__dismiss:hover {
+	color: var(--utmat-text);
+}
+
+/* Settings card
+   ========================================================================== */
+.utmat-settings-form p {
+	margin: 0 0 12px;
+}
+
+.utmat-settings-form label {
+	font-weight:  600;
+	font-size:    13px;
+	color:        var(--utmat-text);
+	margin-right: 8px;
+}
+
+.utmat-settings-form .description {
+	display:   block;
+	margin-top: 4px;
+	font-size: 12px;
+	color:     var(--utmat-muted);
+}
+
+.utmat-settings-form__actions {
+	display:     flex;
+	align-items: center;
+	gap:         12px;
 }
 
 /* Shortcode reference

@@ -10,9 +10,11 @@ namespace UTMAT;
 use UTMAT\DB\Schema;
 use UTMAT\DB\Retention;
 use UTMAT\Privacy\PrivacyPolicy;
+use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
+use UTMAT\Tracking\Rewrites;
 use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
@@ -72,11 +74,19 @@ class Plugin {
 		// Track incoming requests at priority 1 (before most other code).
 		add_action( 'init', array( Tracker::class, 'handle_incoming_request' ), 1 );
 
+		// Pretty short links: register /go/{slug}/ and bridge parsed requests
+		// into the redirect handler (the query var only exists post-init).
+		add_action( 'init', array( Rewrites::class, 'add_rules' ) );
+		add_action( 'parse_request', array( Rewrites::class, 'handle_pretty_request' ) );
+
 		// Translations.
 		add_action( 'init', array( self::class, 'load_textdomain' ) );
 
 		// Daily retention pruning.
 		add_action( Retention::HOOK, array( Retention::class, 'prune' ) );
+
+		// Weekly email report (cron is only scheduled while the toggle is on).
+		add_action( WeeklyEmail::HOOK, array( WeeklyEmail::class, 'send' ) );
 
 		// Suggested privacy policy text.
 		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );
@@ -180,7 +190,10 @@ class Plugin {
 	 * Plugin activation — install DB, create the IP salt, seed example link,
 	 * and schedule retention pruning.
 	 *
-	 * @since 1.0.0
+	 * The /go/{slug}/ rewrite rule is registered before the flush so the
+	 * flushed rules include it (activation runs before our `init` hook).
+	 *
+	 * @since 1.0.0 Added the pretty short-link rewrite registration.
 	 * @return void
 	 */
 	public static function activate(): void {
@@ -190,17 +203,19 @@ class Plugin {
 		}
 		LinkManager::seed_defaults();
 		Retention::schedule();
+		Rewrites::add_rules();
 		flush_rewrite_rules();
 	}
 
 	/**
-	 * Plugin deactivation — unschedule retention pruning.
+	 * Plugin deactivation — unschedule retention pruning and the weekly report.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Added weekly report unscheduling.
 	 * @return void
 	 */
 	public static function deactivate(): void {
 		Retention::unschedule();
+		WeeklyEmail::unschedule();
 		flush_rewrite_rules();
 	}
 }

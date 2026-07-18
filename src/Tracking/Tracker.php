@@ -104,6 +104,16 @@ class Tracker {
 		}
 
 		// --- 2. Passive incoming UTM tracking (any whitelisted param) ---
+		// A /go/{slug}/ pretty-link request is resolved by the outbound redirect
+		// path at parse_request (which records the click and 302s). At this early
+		// `init` pass that request still carries its UTM query params but no
+		// utmat_track $_GET value, so without this guard it would also be
+		// logged here as a passive "incoming" row — double-counting the click.
+		$request_path = (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
+		if ( empty( $track_id ) && 1 === preg_match( '#^/go/[a-z0-9_\-]+/?$#', $request_path ) ) {
+			return;
+		}
+
 		$params = array();
 		foreach ( self::PARAM_WHITELIST as $key ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended

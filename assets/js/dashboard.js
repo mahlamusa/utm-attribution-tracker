@@ -1,17 +1,17 @@
-/* global Chart, utmatData */
+/* global Chart, qrcode, utmatData */
 /**
  * UTM & Attribution Tracker — Dashboard JS
  *
  * Fetches stats from the REST API and renders Chart.js charts, manages the
- * tracked-links table (list, add, delete). All user-visible strings come
- * from the utmat-i18n JSON block so they pass through WordPress i18n
- * on the PHP side.
+ * tracked-links table (list, add, edit, delete, QR), the CSV export, and the
+ * settings card. All user-visible strings come from the utmat-i18n JSON
+ * block so they pass through WordPress i18n on the PHP side.
  */
 ( function () {
 	'use strict';
 
 	// ── Config ────────────────────────────────────────────────────────────────
-	const { apiBase, nonce, wooActive, currencySymbol } = utmatData;
+	const { apiBase, nonce, wooActive, currencySymbol, settings } = utmatData;
 
 	// Translated strings from the PHP JSON block.
 	const i18nEl = document.getElementById( 'utmat-i18n' );
@@ -43,6 +43,13 @@
 	const elRevenueCard  = document.getElementById( 'utmat-card-revenue' );
 	const elSubmitBtn    = document.getElementById( 'utmat-submit-btn' );
 	const elCancelBtn    = document.getElementById( 'utmat-cancel-edit' );
+	const elExportBtn    = document.getElementById( 'utmat-export-btn' );
+	const elNormNotice   = document.getElementById( 'utmat-normalize-notice' );
+	const elNormDismiss  = document.getElementById( 'utmat-normalize-dismiss' );
+	const elSettingsForm = document.getElementById( 'utmat-settings-form' );
+	const elRetention    = document.getElementById( 'utmat-retention-days' );
+	const elWeekly       = document.getElementById( 'utmat-weekly-email' );
+	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -296,6 +303,91 @@
 		elCampaignSel.value = activeCampaign;
 	}
 
+	// ── QR codes (qrcode-generator, bundled) ──────────────────────────────────
+	// Draws the QR modules onto a canvas so the PNG download can come straight
+	// from canvas.toDataURL — no external service involved.
+	function renderQrCanvas( text, canvas ) {
+		const qr = qrcode( 0, 'M' );
+		qr.addData( text );
+		qr.make();
+
+		const count  = qr.getModuleCount();
+		const cell   = 4;
+		const margin = cell * 4; // Quiet zone: 4 modules per QR spec.
+		const size   = count * cell + margin * 2;
+
+		canvas.width  = size;
+		canvas.height = size;
+
+		const ctx = canvas.getContext( '2d' );
+		ctx.fillStyle = '#fff';
+		ctx.fillRect( 0, 0, size, size );
+		ctx.fillStyle = '#000';
+		for ( let row = 0; row < count; row++ ) {
+			for ( let col = 0; col < count; col++ ) {
+				if ( qr.isDark( row, col ) ) {
+					ctx.fillRect( margin + col * cell, margin + row * cell, cell, cell );
+				}
+			}
+		}
+	}
+
+	function closeQrRows() {
+		elLinksTbody.querySelectorAll( '.utmat-qr-row' ).forEach( function ( r ) {
+			r.remove();
+		} );
+		elLinksTbody.querySelectorAll( '.utmat-qr-btn' ).forEach( function ( b ) {
+			b.setAttribute( 'aria-expanded', 'false' );
+		} );
+	}
+
+	function toggleQrRow( link, row, btn ) {
+		const next   = row.nextElementSibling;
+		const isOpen = next && next.classList.contains( 'utmat-qr-row' );
+
+		closeQrRows();
+		if ( isOpen ) {
+			return;
+		}
+
+		const tr = document.createElement( 'tr' );
+		tr.className = 'utmat-qr-row';
+		const td = document.createElement( 'td' );
+		td.colSpan = 6;
+
+		const box = document.createElement( 'div' );
+		box.className = 'utmat-qr-box';
+
+		const canvas = document.createElement( 'canvas' );
+		canvas.className = 'utmat-qr-canvas';
+		canvas.setAttribute( 'role', 'img' );
+		canvas.setAttribute( 'aria-label', ( i18n.qrCode || 'QR code' ) + ': ' + link.redirect_url );
+		renderQrCanvas( link.redirect_url, canvas );
+
+		const meta = document.createElement( 'div' );
+		meta.className = 'utmat-qr-meta';
+
+		const urlSpan = document.createElement( 'span' );
+		urlSpan.className   = 'utmat-url-text';
+		urlSpan.textContent = link.redirect_url;
+
+		const download = document.createElement( 'a' );
+		download.className   = 'button button-small';
+		download.textContent = i18n.downloadPng || 'Download PNG';
+		download.href        = canvas.toDataURL( 'image/png' );
+		download.download    = 'utmat-' + link.id + '-qr.png';
+
+		meta.appendChild( urlSpan );
+		meta.appendChild( download );
+		box.appendChild( canvas );
+		box.appendChild( meta );
+		td.appendChild( box );
+		tr.appendChild( td );
+
+		row.parentNode.insertBefore( tr, row.nextSibling );
+		btn.setAttribute( 'aria-expanded', 'true' );
+	}
+
 	// ── Populate links table ───────────────────────────────────────────────────
 	function renderLinksTable( links ) {
 		elLinksTbody.innerHTML = '';
@@ -355,8 +447,19 @@
 			destCell.textContent = link.destination;
 			destCell.title       = link.destination;
 
-			// Edit / Delete.
+			// QR / Edit / Delete.
 			const actionsCell = row.insertCell();
+
+			const qrBtn = document.createElement( 'button' );
+			qrBtn.type      = 'button';
+			qrBtn.className = 'button button-small utmat-qr-btn';
+			qrBtn.textContent = i18n.qr || 'QR';
+			qrBtn.setAttribute( 'aria-expanded', 'false' );
+			qrBtn.addEventListener( 'click', function () {
+				toggleQrRow( link, row, qrBtn );
+			} );
+			actionsCell.appendChild( qrBtn );
+
 			const editBtn = document.createElement( 'button' );
 			editBtn.type      = 'button';
 			editBtn.className = 'button button-small utmat-edit-btn';
@@ -392,6 +495,10 @@
 	function deleteLink( id, row ) {
 		apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
 			.then( function () {
+				const next = row.nextElementSibling;
+				if ( next && next.classList.contains( 'utmat-qr-row' ) ) {
+					next.remove();
+				}
 				row.remove();
 				if ( ! elLinksTbody.rows.length ) {
 					loadDashboard();
@@ -400,6 +507,75 @@
 			.catch( function ( err ) {
 				window.alert( err.message || 'Unknown error.' ); // eslint-disable-line no-alert
 			} );
+	}
+
+	// ── UTM naming conventions ────────────────────────────────────────────────
+	// Inconsistent case/spaces silently fragment reports ("My Newsletter" vs
+	// "my-newsletter"), so utm_* values are normalized on blur and on submit.
+	// The server applies the same normalization authoritatively — keep in
+	// sync with RestController::normalize_utm().
+	const UTM_FIELDS = [ 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ];
+
+	function normalizeUtm( value ) {
+		return value.trim().toLowerCase().replace( /\s+/g, '-' );
+	}
+
+	// Normalizes one input in place; returns whether the value changed.
+	function normalizeField( input ) {
+		const normalized = normalizeUtm( input.value );
+		if ( normalized === input.value ) {
+			return false;
+		}
+		input.value = normalized;
+		return true;
+	}
+
+	function normalizeAllFields() {
+		let changed = false;
+		UTM_FIELDS.forEach( function ( name ) {
+			const input = elAddForm.elements[ name ];
+			if ( input && normalizeField( input ) ) {
+				changed = true;
+			}
+		} );
+		return changed;
+	}
+
+	UTM_FIELDS.forEach( function ( name ) {
+		const input = elAddForm.elements[ name ];
+		if ( ! input ) {
+			return;
+		}
+		input.addEventListener( 'blur', function () {
+			if ( normalizeField( input ) ) {
+				show( elNormNotice );
+			}
+		} );
+	} );
+
+	elNormDismiss.addEventListener( 'click', function () {
+		hide( elNormNotice );
+	} );
+
+	// ── Suggestion datalists ──────────────────────────────────────────────────
+	function populateDatalists( suggestions ) {
+		const map = {
+			campaigns: 'utmat-list-campaign',
+			sources:   'utmat-list-source',
+			mediums:   'utmat-list-medium',
+		};
+		Object.keys( map ).forEach( function ( key ) {
+			const el = document.getElementById( map[ key ] );
+			if ( ! el ) {
+				return;
+			}
+			el.innerHTML = '';
+			( suggestions[ key ] || [] ).forEach( function ( value ) {
+				const opt = document.createElement( 'option' );
+				opt.value = value;
+				el.appendChild( opt );
+			} );
+		} );
 	}
 
 	// ── Add / edit link form ──────────────────────────────────────────────────
@@ -446,6 +622,10 @@
 	elAddForm.addEventListener( 'submit', function ( e ) {
 		e.preventDefault();
 
+		if ( normalizeAllFields() ) {
+			show( elNormNotice );
+		}
+
 		const formData = new FormData( elAddForm );
 		const payload  = {};
 		formData.forEach( function ( value, key ) {
@@ -473,6 +653,98 @@
 		} );
 	} );
 
+	// ── CSV export ────────────────────────────────────────────────────────────
+	// The REST endpoint returns raw JSON rows (capped at 10,000); the CSV is
+	// assembled here. Every cell is quoted, and values starting with = + - @
+	// are prefixed with ' so a crafted UTM value can never execute as a
+	// spreadsheet formula.
+	const EXPORT_COLUMNS = [
+		'clicked_at', 'link_id', 'utm_source', 'utm_medium', 'utm_campaign',
+		'utm_id', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid',
+		'ttclid', 'destination', 'referrer', 'is_conversion', 'order_total',
+	];
+
+	function csvCell( value ) {
+		let v = ( null === value || undefined === value ) ? '' : String( value );
+		if ( /^[=+\-@\t\r]/.test( v ) ) {
+			v = "'" + v;
+		}
+		return '"' + v.replace( /"/g, '""' ) + '"';
+	}
+
+	function exportCsv() {
+		elExportBtn.disabled    = true;
+		elExportBtn.textContent = i18n.exporting || 'Exporting…';
+
+		const url = '/export?period=' + activePeriod +
+			( activeCampaign ? '&campaign=' + encodeURIComponent( activeCampaign ) : '' );
+
+		apiFetch( url ).then( function ( body ) {
+			const rows = body.rows || [];
+			if ( ! rows.length ) {
+				window.alert( i18n.exportEmpty || 'No events to export for this period.' ); // eslint-disable-line no-alert
+				return;
+			}
+
+			const lines = [ EXPORT_COLUMNS.map( csvCell ).join( ',' ) ];
+			rows.forEach( function ( row ) {
+				lines.push( EXPORT_COLUMNS.map( function ( col ) {
+					return csvCell( row[ col ] );
+				} ).join( ',' ) );
+			} );
+
+			const now   = new Date();
+			const pad   = function ( n ) { return String( n ).padStart( 2, '0' ); };
+			const stamp = now.getFullYear() + pad( now.getMonth() + 1 ) + pad( now.getDate() );
+			const blob  = new Blob( [ lines.join( '\r\n' ) + '\r\n' ], { type: 'text/csv;charset=utf-8;' } );
+
+			const a    = document.createElement( 'a' );
+			a.href     = URL.createObjectURL( blob );
+			a.download = 'utmat-export-' + stamp + '.csv';
+			document.body.appendChild( a );
+			a.click();
+			a.remove();
+			URL.revokeObjectURL( a.href );
+		} ).catch( function ( err ) {
+			window.alert( err.message || 'Unknown error.' ); // eslint-disable-line no-alert
+		} ).then( function () {
+			elExportBtn.disabled    = false;
+			elExportBtn.textContent = i18n.exportCsv || 'Export CSV';
+		} );
+	}
+
+	elExportBtn.addEventListener( 'click', exportCsv );
+
+	// ── Settings card ─────────────────────────────────────────────────────────
+	if ( settings ) {
+		elRetention.value = settings.retentionDays;
+		elWeekly.checked  = !! settings.weeklyEmail;
+	}
+
+	elSettingsForm.addEventListener( 'submit', function ( e ) {
+		e.preventDefault();
+
+		elSettingsMsg.textContent = '';
+		elSettingsMsg.className   = 'utmat-add-form__msg';
+
+		apiFetch( '/settings', {
+			method:  'POST',
+			headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
+			body:    JSON.stringify( {
+				retention_days: parseInt( elRetention.value, 10 ) || 0,
+				weekly_email:   elWeekly.checked,
+			} ),
+		} ).then( function ( body ) {
+			elRetention.value = body.retention_days;
+			elWeekly.checked  = !! body.weekly_email;
+			elSettingsMsg.textContent = i18n.settingsSaved || 'Settings saved.';
+			elSettingsMsg.className   = 'utmat-add-form__msg is-success';
+		} ).catch( function ( err ) {
+			elSettingsMsg.textContent = err.message || 'Unknown error.';
+			elSettingsMsg.className   = 'utmat-add-form__msg is-error';
+		} );
+	} );
+
 	// ── Main fetch ────────────────────────────────────────────────────────────
 	function loadDashboard() {
 		setLoading( true );
@@ -484,8 +756,8 @@
 			apiFetch( statsUrl ),
 			apiFetch( '/links' ),
 		] ).then( function ( results ) {
-			const stats = results[ 0 ];
-			const links = results[ 1 ];
+			const stats    = results[ 0 ];
+			const linksRes = results[ 1 ] || {};
 
 			setLoading( false );
 			show( elCharts );
@@ -516,8 +788,9 @@
 				makeRevenueChart( 'utmat-chart-revenue', stats.revenue_by_campaign || [] );
 			}
 
-			// Links table.
-			renderLinksTable( links );
+			// Links table + suggestion datalists.
+			renderLinksTable( linksRes.links || [] );
+			populateDatalists( linksRes.suggestions || {} );
 		} ).catch( function ( err ) {
 			setLoading( false );
 			showError( err.message || 'Unknown error.' );

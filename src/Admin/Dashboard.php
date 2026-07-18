@@ -11,6 +11,7 @@
 
 namespace UTMAT\Admin;
 
+use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
 
 defined( 'ABSPATH' ) || exit;
@@ -107,6 +108,15 @@ class Dashboard {
 			true
 		);
 
+		// qrcode-generator (MIT) — bundled locally, dashboard page only.
+		wp_enqueue_script(
+			'utmat-qrcode',
+			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/vendor/qrcode.min.js',
+			array(),
+			'2.0.4',
+			true
+		);
+
 		// Version off the file's own mtime (not the plugin version) so a saved
 		// edit always busts the browser cache, even between releases.
 		$js_path  = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/dashboard.js';
@@ -115,7 +125,7 @@ class Dashboard {
 		wp_enqueue_script(
 			'utmat-dashboard',
 			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/dashboard.js',
-			array( 'chartjs' ),
+			array( 'chartjs', 'utmat-qrcode' ),
 			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTM_ATTRIBUTION_TRACKER_VERSION,
 			true
 		);
@@ -156,6 +166,10 @@ class Dashboard {
 				'currencySymbol' => $woo_active && function_exists( 'get_woocommerce_currency_symbol' )
 					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
 					: '',
+				'settings'       => array(
+					'retentionDays' => (int) get_option( 'utmat_retention_days', 180 ),
+					'weeklyEmail'   => WeeklyEmail::enabled(),
+				),
 			)
 		);
 	}
