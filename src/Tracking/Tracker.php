@@ -124,7 +124,86 @@ class Tracker {
 			if ( ! self::is_duplicate( $data ) ) {
 				self::record( $data );
 			}
+			// Cookie logic runs regardless of dedup — a deduplicated repeat
+			// visit must still refresh the last-touch set and expiry.
+			self::maybe_set_attribution_cookie( $params, $data['destination'] );
 		}
+	}
+
+	/**
+	 * PHP fallback writer for the first/last-touch attribution cookie.
+	 *
+	 * The front-end beacon is the primary (cache-proof) writer; this covers
+	 * no-JS visitors on uncached pages. Both writers apply the same rules so
+	 * the writes are idempotent: `first` is preserved once set, `last` is
+	 * overwritten with the current visit, and every value is capped at 255
+	 * characters. An oversized encoded cookie (> 4000 bytes) sheds the landing
+	 * page from both sets, and is skipped entirely if still over the limit so
+	 * the existing cookie is preserved. Runs only for non-bot traffic (enforced
+	 * at the call site), when headers are not yet sent, and when the
+	 * `utmat_enable_cookie` master switch allows it.
+	 *
+	 * @since 1.0.0
+	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
+	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
+	 * @return void
+	 */
+	private static function maybe_set_attribution_cookie( array $params, string $landing ): void {
+		if ( headers_sent() || ! Attribution::enabled() ) {
+			return;
+		}
+
+		$touch = array();
+		foreach ( $params as $key => $value ) {
+			$touch[ $key ] = substr( $value, 0, 255 );
+		}
+		$touch['lp'] = substr( $landing, 0, 255 );
+		$touch['ts'] = time();
+
+		$first = Attribution::get_first();
+		if ( empty( $first ) ) {
+			$first = $touch;
+		}
+
+		$value = wp_json_encode(
+			array(
+				'first' => $first,
+				'last'  => $touch,
+			)
+		);
+		if ( false === $value ) {
+			return;
+		}
+
+		// Total-cookie-size guard: shed the landing page from both sets if the
+		// encoded value is oversized, then skip the write entirely if still over
+		// the limit so the existing cookie is preserved rather than truncated.
+		if ( strlen( $value ) > 4000 ) {
+			unset( $first['lp'], $touch['lp'] );
+			$value = wp_json_encode(
+				array(
+					'first' => $first,
+					'last'  => $touch,
+				)
+			);
+			if ( false === $value || strlen( $value ) > 4000 ) {
+				return;
+			}
+		}
+
+		// setcookie() URL-encodes the value, matching the beacon's
+		// encodeURIComponent, so both writers produce the same wire format.
+		setcookie(
+			Attribution::COOKIE_NAME,
+			$value,
+			array(
+				'expires'  => time() + Attribution::cookie_days() * DAY_IN_SECONDS,
+				'path'     => '/',
+				'secure'   => is_ssl(),
+				'httponly' => false,
+				'samesite' => 'Lax',
+			)
+		);
 	}
 
 	/**

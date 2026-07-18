@@ -10,6 +10,7 @@ namespace UTMAT;
 use UTMAT\DB\Schema;
 use UTMAT\DB\Retention;
 use UTMAT\Privacy\PrivacyPolicy;
+use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Admin\Dashboard;
@@ -138,11 +139,16 @@ class Plugin {
 			)
 		);
 
+		// wp_localize_script() casts scalars to strings: true → '1' and
+		// false → '' — both read correctly as truthy/falsy in the beacon.
 		wp_localize_script(
 			'utmat-beacon',
 			'utmatBeacon',
 			array(
-				'endpoint' => rest_url( 'utmat/v1/collect' ),
+				'endpoint'      => rest_url( 'utmat/v1/collect' ),
+				'cookieDays'    => Attribution::cookie_days(),
+				'cookieEnabled' => Attribution::enabled(),
+				'secure'        => is_ssl(),
 			)
 		);
 	}

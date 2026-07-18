@@ -17,6 +17,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting click tracki
 **Features:**
 
 * **Passive UTM tracking** — any page load arriving with `utm_campaign` in the URL is recorded automatically. No code changes needed.
+* **First/last-touch attribution cookie** — campaign parameters are persisted in a first-party cookie (`utmat_attr`, 90 days) with separate first-touch and last-touch sets, ready to attach attribution to conversions.
 * **Redirect tracking** — create managed links (e.g. `/?utmat_track=my-link`) that record a click before forwarding the visitor to the destination with full UTM parameters intact.
 * **Chart.js dashboard** — a clean admin dashboard with:
   * Clicks over time (line chart)
@@ -50,6 +51,24 @@ add_filter( 'utmat_track_logged_in_users', '__return_true' );
 = Does this plugin store personal data? =
 
 Raw IP addresses are never stored. Each IP address is combined with a secret per-site salt and hashed with SHA-256 before storage, so the stored hashes cannot be correlated with hashes from other sites. User agents and referrer URLs are stored as-is. Events are pruned automatically after a retention period (180 days by default). Suggested privacy policy text is provided under Settings → Privacy → Policy Guide.
+
+= What does the attribution cookie store? =
+
+When a visitor arrives with a UTM parameter or ad click ID, the plugin sets a first-party cookie named `utmat_attr` containing two sets of campaign data: the visitor's **first touch** (preserved once written) and **last touch** (updated on every tagged visit). Each set holds the whitelisted UTM/click-ID parameters present on that visit plus the landing page URL and a timestamp. The landing page URL is stored and may include query parameters from the address the visitor arrived on. The cookie does not store names, email addresses, or IP addresses.
+
+The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites). Change the lifetime with:
+
+```php
+add_filter( 'utmat_cookie_days', function () { return 30; } );
+```
+
+Or disable the cookie entirely:
+
+```php
+add_filter( 'utmat_enable_cookie', '__return_false' );
+```
+
+**Consent note:** the plugin does not ship a consent banner and does not integrate with consent managers. If your jurisdiction requires consent before setting non-essential cookies, gate the cookie yourself by returning `false` from `utmat_enable_cookie` until consent is given.
 
 = How do I create a tracked redirect link? =
 
