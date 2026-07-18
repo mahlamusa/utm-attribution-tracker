@@ -234,7 +234,11 @@
 }
 
 .utmat-col-actions {
-	width: 70px;
+	width: 120px;
+}
+
+.utmat-edit-btn {
+	margin-right: 6px;
 }
 
 .utmat-clicks-badge {

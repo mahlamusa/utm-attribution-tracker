@@ -27,6 +27,7 @@
 	let activePeriod   = 7;
 	let activeCampaign = '';
 	let charts         = {};
+	let editingId      = null;
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	const elLoading      = document.getElementById( 'utmat-loading' );
@@ -40,6 +41,8 @@
 	const elAddForm      = document.getElementById( 'utmat-add-form' );
 	const elAddMsg       = document.getElementById( 'utmat-add-msg' );
 	const elRevenueCard  = document.getElementById( 'utmat-card-revenue' );
+	const elSubmitBtn    = document.getElementById( 'utmat-submit-btn' );
+	const elCancelBtn    = document.getElementById( 'utmat-cancel-edit' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -83,11 +86,25 @@
 		} );
 	}
 
+	// Toggle between a chart canvas and its permanent "no data" sibling.
+	// Never removes nodes, so the canvas survives empty periods (R1).
+	function toggleNoData( canvasId, hasData ) {
+		const canvas = document.getElementById( canvasId );
+		if ( ! canvas ) return;
+		const nodata = canvas.parentElement.querySelector( '.utmat-nodata' );
+		canvas.hidden = ! hasData;
+		if ( nodata ) {
+			nodata.hidden = hasData;
+		}
+	}
+
 	// ── Chart factories ───────────────────────────────────────────────────────
 	function makeLineChart( canvasId, labels, values ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
 		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
+
+		toggleNoData( canvasId, true );
 
 		charts[ canvasId ] = new Chart( ctx, {
 			type: 'line',
@@ -129,10 +146,13 @@
 	function makeDoughnutChart( canvasId, data ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
-		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
+		if ( charts[ canvasId ] ) {
+			charts[ canvasId ].destroy();
+			delete charts[ canvasId ];
+		}
 
+		toggleNoData( canvasId, data.length > 0 );
 		if ( ! data.length ) {
-			ctx.parentElement.innerHTML = '<p class="description">' + ( i18n.noData || 'No data.' ) + '</p>';
 			return;
 		}
 
@@ -165,10 +185,13 @@
 	function makeBarChart( canvasId, data ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
-		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
+		if ( charts[ canvasId ] ) {
+			charts[ canvasId ].destroy();
+			delete charts[ canvasId ];
+		}
 
+		toggleNoData( canvasId, data.length > 0 );
 		if ( ! data.length ) {
-			ctx.parentElement.innerHTML = '<p class="description">' + ( i18n.noData || 'No data.' ) + '</p>';
 			return;
 		}
 
@@ -208,10 +231,13 @@
 	function makeRevenueChart( canvasId, data ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
-		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
+		if ( charts[ canvasId ] ) {
+			charts[ canvasId ].destroy();
+			delete charts[ canvasId ];
+		}
 
+		toggleNoData( canvasId, data.length > 0 );
 		if ( ! data.length ) {
-			ctx.parentElement.innerHTML = '<p class="description">' + ( i18n.noData || 'No data.' ) + '</p>';
 			return;
 		}
 
@@ -329,8 +355,17 @@
 			destCell.textContent = link.destination;
 			destCell.title       = link.destination;
 
-			// Delete.
+			// Edit / Delete.
 			const actionsCell = row.insertCell();
+			const editBtn = document.createElement( 'button' );
+			editBtn.type      = 'button';
+			editBtn.className = 'button button-small utmat-edit-btn';
+			editBtn.textContent = i18n.edit || 'Edit';
+			editBtn.addEventListener( 'click', function () {
+				enterEditMode( link );
+			} );
+			actionsCell.appendChild( editBtn );
+
 			const deleteBtn = document.createElement( 'button' );
 			deleteBtn.type      = 'button';
 			deleteBtn.className = 'button button-small button-link-delete utmat-delete-btn';
@@ -367,7 +402,47 @@
 			} );
 	}
 
-	// ── Add-link form ─────────────────────────────────────────────────────────
+	// ── Add / edit link form ──────────────────────────────────────────────────
+	// Editing reuses the add form: fields are pre-filled from the link, the
+	// submit button becomes "Save changes", and the slug is locked (it is not
+	// a form field — the PUT request targets the stored slug directly).
+	function enterEditMode( link ) {
+		editingId = link.id;
+
+		elAddForm.elements.label.value        = link.label;
+		elAddForm.elements.destination.value  = link.destination_raw;
+		elAddForm.elements.utm_campaign.value = link.utm_campaign;
+		elAddForm.elements.utm_source.value   = link.utm_source;
+		elAddForm.elements.utm_medium.value   = link.utm_medium;
+		elAddForm.elements.utm_term.value     = link.utm_term;
+		elAddForm.elements.utm_content.value  = link.utm_content;
+		elAddForm.elements.utm_id.value       = link.utm_id;
+
+		const advanced = elAddForm.querySelector( '.utmat-add-form__advanced' );
+		if ( advanced ) {
+			advanced.open = !! ( link.utm_term || link.utm_content || link.utm_id );
+		}
+
+		elSubmitBtn.textContent = i18n.saveChanges || 'Save changes';
+		show( elCancelBtn );
+		elAddMsg.textContent = '';
+		elAddMsg.className = 'utmat-add-form__msg';
+		elAddForm.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+	}
+
+	function exitEditMode() {
+		editingId = null;
+		elAddForm.reset();
+		elSubmitBtn.textContent = i18n.addLink || 'Add link';
+		hide( elCancelBtn );
+	}
+
+	elCancelBtn.addEventListener( 'click', function () {
+		exitEditMode();
+		elAddMsg.textContent = '';
+		elAddMsg.className = 'utmat-add-form__msg';
+	} );
+
 	elAddForm.addEventListener( 'submit', function ( e ) {
 		e.preventDefault();
 
@@ -377,16 +452,19 @@
 			payload[ key ] = value;
 		} );
 
+		const isEdit = null !== editingId;
+		const path   = isEdit ? '/links/' + encodeURIComponent( editingId ) : '/links';
+
 		elAddMsg.textContent = '';
 		elAddMsg.className = 'utmat-add-form__msg';
 
-		apiFetch( '/links', {
-			method:  'POST',
+		apiFetch( path, {
+			method:  isEdit ? 'PUT' : 'POST',
 			headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
 			body:    JSON.stringify( payload ),
 		} ).then( function () {
-			elAddForm.reset();
-			elAddMsg.textContent = i18n.added || 'Link added.';
+			exitEditMode();
+			elAddMsg.textContent = isEdit ? ( i18n.updated || 'Link updated.' ) : ( i18n.added || 'Link added.' );
 			elAddMsg.className = 'utmat-add-form__msg is-success';
 			loadDashboard();
 		} ).catch( function ( err ) {

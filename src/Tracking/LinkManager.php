@@ -74,6 +74,10 @@ class LinkManager {
 	/**
 	 * Build the full destination URL with UTM query parameters appended.
 	 *
+	 * Fragment-safe: a `#fragment` in the destination is split off before the
+	 * query parameters are appended and re-attached afterwards, so
+	 * `https://ex.com/page#pricing` yields `https://ex.com/page?utm_…#pricing`.
+	 *
 	 * @since 1.0.0
 	 * @param array<string, string> $link Link data array.
 	 * @return string
@@ -92,8 +96,15 @@ class LinkManager {
 			return $base;
 		}
 
+		$fragment = '';
+		$hash_pos = strpos( $base, '#' );
+		if ( false !== $hash_pos ) {
+			$fragment = substr( $base, $hash_pos );
+			$base     = substr( $base, 0, $hash_pos );
+		}
+
 		$separator = ( strpos( $base, '?' ) !== false ) ? '&' : '?';
-		return $base . $separator . http_build_query( $params );
+		return $base . $separator . http_build_query( $params ) . $fragment;
 	}
 
 	/**

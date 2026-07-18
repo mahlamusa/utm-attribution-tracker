@@ -69,6 +69,7 @@ defined( 'ABSPATH' ) || exit;
 				<canvas id="utmat-chart-line"
 					aria-label="<?php esc_attr_e( 'Clicks over time line chart', 'utm-attribution-tracker' ); ?>"
 					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 			</div>
 		</div>
 
@@ -78,6 +79,7 @@ defined( 'ABSPATH' ) || exit;
 				<canvas id="utmat-chart-source"
 					aria-label="<?php esc_attr_e( 'Clicks by source doughnut chart', 'utm-attribution-tracker' ); ?>"
 					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 			</div>
 		</div>
 
@@ -87,6 +89,7 @@ defined( 'ABSPATH' ) || exit;
 				<canvas id="utmat-chart-campaign"
 					aria-label="<?php esc_attr_e( 'Clicks by campaign bar chart', 'utm-attribution-tracker' ); ?>"
 					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 			</div>
 		</div>
 
@@ -96,6 +99,7 @@ defined( 'ABSPATH' ) || exit;
 				<canvas id="utmat-chart-medium"
 					aria-label="<?php esc_attr_e( 'Clicks by medium bar chart', 'utm-attribution-tracker' ); ?>"
 					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 			</div>
 		</div>
 
@@ -106,6 +110,7 @@ defined( 'ABSPATH' ) || exit;
 				<canvas id="utmat-chart-revenue"
 					aria-label="<?php esc_attr_e( 'Revenue by campaign bar chart', 'utm-attribution-tracker' ); ?>"
 					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 			</div>
 		</div>
 
@@ -185,7 +190,8 @@ defined( 'ABSPATH' ) || exit;
 			</details>
 
 			<p class="utmat-add-form__actions">
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Add link', 'utm-attribution-tracker' ); ?></button>
+				<button type="submit" class="button button-primary" id="utmat-submit-btn"><?php esc_html_e( 'Add link', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="button" id="utmat-cancel-edit" hidden><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
 				<span class="utmat-add-form__msg" id="utmat-add-msg" role="status"></span>
 			</p>
 		</form>
@@ -208,13 +214,16 @@ defined( 'ABSPATH' ) || exit;
 		array(
 			'copy'          => __( 'Copy', 'utm-attribution-tracker' ),
 			'copied'        => __( 'Copied!', 'utm-attribution-tracker' ),
-			'noData'        => __( 'No data for this period.', 'utm-attribution-tracker' ),
 			'errorPrefix'   => __( 'Could not load data:', 'utm-attribution-tracker' ),
 			'noLinks'       => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
 			'clicksLabel'   => __( 'Clicks', 'utm-attribution-tracker' ),
 			'delete'        => __( 'Delete', 'utm-attribution-tracker' ),
 			'confirmDelete' => __( 'Confirm?', 'utm-attribution-tracker' ),
 			'added'         => __( 'Link added.', 'utm-attribution-tracker' ),
+			'updated'       => __( 'Link updated.', 'utm-attribution-tracker' ),
+			'edit'          => __( 'Edit', 'utm-attribution-tracker' ),
+			'saveChanges'   => __( 'Save changes', 'utm-attribution-tracker' ),
+			'addLink'       => __( 'Add link', 'utm-attribution-tracker' ),
 			'revenueLabel'  => __( 'Revenue', 'utm-attribution-tracker' ),
 			'ordersLabel'   => __( 'Orders', 'utm-attribution-tracker' ),
 		)
