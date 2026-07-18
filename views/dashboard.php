@@ -99,6 +99,16 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 		</div>
 
+		<!-- Revenue by campaign — shown by JS only when WooCommerce is active -->
+		<div class="utmat-card" id="utmat-card-revenue" hidden>
+			<h2 class="utmat-card__title"><?php esc_html_e( 'Revenue by campaign', 'utm-attribution-tracker' ); ?></h2>
+			<div class="utmat-card__body">
+				<canvas id="utmat-chart-revenue"
+					aria-label="<?php esc_attr_e( 'Revenue by campaign bar chart', 'utm-attribution-tracker' ); ?>"
+					role="img"></canvas>
+			</div>
+		</div>
+
 	</div><!-- /.utmat-charts -->
 
 	<!-- Tracked links -->
@@ -205,6 +215,8 @@ defined( 'ABSPATH' ) || exit;
 			'delete'        => __( 'Delete', 'utm-attribution-tracker' ),
 			'confirmDelete' => __( 'Confirm?', 'utm-attribution-tracker' ),
 			'added'         => __( 'Link added.', 'utm-attribution-tracker' ),
+			'revenueLabel'  => __( 'Revenue', 'utm-attribution-tracker' ),
+			'ordersLabel'   => __( 'Orders', 'utm-attribution-tracker' ),
 		)
 	);
 	?>

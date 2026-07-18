@@ -278,6 +278,9 @@ class Tracker {
 	 *
 	 * After a successful insert the deduplication transient is set so an
 	 * identical event within the dedup window is skipped (see is_duplicate()).
+	 * Conversion rows (`is_conversion` truthy) never participate in dedup —
+	 * each order is a distinct conversion — so they neither set nor honour
+	 * the transient.
 	 *
 	 * @since 1.0.0
 	 * @param array<string, mixed> $data Event fields.
@@ -329,7 +332,7 @@ class Tracker {
 		);
 
 		$window = self::dedup_window();
-		if ( false !== $inserted && $window > 0 ) {
+		if ( empty( $data['is_conversion'] ) && false !== $inserted && $window > 0 ) {
 			set_transient( 'utmat_dd_' . self::dedup_key( $data ), 1, $window );
 		}
 	}
@@ -341,12 +344,17 @@ class Tracker {
 	 * UTM/click-ID values. Checked against a transient
 	 * (`utmat_dd_{md5}`) so no table scan is needed; record() sets the
 	 * transient after a successful insert. A window of 0 disables dedup.
+	 * Conversion rows are exempt: an order is always a distinct conversion,
+	 * so `is_conversion` truthy is never a duplicate.
 	 *
 	 * @since 1.0.0
 	 * @param array<string, mixed> $data Event fields (same shape as record()).
 	 * @return bool
 	 */
 	public static function is_duplicate( array $data ): bool {
+		if ( ! empty( $data['is_conversion'] ) ) {
+			return false;
+		}
 		if ( self::dedup_window() <= 0 ) {
 			return false;
 		}

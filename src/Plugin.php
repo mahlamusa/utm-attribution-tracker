@@ -15,6 +15,7 @@ use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\RestController;
+use UTMAT\Integrations\WooCommerce;
 use UTMAT\Rest\CollectController;
 use UTMAT\Shortcode\TrackedLink;
 
@@ -84,6 +85,11 @@ class Plugin {
 
 		// Front-end tracking beacon.
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_beacon' ) );
+
+		// WooCommerce order attribution. This runs during `plugins_loaded`
+		// priority 10 and Woo may load after us, so defer the class_exists
+		// check to priority 20 — maybe_init() adds zero hooks without Woo.
+		add_action( 'plugins_loaded', array( WooCommerce::class, 'maybe_init' ), 20 );
 
 		// Admin dashboard.
 		if ( is_admin() ) {

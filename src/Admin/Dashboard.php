@@ -139,14 +139,23 @@ class Dashboard {
 			);
 		}
 
+		// WooCommerce revenue card config. The symbol is entity-decoded because
+		// get_woocommerce_currency_symbol() returns HTML entities (&#36;) and
+		// the JS renders it as plain text (Chart.js canvas labels).
+		$woo_active = class_exists( 'WooCommerce' );
+
 		wp_localize_script(
 			'utmat-dashboard',
 			'utmatData',
 			array(
-				'apiBase' => rest_url( 'utmat/v1' ),
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
-				'siteUrl' => home_url( '/' ),
-				'links'   => $links_out,
+				'apiBase'        => rest_url( 'utmat/v1' ),
+				'nonce'          => wp_create_nonce( 'wp_rest' ),
+				'siteUrl'        => home_url( '/' ),
+				'links'          => $links_out,
+				'wooActive'      => $woo_active,
+				'currencySymbol' => $woo_active && function_exists( 'get_woocommerce_currency_symbol' )
+					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
+					: '',
 			)
 		);
 	}

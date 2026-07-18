@@ -178,6 +178,28 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// Revenue by campaign — conversion rows only (WooCommerce orders).
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$revenue_raw = $wpdb->get_results(
+			"SELECT utm_campaign AS label, COUNT(*) AS orders, SUM(order_total) AS revenue
+			 FROM {$table}
+			 WHERE {$where} AND is_conversion = 1 AND utm_campaign != ''
+			 GROUP BY utm_campaign
+			 ORDER BY revenue DESC
+			 LIMIT 10",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		$revenue_by_campaign = array();
+		foreach ( (array) $revenue_raw as $row ) {
+			$revenue_by_campaign[] = array(
+				'label'   => (string) $row['label'],
+				'orders'  => (int) $row['orders'],
+				'revenue' => round( (float) $row['revenue'], 2 ),
+			);
+		}
+
 		// Total.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where}" );
@@ -199,12 +221,13 @@ class RestController {
 
 		return new WP_REST_Response(
 			array(
-				'clicks_by_day' => $clicks_by_day,
-				'by_source'     => array_values( (array) $by_source ),
-				'by_campaign'   => array_values( (array) $by_campaign ),
-				'by_medium'     => array_values( (array) $by_medium ),
-				'total'         => $total,
-				'campaigns'     => array_values( (array) $campaigns ),
+				'clicks_by_day'       => $clicks_by_day,
+				'by_source'           => array_values( (array) $by_source ),
+				'by_campaign'         => array_values( (array) $by_campaign ),
+				'by_medium'           => array_values( (array) $by_medium ),
+				'revenue_by_campaign' => $revenue_by_campaign,
+				'total'               => $total,
+				'campaigns'           => array_values( (array) $campaigns ),
 			),
 			200
 		);

@@ -11,7 +11,7 @@
 	'use strict';
 
 	// ── Config ────────────────────────────────────────────────────────────────
-	const { apiBase, nonce } = utmatData;
+	const { apiBase, nonce, wooActive, currencySymbol } = utmatData;
 
 	// Translated strings from the PHP JSON block.
 	const i18nEl = document.getElementById( 'utmat-i18n' );
@@ -39,6 +39,7 @@
 	const elLinksTbody   = document.getElementById( 'utmat-links-tbody' );
 	const elAddForm      = document.getElementById( 'utmat-add-form' );
 	const elAddMsg       = document.getElementById( 'utmat-add-msg' );
+	const elRevenueCard  = document.getElementById( 'utmat-card-revenue' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -193,6 +194,60 @@
 					x: {
 						beginAtZero: true,
 						ticks:      { precision: 0 },
+					},
+					y: { grid: { display: false } },
+				},
+			},
+		} );
+	}
+
+	function formatCurrency( value ) {
+		return ( currencySymbol || '' ) + Number( value ).toLocaleString();
+	}
+
+	function makeRevenueChart( canvasId, data ) {
+		const ctx = document.getElementById( canvasId );
+		if ( ! ctx ) return;
+		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
+
+		if ( ! data.length ) {
+			ctx.parentElement.innerHTML = '<p class="description">' + ( i18n.noData || 'No data.' ) + '</p>';
+			return;
+		}
+
+		charts[ canvasId ] = new Chart( ctx, {
+			type: 'bar',
+			data: {
+				labels:   data.map( function ( d ) { return d.label; } ),
+				datasets: [ {
+					label:           i18n.revenueLabel || 'Revenue',
+					data:            data.map( function ( d ) { return d.revenue; } ),
+					backgroundColor: COLORS.slice( 0, data.length ),
+					borderRadius:    2,
+				} ],
+			},
+			options: {
+				indexAxis:           'y',
+				responsive:          true,
+				maintainAspectRatio: true,
+				plugins: {
+					legend: { display: false },
+					tooltip: {
+						callbacks: {
+							label: function ( item ) {
+								const d = data[ item.dataIndex ];
+								return formatCurrency( d.revenue ) + ' — ' +
+									( i18n.ordersLabel || 'Orders' ) + ': ' + d.orders;
+							},
+						},
+					},
+				},
+				scales: {
+					x: {
+						beginAtZero: true,
+						ticks: {
+							callback: function ( value ) { return formatCurrency( value ); },
+						},
 					},
 					y: { grid: { display: false } },
 				},
@@ -376,6 +431,12 @@
 
 			// Bar — by medium.
 			makeBarChart( 'utmat-chart-medium', stats.by_medium || [] );
+
+			// Bar — revenue by campaign (WooCommerce only).
+			if ( wooActive && elRevenueCard ) {
+				show( elRevenueCard );
+				makeRevenueChart( 'utmat-chart-revenue', stats.revenue_by_campaign || [] );
+			}
 
 			// Links table.
 			renderLinksTable( links );
