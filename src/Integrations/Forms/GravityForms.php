@@ -1,0 +1,68 @@
+<?php
+/**
+ * Gravity Forms integration — dynamic field population.
+ *
+ * Registers a `gform_field_value_{name}` filter for every recognised
+ * attribution field name (`utmat_source` … `utmat_landing`, plus
+ * `_first` variants) so users can add a Hidden field with "Allow field to
+ * be populated dynamically" and the matching parameter name to capture
+ * attribution — values come from the Attribution cookie reader server-side.
+ *
+ * Hooks register only when Gravity Forms is active (`GFForms` class exists,
+ * checked at `plugins_loaded` priority 20). Without Gravity Forms the class
+ * is loaded but completely inert.
+ *
+ * @package UTMAT\Integrations\Forms
+ */
+
+namespace UTMAT\Integrations\Forms;
+
+use UTMAT\Tracking\Attribution;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * GravityForms
+ *
+ * @since 1.0.0
+ */
+class GravityForms {
+
+	/**
+	 * Register the dynamic-population filters — only when GF is active.
+	 *
+	 * Hooked on `plugins_loaded` priority 20 (Gravity Forms may load after
+	 * this plugin). Bails without adding a single hook when GF is absent.
+	 * One filter is registered per recognised field name via a closure
+	 * factory; each closure resolves its value lazily at render time.
+	 *
+	 * Gravity Forms esc_attr()s dynamically populated values when rendering
+	 * the field input, so the input-sanitized values are returned raw —
+	 * escaping them here too would double-encode.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public static function maybe_init(): void {
+		if ( ! class_exists( 'GFForms' ) ) {
+			return;
+		}
+
+		foreach ( Attribution::field_names() as $name ) {
+			add_filter(
+				'gform_field_value_' . $name,
+				static function ( $value ) use ( $name ) {
+					// A value already populated (query string, shortcode
+					// attribute, hook) always wins over the cookie.
+					if ( is_string( $value ) && '' !== $value ) {
+						return $value;
+					}
+
+					$map = Attribution::field_map();
+
+					return $map[ $name ] ?? $value;
+				}
+			);
+		}
+	}
+}

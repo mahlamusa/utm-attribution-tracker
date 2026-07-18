@@ -16,6 +16,8 @@ use UTMAT\Tracking\LinkManager;
 use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
+use UTMAT\Integrations\Forms\ContactForm7;
+use UTMAT\Integrations\Forms\GravityForms;
 use UTMAT\Rest\CollectController;
 use UTMAT\Shortcode\TrackedLink;
 
@@ -90,6 +92,11 @@ class Plugin {
 		// priority 10 and Woo may load after us, so defer the class_exists
 		// check to priority 20 — maybe_init() adds zero hooks without Woo.
 		add_action( 'plugins_loaded', array( WooCommerce::class, 'maybe_init' ), 20 );
+
+		// Form plugin adapters — same deferred detection as WooCommerce;
+		// each maybe_init() adds zero hooks when its plugin is absent.
+		add_action( 'plugins_loaded', array( ContactForm7::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( GravityForms::class, 'maybe_init' ), 20 );
 
 		// Admin dashboard.
 		if ( is_admin() ) {

@@ -95,6 +95,75 @@ class Attribution {
 	}
 
 	/**
+	 * Map an attribution param to its public form-field name.
+	 *
+	 * The convention (shared with the front-end beacon's fillFormFields) is
+	 * `utmat_` + the param without its `utm_` prefix: `utm_source` →
+	 * `utmat_source`, `gclid` → `utmat_gclid`. The landing page
+	 * (`lp`) becomes `utmat_landing`. First-touch variants append
+	 * `_first` to the returned name (handled by callers).
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $param Whitelisted param key, or 'lp' for the landing page.
+	 *
+	 * @return string
+	 */
+	public static function field_name( string $param ): string {
+		if ( 'lp' === $param ) {
+			$param = 'landing';
+		}
+		return ( 0 === strpos( $param, 'utm_' ) ) ? 'utmat_' . substr( $param, 4 ) : 'utmat_' . $param;
+	}
+
+	/**
+	 * All recognised form-field names — last-touch and `_first` variants.
+	 *
+	 * @since 1.0.0
+	 * @return string[]
+	 */
+	public static function field_names(): array {
+		$names = array();
+		foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $param ) {
+			$name    = self::field_name( $param );
+			$names[] = $name;
+			$names[] = $name . '_first';
+		}
+		return $names;
+	}
+
+	/**
+	 * Field name => value map of both attribution sets, for form adapters.
+	 *
+	 * Last-touch values map to the plain field names, first-touch values to
+	 * the `_first`-suffixed names; only non-empty values are included. Values
+	 * are input-sanitized but NOT output-escaped — the form plugins receiving
+	 * them (Contact Form 7, Gravity Forms) esc_attr() at render; any caller
+	 * emitting markup itself must escape.
+	 *
+	 * @since 1.0.0
+	 * @return array<string, string>
+	 */
+	public static function field_map(): array {
+		$map     = array();
+		$touches = array(
+			''       => self::get_last(),
+			'_first' => self::get_first(),
+		);
+
+		foreach ( $touches as $suffix => $touch ) {
+			foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $param ) {
+				$value = isset( $touch[ $param ] ) ? (string) $touch[ $param ] : '';
+				if ( '' !== $value ) {
+					$map[ self::field_name( $param ) . $suffix ] = $value;
+				}
+			}
+		}
+
+		return $map;
+	}
+
+	/**
 	 * The attribution cookie lifetime in days.
 	 *
 	 * @since 1.0.0

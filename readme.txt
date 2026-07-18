@@ -18,6 +18,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting click tracki
 
 * **Passive UTM tracking** — any page load arriving with `utm_campaign` in the URL is recorded automatically. No code changes needed.
 * **First/last-touch attribution cookie** — campaign parameters are persisted in a first-party cookie (`utmat_attr`, 90 days) with separate first-touch and last-touch sets, ready to attach attribution to conversions.
+* **Form attribution capture** — add a hidden field named `utmat_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms.
 * **Redirect tracking** — create managed links (e.g. `/?utmat_track=my-link`) that record a click before forwarding the visitor to the destination with full UTM parameters intact.
 * **Chart.js dashboard** — a clean admin dashboard with:
   * Clicks over time (line chart)
@@ -69,6 +70,20 @@ add_filter( 'utmat_enable_cookie', '__return_false' );
 ```
 
 **Consent note:** the plugin does not ship a consent banner and does not integrate with consent managers. If your jurisdiction requires consent before setting non-essential cookies, gate the cookie yourself by returning `false` from `utmat_enable_cookie` until consent is given.
+
+= How do I capture attribution in my lead forms? =
+
+Every tracked parameter is available to forms under a `utmat_*` field name: `utmat_source`, `utmat_medium`, `utmat_campaign`, `utmat_id`, `utmat_term`, `utmat_content`, `utmat_gclid`, `utmat_fbclid`, `utmat_msclkid`, `utmat_ttclid`, and `utmat_landing` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utmat_source_first`) for the **first touch**.
+
+**Any form plugin (generic):** add a hidden input (or text field) with one of the names above and it is auto-filled from the attribution cookie on page load. Fields that already have a value are never overwritten. Forms injected into the page after load (some popup builders) are not filled automatically.
+
+**Contact Form 7:** zero configuration — the last-touch fields are appended to every form as hidden fields automatically and arrive with each submission. Use special mail tags in your mail templates to include them in notification emails: `[_utmat_source]`, `[_utmat_campaign]`, etc. (any field name above works, including `_first` variants).
+
+**Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utmat_source` or `utmat_source_first`.
+
+**Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utmat_source` — the generic layer fills it on page load.
+
+**WPForms:** WPForms does not expose a field's HTML `name`, so the generic layer cannot target it. Use a Hidden Field with the `{query_var key="utm_source"}` Smart Tag to capture parameters from the URL the form is submitted on.
 
 = How do I create a tracked redirect link? =
 
