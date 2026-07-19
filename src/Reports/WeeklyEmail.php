@@ -140,6 +140,16 @@ class WeeklyEmail {
 			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND is_conversion = 0", $since )
 		);
 
+		// The week before, for the week-over-week comparison line.
+		$prev_since = gmdate( 'Y-m-d H:i:s', time() - 14 * DAY_IN_SECONDS );
+		$prev_total = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND clicked_at < %s AND is_conversion = 0",
+				$prev_since,
+				$since
+			)
+		);
+
 		$top_campaigns = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT utm_campaign AS label, COUNT(*) AS count
@@ -192,7 +202,7 @@ class WeeklyEmail {
 			/* translators: %s: total click count. */
 			esc_html__( 'Total clicks: %s', 'utm-attribution-tracker' ),
 			'<strong>' . esc_html( number_format_i18n( $total ) ) . '</strong>'
-		) . '</p>';
+		) . self::trend_line( $total, $prev_total ) . '</p>';
 
 		$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Top campaigns', 'utm-attribution-tracker' ) . '</h2>';
 		$html .= self::count_table( (array) $top_campaigns, __( 'Campaign', 'utm-attribution-tracker' ) );
@@ -213,6 +223,38 @@ class WeeklyEmail {
 		$html .= '</div>';
 
 		return $html;
+	}
+
+	/**
+	 * Render the week-over-week comparison fragment for the totals line.
+	 *
+	 * Returns an empty string when the previous week had no clicks (no
+	 * meaningful percentage exists).
+	 *
+	 * @since 1.0.0
+	 * @param int $total      Clicks in the reported week.
+	 * @param int $prev_total Clicks in the week before it.
+	 * @return string HTML fragment, or empty string.
+	 */
+	private static function trend_line( int $total, int $prev_total ): string {
+		if ( $prev_total <= 0 ) {
+			return '';
+		}
+
+		$pct = (int) round( ( ( $total - $prev_total ) / $prev_total ) * 100 );
+		if ( $pct > 0 ) {
+			$text  = '▲ ' . $pct . '%';
+			$color = '#2e8540';
+		} elseif ( $pct < 0 ) {
+			$text  = '▼ ' . abs( $pct ) . '%';
+			$color = '#b32d2e';
+		} else {
+			$text  = '±0%';
+			$color = '#646970';
+		}
+
+		return ' <span style="color:' . esc_attr( $color ) . ';font-size:12px;font-weight:600;">'
+			. esc_html( $text ) . ' ' . esc_html__( 'vs previous week', 'utm-attribution-tracker' ) . '</span>';
 	}
 
 	/**
