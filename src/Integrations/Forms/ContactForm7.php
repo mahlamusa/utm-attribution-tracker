@@ -110,9 +110,11 @@ class ContactForm7 {
 		// metadata read during mail composition — no nonce applies. Non-string
 		// values (crafted array fields) are ignored, and values are capped at
 		// 255 chars to match the attribution writers.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$raw   = isset( $_POST[ $field ] ) && is_string( $_POST[ $field ] ) ? wp_unslash( $_POST[ $field ] ) : '';
-		$value = substr( sanitize_text_field( $raw ), 0, 255 );
+		// phpcs:disable WordPress.Security.NonceVerification.Missing
+		$value = isset( $_POST[ $field ] ) && is_string( $_POST[ $field ] )
+			? substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
+			: '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return $html ? esc_html( $value ) : $value;
 	}
