@@ -512,6 +512,23 @@ class RestController {
 	}
 
 	/**
+	 * Read a request parameter as a string, rejecting non-scalar values.
+	 *
+	 * A JSON body can carry arrays/objects for any parameter; casting those
+	 * with `(string)` raises an Array-to-string warning and stores the
+	 * literal `Array`. Non-scalar values are treated as absent instead.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @param string          $key     Parameter name.
+	 * @return string
+	 */
+	private static function param_string( WP_REST_Request $request, string $key ): string {
+		$value = $request->get_param( $key );
+		return is_scalar( $value ) ? (string) $value : '';
+	}
+
+	/**
 	 * Validate and sanitize the link fields shared by create and update.
 	 *
 	 * Sanitizes the label and the six UTM fields and validates the
@@ -525,7 +542,7 @@ class RestController {
 	 * @return array<string, string>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
 	 */
 	private static function validate_link_input( WP_REST_Request $request ) {
-		$destination = esc_url_raw( (string) $request->get_param( 'destination' ), array( 'http', 'https' ) );
+		$destination = esc_url_raw( self::param_string( $request, 'destination' ), array( 'http', 'https' ) );
 
 		if ( '' === $destination ) {
 			return new WP_REST_Response(
@@ -535,11 +552,11 @@ class RestController {
 		}
 
 		$link = array(
-			'label'       => sanitize_text_field( (string) $request->get_param( 'label' ) ),
+			'label'       => sanitize_text_field( self::param_string( $request, 'label' ) ),
 			'destination' => $destination,
 		);
 		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ) as $key ) {
-			$link[ $key ] = self::normalize_utm( sanitize_text_field( (string) $request->get_param( $key ) ) );
+			$link[ $key ] = self::normalize_utm( sanitize_text_field( self::param_string( $request, $key ) ) );
 		}
 
 		return $link;
@@ -578,8 +595,8 @@ class RestController {
 	 * @return WP_REST_Response
 	 */
 	public static function create_link( WP_REST_Request $request ): WP_REST_Response {
-		$label    = sanitize_text_field( (string) $request->get_param( 'label' ) );
-		$id_param = (string) $request->get_param( 'id' );
+		$label    = sanitize_text_field( self::param_string( $request, 'label' ) );
+		$id_param = self::param_string( $request, 'id' );
 		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
 
 		if ( '' === $id || 'incoming' === $id ) {

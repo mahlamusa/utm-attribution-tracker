@@ -412,8 +412,11 @@
 			row.insertCell().textContent = link.utm_campaign || '—';
 
 			// Clicks badge.
-			const clicksCell = row.insertCell();
-			clicksCell.innerHTML = '<span class="utmat-clicks-badge">' + link.clicks + '</span>';
+			const clicksCell  = row.insertCell();
+			const clicksBadge = document.createElement( 'span' );
+			clicksBadge.className   = 'utmat-clicks-badge';
+			clicksBadge.textContent = String( link.clicks );
+			clicksCell.appendChild( clicksBadge );
 
 			// Redirect URL + copy button.
 			const redirectCell = row.insertCell();
