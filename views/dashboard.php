@@ -77,7 +77,7 @@ defined( 'ABSPATH' ) || exit;
 				<code class="utmat-code"><?php echo esc_html( home_url( '/' ) . '?utm_source=newsletter&utm_medium=email&utm_campaign=launch' ); ?></code>
 			</li>
 			<li><?php esc_html_e( 'Or share a tracked link from the table below — the click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?></li>
-			<li><?php esc_html_e( 'Ad clicks carrying gclid, fbclid, msclkid, or ttclid are tracked automatically, even without UTM parameters.', 'utm-attribution-tracker' ); ?></li>
+			<li><?php esc_html_e( 'Ad clicks carrying gclid, fbclid, msclkid, ttclid, li_fat_id, or twclid are tracked automatically, even without UTM parameters.', 'utm-attribution-tracker' ); ?></li>
 		</ol>
 		<p class="description">
 			<?php esc_html_e( 'Heads up: visits from logged-in administrators are not tracked by default, so test in a private browsing window. Bots and repeated reloads are filtered out automatically.', 'utm-attribution-tracker' ); ?>
@@ -331,6 +331,8 @@ defined( 'ABSPATH' ) || exit;
 			'platformFacebook'  => __( 'Facebook / Meta', 'utm-attribution-tracker' ),
 			'platformMicrosoft' => __( 'Microsoft Ads', 'utm-attribution-tracker' ),
 			'platformTiktok'    => __( 'TikTok Ads', 'utm-attribution-tracker' ),
+			'platformLinkedin'  => __( 'LinkedIn Ads', 'utm-attribution-tracker' ),
+			'platformTwitter'   => __( 'X / Twitter Ads', 'utm-attribution-tracker' ),
 			'vsPrevious'        => __( 'vs previous period', 'utm-attribution-tracker' ),
 			'conversionsLabel'  => __( 'conversions', 'utm-attribution-tracker' ),
 			'testEmailSending'  => __( 'Sending…', 'utm-attribution-tracker' ),

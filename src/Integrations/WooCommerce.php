@@ -260,6 +260,8 @@ class WooCommerce {
 			'fbclid'       => __( 'Facebook click ID', 'utm-attribution-tracker' ),
 			'msclkid'      => __( 'Microsoft click ID', 'utm-attribution-tracker' ),
 			'ttclid'       => __( 'TikTok click ID', 'utm-attribution-tracker' ),
+			'li_fat_id'    => __( 'LinkedIn click ID', 'utm-attribution-tracker' ),
+			'twclid'       => __( 'X / Twitter click ID', 'utm-attribution-tracker' ),
 			'lp'           => __( 'Landing page', 'utm-attribution-tracker' ),
 			'ts'           => __( 'Time', 'utm-attribution-tracker' ),
 		);

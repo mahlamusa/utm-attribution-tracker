@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 class Schema {
 
 	private const DB_VERSION_OPTION = 'utmat_db_version';
-	private const DB_VERSION        = '2';
+	private const DB_VERSION        = '3';
 
 	/**
 	 * Create / upgrade the events table on activation.
@@ -80,6 +80,8 @@ class Schema {
   fbclid VARCHAR(255) NOT NULL DEFAULT '',
   msclkid VARCHAR(255) NOT NULL DEFAULT '',
   ttclid VARCHAR(255) NOT NULL DEFAULT '',
+  li_fat_id VARCHAR(255) NOT NULL DEFAULT '',
+  twclid VARCHAR(255) NOT NULL DEFAULT '',
   is_conversion TINYINT(1) NOT NULL DEFAULT 0,
   touch VARCHAR(10) NOT NULL DEFAULT '',
   order_total DECIMAL(19,4) NULL DEFAULT NULL,
@@ -91,7 +93,8 @@ class Schema {
   KEY link_id (link_id(64)),
   KEY utm_campaign (utm_campaign(100)),
   KEY clicked_at (clicked_at),
-  KEY is_conversion (is_conversion)
+  KEY is_conversion (is_conversion),
+  KEY conv_time (is_conversion, clicked_at)
 ) {$charset_collate};";
 
 		dbDelta( $sql );

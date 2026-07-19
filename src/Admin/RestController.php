@@ -285,9 +285,11 @@ class RestController {
 				WHEN fbclid != '' THEN 'facebook'
 				WHEN msclkid != '' THEN 'microsoft'
 				WHEN ttclid != '' THEN 'tiktok'
+				WHEN li_fat_id != '' THEN 'linkedin'
+				WHEN twclid != '' THEN 'twitter'
 			 END AS label, COUNT(*) AS count
 			 FROM {$table}
-			 WHERE {$click_where} AND ( gclid != '' OR fbclid != '' OR msclkid != '' OR ttclid != '' )
+			 WHERE {$click_where} AND ( gclid != '' OR fbclid != '' OR msclkid != '' OR ttclid != '' OR li_fat_id != '' OR twclid != '' )
 			 GROUP BY label
 			 ORDER BY count DESC",
 			ARRAY_A
@@ -454,7 +456,7 @@ class RestController {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $wpdb->get_results(
 			"SELECT clicked_at, link_id, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
-			        gclid, fbclid, msclkid, ttclid, destination, referrer, is_conversion, order_total
+			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total
 			 FROM {$table}
 			 WHERE {$where}
 			 ORDER BY clicked_at DESC

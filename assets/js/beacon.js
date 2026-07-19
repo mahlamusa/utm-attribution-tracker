@@ -28,6 +28,7 @@
 	var WHITELIST = [
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term',
 		'utm_content', 'gclid', 'fbclid', 'msclkid', 'ttclid',
+		'li_fat_id', 'twclid',
 	];
 
 	var COOKIE_NAME = 'utmat_attr';

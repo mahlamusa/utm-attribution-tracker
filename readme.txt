@@ -17,7 +17,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 **Tracking engine:**
 
 * **Cache-proof tracking beacon** — a tiny front-end beacon records UTM-tagged visits even when your pages are served from a full-page cache, where PHP never runs. It self-gates in JS, so untagged page views send nothing.
-* **Passive UTM tracking (no-JS fallback)** — on uncached pages, any request arriving with a `utm_*` parameter or an ad click ID (`gclid`, `fbclid`, `msclkid`, `ttclid`) is also recorded server-side.
+* **Passive UTM tracking (no-JS fallback)** — on uncached pages, any request arriving with a `utm_*` parameter or an ad click ID (`gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`) is also recorded server-side.
 * **Bot filtering** — crawlers, link-preview unfurlers, and monitoring agents are recognised by user agent and never pollute your stats. Bots still receive the redirect, so social link previews keep working.
 * **Click deduplication** — repeat hits from the same visitor with identical parameters within a 30-minute window (filterable) are recorded once.
 * **First/last-touch attribution cookie** — campaign parameters are persisted in a first-party cookie (`utmat_attr`, 90 days) with separate first-touch and last-touch sets.
@@ -86,7 +86,7 @@ When a visitor who previously arrived through a tracked campaign places an order
 
 = How do I capture attribution in my lead forms? =
 
-Every tracked parameter is available to forms under a `utmat_*` field name: `utmat_source`, `utmat_medium`, `utmat_campaign`, `utmat_id`, `utmat_term`, `utmat_content`, `utmat_gclid`, `utmat_fbclid`, `utmat_msclkid`, `utmat_ttclid`, and `utmat_landing` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utmat_source_first`) for the **first touch**.
+Every tracked parameter is available to forms under a `utmat_*` field name: `utmat_source`, `utmat_medium`, `utmat_campaign`, `utmat_id`, `utmat_term`, `utmat_content`, `utmat_gclid`, `utmat_fbclid`, `utmat_msclkid`, `utmat_ttclid`, `utmat_li_fat_id`, `utmat_twclid`, and `utmat_landing` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utmat_source_first`) for the **first touch**.
 
 **Any form plugin (generic):** add a hidden input (or text field) with one of the names above and it is auto-filled from the attribution cookie on page load. Fields that already have a value are never overwritten. Forms injected into the page after load (some popup builders) are not filled automatically.
 

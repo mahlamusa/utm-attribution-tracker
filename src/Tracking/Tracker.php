@@ -46,6 +46,8 @@ class Tracker {
 		'fbclid',
 		'msclkid',
 		'ttclid',
+		'li_fat_id',
+		'twclid',
 	);
 
 	/**
@@ -319,6 +321,8 @@ class Tracker {
 			'fbclid'        => substr( $data['fbclid'] ?? '', 0, 255 ),
 			'msclkid'       => substr( $data['msclkid'] ?? '', 0, 255 ),
 			'ttclid'        => substr( $data['ttclid'] ?? '', 0, 255 ),
+			'li_fat_id'     => substr( $data['li_fat_id'] ?? '', 0, 255 ),
+			'twclid'        => substr( $data['twclid'] ?? '', 0, 255 ),
 			'is_conversion' => empty( $data['is_conversion'] ) ? 0 : 1,
 			'touch'         => substr( $data['touch'] ?? '', 0, 10 ),
 			'ip_hash'       => self::hash_ip( $ip ),
@@ -327,7 +331,7 @@ class Tracker {
 			'clicked_at'    => current_time( 'mysql', true ),
 		);
 
-		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
 
 		// $wpdb->insert() cannot pass a typed NULL, so omit the column instead.
 		if ( isset( $data['order_total'] ) && is_numeric( $data['order_total'] ) ) {

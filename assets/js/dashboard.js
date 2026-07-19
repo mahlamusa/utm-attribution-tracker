@@ -238,6 +238,8 @@
 		facebook:  i18n.platformFacebook || 'Facebook / Meta',
 		microsoft: i18n.platformMicrosoft || 'Microsoft Ads',
 		tiktok:    i18n.platformTiktok || 'TikTok Ads',
+		linkedin:  i18n.platformLinkedin || 'LinkedIn Ads',
+		twitter:   i18n.platformTwitter || 'X / Twitter Ads',
 	};
 
 	// Shorten a landing URL for chart labels: same-host URLs show their path,
@@ -738,7 +740,7 @@
 	const EXPORT_COLUMNS = [
 		'clicked_at', 'link_id', 'utm_source', 'utm_medium', 'utm_campaign',
 		'utm_id', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid',
-		'ttclid', 'destination', 'referrer', 'is_conversion', 'order_total',
+		'ttclid', 'li_fat_id', 'twclid', 'destination', 'referrer', 'is_conversion', 'order_total',
 	];
 
 	function csvCell( value ) {
