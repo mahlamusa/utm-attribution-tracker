@@ -231,6 +231,14 @@
 		} );
 	}
 
+	// Display names for the ad-platform keys derived server-side from click IDs.
+	const PLATFORM_NAMES = {
+		google:    i18n.platformGoogle || 'Google Ads',
+		facebook:  i18n.platformFacebook || 'Facebook / Meta',
+		microsoft: i18n.platformMicrosoft || 'Microsoft Ads',
+		tiktok:    i18n.platformTiktok || 'TikTok Ads',
+	};
+
 	// Shorten a landing URL for chart labels: same-host URLs show their path,
 	// other hosts keep host + path. Unparseable values pass through untouched.
 	function shortenUrl( url ) {
@@ -800,6 +808,11 @@
 			// Bar — top landing pages (labels shortened to the URL path).
 			makeBarChart( 'utmat-chart-landing', ( stats.by_landing || [] ).map( function ( d ) {
 				return { label: shortenUrl( d.label ), count: d.count };
+			} ) );
+
+			// Doughnut — ad platforms, derived from click IDs.
+			makeDoughnutChart( 'utmat-chart-platform', ( stats.by_platform || [] ).map( function ( d ) {
+				return { label: PLATFORM_NAMES[ d.label ] || d.label, count: d.count };
 			} ) );
 
 			// Bar — revenue by campaign (WooCommerce only).

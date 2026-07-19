@@ -261,6 +261,25 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// Ad-platform breakdown — derived from which ad click ID a click
+		// carried. Rows without any click ID (organic/UTM-only traffic) are
+		// excluded; the dashboard maps the keys to display names.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$by_platform = $wpdb->get_results(
+			"SELECT CASE
+				WHEN gclid != '' THEN 'google'
+				WHEN fbclid != '' THEN 'facebook'
+				WHEN msclkid != '' THEN 'microsoft'
+				WHEN ttclid != '' THEN 'tiktok'
+			 END AS label, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$click_where} AND ( gclid != '' OR fbclid != '' OR msclkid != '' OR ttclid != '' )
+			 GROUP BY label
+			 ORDER BY count DESC",
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Revenue by campaign — conversion rows only (WooCommerce orders).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$revenue_raw = $wpdb->get_results(
@@ -309,6 +328,7 @@ class RestController {
 				'by_campaign'         => array_values( (array) $by_campaign ),
 				'by_medium'           => array_values( (array) $by_medium ),
 				'by_landing'          => array_values( (array) $by_landing ),
+				'by_platform'         => array_values( (array) $by_platform ),
 				'revenue_by_campaign' => $revenue_by_campaign,
 				'total'               => $total,
 				'campaigns'           => array_values( (array) $campaigns ),

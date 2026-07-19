@@ -118,6 +118,16 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 		</div>
 
+		<div class="utmat-card">
+			<h2 class="utmat-card__title"><?php esc_html_e( 'Ad platforms', 'utm-attribution-tracker' ); ?></h2>
+			<div class="utmat-card__body utmat-card__body--center">
+				<canvas id="utmat-chart-platform"
+					aria-label="<?php esc_attr_e( 'Clicks by ad platform doughnut chart', 'utm-attribution-tracker' ); ?>"
+					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No ad click IDs recorded in this period.', 'utm-attribution-tracker' ); ?></p>
+			</div>
+		</div>
+
 		<!-- Revenue by campaign — shown by JS only when WooCommerce is active -->
 		<div class="utmat-card" id="utmat-card-revenue" hidden>
 			<h2 class="utmat-card__title"><?php esc_html_e( 'Revenue by campaign', 'utm-attribution-tracker' ); ?></h2>
@@ -268,27 +278,31 @@ defined( 'ABSPATH' ) || exit;
 	<?php
 	echo wp_json_encode(
 		array(
-			'copy'          => __( 'Copy', 'utm-attribution-tracker' ),
-			'copied'        => __( 'Copied!', 'utm-attribution-tracker' ),
-			'errorPrefix'   => __( 'Could not load data:', 'utm-attribution-tracker' ),
-			'noLinks'       => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
-			'clicksLabel'   => __( 'Clicks', 'utm-attribution-tracker' ),
-			'delete'        => __( 'Delete', 'utm-attribution-tracker' ),
-			'confirmDelete' => __( 'Confirm?', 'utm-attribution-tracker' ),
-			'added'         => __( 'Link added.', 'utm-attribution-tracker' ),
-			'updated'       => __( 'Link updated.', 'utm-attribution-tracker' ),
-			'edit'          => __( 'Edit', 'utm-attribution-tracker' ),
-			'saveChanges'   => __( 'Save changes', 'utm-attribution-tracker' ),
-			'addLink'       => __( 'Add link', 'utm-attribution-tracker' ),
-			'revenueLabel'  => __( 'Revenue', 'utm-attribution-tracker' ),
-			'ordersLabel'   => __( 'Orders', 'utm-attribution-tracker' ),
-			'qr'            => __( 'QR', 'utm-attribution-tracker' ),
-			'qrCode'        => __( 'QR code', 'utm-attribution-tracker' ),
-			'downloadPng'   => __( 'Download PNG', 'utm-attribution-tracker' ),
-			'exporting'     => __( 'Exporting…', 'utm-attribution-tracker' ),
-			'exportCsv'     => __( 'Export CSV', 'utm-attribution-tracker' ),
-			'exportEmpty'   => __( 'No events to export for this period.', 'utm-attribution-tracker' ),
-			'settingsSaved' => __( 'Settings saved.', 'utm-attribution-tracker' ),
+			'copy'              => __( 'Copy', 'utm-attribution-tracker' ),
+			'copied'            => __( 'Copied!', 'utm-attribution-tracker' ),
+			'errorPrefix'       => __( 'Could not load data:', 'utm-attribution-tracker' ),
+			'noLinks'           => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
+			'clicksLabel'       => __( 'Clicks', 'utm-attribution-tracker' ),
+			'delete'            => __( 'Delete', 'utm-attribution-tracker' ),
+			'confirmDelete'     => __( 'Confirm?', 'utm-attribution-tracker' ),
+			'added'             => __( 'Link added.', 'utm-attribution-tracker' ),
+			'updated'           => __( 'Link updated.', 'utm-attribution-tracker' ),
+			'edit'              => __( 'Edit', 'utm-attribution-tracker' ),
+			'saveChanges'       => __( 'Save changes', 'utm-attribution-tracker' ),
+			'addLink'           => __( 'Add link', 'utm-attribution-tracker' ),
+			'revenueLabel'      => __( 'Revenue', 'utm-attribution-tracker' ),
+			'ordersLabel'       => __( 'Orders', 'utm-attribution-tracker' ),
+			'qr'                => __( 'QR', 'utm-attribution-tracker' ),
+			'qrCode'            => __( 'QR code', 'utm-attribution-tracker' ),
+			'downloadPng'       => __( 'Download PNG', 'utm-attribution-tracker' ),
+			'exporting'         => __( 'Exporting…', 'utm-attribution-tracker' ),
+			'exportCsv'         => __( 'Export CSV', 'utm-attribution-tracker' ),
+			'exportEmpty'       => __( 'No events to export for this period.', 'utm-attribution-tracker' ),
+			'settingsSaved'     => __( 'Settings saved.', 'utm-attribution-tracker' ),
+			'platformGoogle'    => __( 'Google Ads', 'utm-attribution-tracker' ),
+			'platformFacebook'  => __( 'Facebook / Meta', 'utm-attribution-tracker' ),
+			'platformMicrosoft' => __( 'Microsoft Ads', 'utm-attribution-tracker' ),
+			'platformTiktok'    => __( 'TikTok Ads', 'utm-attribution-tracker' ),
 		)
 	);
 	?>
