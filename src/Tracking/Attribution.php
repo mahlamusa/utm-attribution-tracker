@@ -166,16 +166,25 @@ class Attribution {
 	/**
 	 * The attribution cookie lifetime in days.
 	 *
-	 * @since 1.0.0
+	 * Reads the `utmat_cookie_days` option (set from the dashboard
+	 * settings card, default 90); the filter of the same name runs last and
+	 * stays authoritative for code-level overrides.
+	 *
+	 * @since 1.0.0 Now backed by the utmat_cookie_days option.
 	 * @return int
 	 */
 	public static function cookie_days(): int {
+		$days = (int) get_option( 'utmat_cookie_days', 90 );
+		if ( $days < 1 ) {
+			$days = 90;
+		}
+
 		/**
 		 * Filter the attribution cookie lifetime in days.
 		 *
 		 * @var int $days
 		 */
-		return (int) apply_filters( 'utmat_cookie_days', 90 );
+		return (int) apply_filters( 'utmat_cookie_days', $days );
 	}
 
 	/**

@@ -31,6 +31,7 @@ function utmat_uninstall_site(): void {
 	delete_option( 'utmat_salt' );
 	delete_option( 'utmat_retention_days' );
 	delete_option( 'utmat_weekly_email' );
+	delete_option( 'utmat_cookie_days' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery

@@ -169,6 +169,7 @@ class Dashboard {
 				'settings'       => array(
 					'retentionDays' => (int) get_option( 'utmat_retention_days', 180 ),
 					'weeklyEmail'   => WeeklyEmail::enabled(),
+					'cookieDays'    => (int) get_option( 'utmat_cookie_days', 90 ),
 				),
 			)
 		);

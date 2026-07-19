@@ -252,6 +252,11 @@ defined( 'ABSPATH' ) || exit;
 				<span class="description"><?php esc_html_e( 'Events older than this are deleted daily. 0 keeps events forever.', 'utm-attribution-tracker' ); ?></span>
 			</p>
 			<p>
+				<label for="utmat-cookie-days"><?php esc_html_e( 'Attribution window (days)', 'utm-attribution-tracker' ); ?></label>
+				<input type="number" id="utmat-cookie-days" name="cookie_days" min="1" max="730" step="1" class="small-text" />
+				<span class="description"><?php esc_html_e( 'How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors.', 'utm-attribution-tracker' ); ?></span>
+			</p>
+			<p>
 				<label for="utmat-weekly-email">
 					<input type="checkbox" id="utmat-weekly-email" name="weekly_email" />
 					<?php esc_html_e( 'Send a weekly campaign summary email', 'utm-attribution-tracker' ); ?>

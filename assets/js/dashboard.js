@@ -49,6 +49,7 @@
 	const elSettingsForm = document.getElementById( 'utmat-settings-form' );
 	const elRetention    = document.getElementById( 'utmat-retention-days' );
 	const elWeekly       = document.getElementById( 'utmat-weekly-email' );
+	const elCookieDays   = document.getElementById( 'utmat-cookie-days' );
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
@@ -793,8 +794,9 @@
 
 	// ── Settings card ─────────────────────────────────────────────────────────
 	if ( settings ) {
-		elRetention.value = settings.retentionDays;
-		elWeekly.checked  = !! settings.weeklyEmail;
+		elRetention.value  = settings.retentionDays;
+		elWeekly.checked   = !! settings.weeklyEmail;
+		elCookieDays.value = settings.cookieDays || 90;
 	}
 
 	elSettingsForm.addEventListener( 'submit', function ( e ) {
@@ -809,10 +811,12 @@
 			body:    JSON.stringify( {
 				retention_days: parseInt( elRetention.value, 10 ) || 0,
 				weekly_email:   elWeekly.checked,
+				cookie_days:    parseInt( elCookieDays.value, 10 ) || 90,
 			} ),
 		} ).then( function ( body ) {
-			elRetention.value = body.retention_days;
-			elWeekly.checked  = !! body.weekly_email;
+			elRetention.value  = body.retention_days;
+			elWeekly.checked   = !! body.weekly_email;
+			elCookieDays.value = body.cookie_days || 90;
 			elSettingsMsg.textContent = i18n.settingsSaved || 'Settings saved.';
 			elSettingsMsg.className   = 'utmat-add-form__msg is-success';
 		} ).catch( function ( err ) {

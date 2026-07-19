@@ -140,6 +140,10 @@ class RestController {
 						'default'           => false,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
+					'cookie_days'    => array(
+						'default'           => 90,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -461,9 +465,12 @@ class RestController {
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
 		$retention = absint( $request->get_param( 'retention_days' ) );
 		$weekly    = (bool) $request->get_param( 'weekly_email' );
+		$cookie    = absint( $request->get_param( 'cookie_days' ) );
+		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
 
 		update_option( 'utmat_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
+		update_option( 'utmat_cookie_days', $cookie );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -475,6 +482,7 @@ class RestController {
 			array(
 				'retention_days' => $retention,
 				'weekly_email'   => $weekly,
+				'cookie_days'    => $cookie,
 			),
 			200
 		);

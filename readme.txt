@@ -124,7 +124,7 @@ All filters shipped by the plugin:
 * **`utmat_client_ip`** *(string)* — the client IP used for hashing, deduplication, and rate limiting. Defaults to `REMOTE_ADDR`; see the reverse proxy FAQ above.
 * **`utmat_dedup_window`** *(int, seconds, default 1800)* — the window within which an identical click from the same visitor is recorded once. Return `0` to disable deduplication.
 * **`utmat_retention_days`** *(int, days, default from the settings card / 180)* — the event retention window. `0` keeps events forever.
-* **`utmat_cookie_days`** *(int, days, default 90)* — the attribution cookie lifetime.
+* **`utmat_cookie_days`** *(int, days, default 90)* — the attribution cookie lifetime. Defaults to the Attribution window setting on the dashboard; the filter overrides it.
 * **`utmat_enable_cookie`** *(bool, default `true`)* — master switch for the attribution cookie; return `false` to never set it (e.g. until consent is given).
 * **`utmat_report_recipient`** *(string, default the admin email)* — the recipient address of the weekly summary email.
 
