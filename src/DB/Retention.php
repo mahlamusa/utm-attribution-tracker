@@ -82,14 +82,17 @@ class Retention {
 	/**
 	 * Delete event rows older than the retention window.
 	 *
-	 * Cron callback for the daily prune event. Does nothing when the
-	 * retention window is 0 (keep forever).
+	 * Cron callback for the daily prune event. Expired plugin transients are
+	 * always swept; the event-row delete does nothing when the retention
+	 * window is 0 (keep forever).
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Also sweeps expired plugin transients.
 	 * @return void
 	 */
 	public static function prune(): void {
 		global $wpdb;
+
+		self::cleanup_expired_transients();
 
 		$days = self::days();
 		if ( $days <= 0 ) {
@@ -101,5 +104,40 @@ class Retention {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE clicked_at < %s", $cutoff ) );
+	}
+
+	/**
+	 * Delete expired plugin transients from the options table.
+	 *
+	 * The dedup and rate-limit transients are high-cardinality (one per
+	 * visitor/param combination) and WordPress core only sweeps expired
+	 * transients on version upgrades, so without this daily sweep they
+	 * accumulate in wp_options on sites without a persistent object cache.
+	 * No-ops when an external object cache handles transients.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	private static function cleanup_expired_transients(): void {
+		global $wpdb;
+
+		if ( wp_using_ext_object_cache() ) {
+			return;
+		}
+
+		// Deletes each expired _transient_timeout_utmat_* row together
+		// with its matching _transient_utmat_* value row (the timeout
+		// prefix is 19 characters, so the shared suffix starts at 20).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE a, b FROM {$wpdb->options} a
+				 INNER JOIN {$wpdb->options} b
+				         ON b.option_name = CONCAT( '_transient_', SUBSTRING( a.option_name, 20 ) )
+				 WHERE a.option_name LIKE %s AND a.option_value < %d",
+				$wpdb->esc_like( '_transient_timeout_utmat_' ) . '%',
+				time()
+			)
+		);
 	}
 }
