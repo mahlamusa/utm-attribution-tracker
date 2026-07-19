@@ -84,14 +84,16 @@ class WeeklyEmail {
 	 * Cron callback — build and send the weekly summary email.
 	 *
 	 * No-ops when the toggle is off (a stale cron event never mails) or when
-	 * the resolved recipient is empty.
+	 * the resolved recipient is empty. Pass `$force` to send regardless of
+	 * the toggle — used by the dashboard's "Send test email" button.
 	 *
-	 * @since 1.0.0
-	 * @return void
+	 * @since 1.0.0 Added the $force parameter and the bool return.
+	 * @param bool $force Send even when the weekly toggle is off.
+	 * @return bool Whether the mail was handed to wp_mail() successfully.
 	 */
-	public static function send(): void {
-		if ( ! self::enabled() ) {
-			return;
+	public static function send( bool $force = false ): bool {
+		if ( ! $force && ! self::enabled() ) {
+			return false;
 		}
 
 		/**
@@ -105,7 +107,7 @@ class WeeklyEmail {
 			$recipient = sanitize_email( (string) get_option( 'admin_email' ) );
 		}
 		if ( '' === $recipient ) {
-			return;
+			return false;
 		}
 
 		$subject = sprintf(
@@ -114,7 +116,7 @@ class WeeklyEmail {
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
 		);
 
-		wp_mail(
+		return wp_mail(
 			$recipient,
 			$subject,
 			self::build_html(),

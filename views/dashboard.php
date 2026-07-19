@@ -282,6 +282,10 @@ defined( 'ABSPATH' ) || exit;
 			</p>
 			<p class="utmat-settings-form__actions">
 				<button type="submit" class="button button-primary" id="utmat-settings-save"><?php esc_html_e( 'Save settings', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="button" id="utmat-test-email"
+					title="<?php esc_attr_e( 'Send the weekly summary to the report recipient now, regardless of the toggle.', 'utm-attribution-tracker' ); ?>">
+					<?php esc_html_e( 'Send test email', 'utm-attribution-tracker' ); ?>
+				</button>
 				<span class="utmat-add-form__msg" id="utmat-settings-msg" role="status"></span>
 			</p>
 		</form>
@@ -329,6 +333,9 @@ defined( 'ABSPATH' ) || exit;
 			'platformTiktok'    => __( 'TikTok Ads', 'utm-attribution-tracker' ),
 			'vsPrevious'        => __( 'vs previous period', 'utm-attribution-tracker' ),
 			'conversionsLabel'  => __( 'conversions', 'utm-attribution-tracker' ),
+			'testEmailSending'  => __( 'Sending…', 'utm-attribution-tracker' ),
+			'testEmailSent'     => __( 'Test email sent.', 'utm-attribution-tracker' ),
+			'testEmailFailed'   => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),
 		)
 	);
 	?>

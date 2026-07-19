@@ -825,6 +825,27 @@
 		} );
 	} );
 
+	// ── Test email ────────────────────────────────────────────────────────────
+	const elTestEmail = document.getElementById( 'utmat-test-email' );
+
+	elTestEmail.addEventListener( 'click', function () {
+		elTestEmail.disabled      = true;
+		elSettingsMsg.textContent = i18n.testEmailSending || 'Sending…';
+		elSettingsMsg.className   = 'utmat-add-form__msg';
+
+		apiFetch( '/test-email', { method: 'POST' } ).then( function ( body ) {
+			elSettingsMsg.textContent = body.sent
+				? ( i18n.testEmailSent || 'Test email sent.' )
+				: ( i18n.testEmailFailed || 'Sending failed.' );
+			elSettingsMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
+		} ).catch( function ( err ) {
+			elSettingsMsg.textContent = err.message || 'Unknown error.';
+			elSettingsMsg.className   = 'utmat-add-form__msg is-error';
+		} ).then( function () {
+			elTestEmail.disabled = false;
+		} );
+	} );
+
 	// ── Main fetch ────────────────────────────────────────────────────────────
 	function loadDashboard() {
 		setLoading( true );

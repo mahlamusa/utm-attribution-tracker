@@ -126,6 +126,16 @@ class RestController {
 
 		register_rest_route(
 			'utmat/v1',
+			'/test-email',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'send_test_email' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
 			'/settings',
 			array(
 				'methods'             => 'POST',
@@ -454,6 +464,19 @@ class RestController {
 		// phpcs:enable
 
 		return new WP_REST_Response( array( 'rows' => array_values( (array) $rows ) ), 200 );
+	}
+
+	/**
+	 * POST utmat/v1/test-email — send the weekly summary now.
+	 *
+	 * Sends the report regardless of the weekly toggle so admins can preview
+	 * the email and confirm delivery works before enabling the schedule.
+	 *
+	 * @since 1.0.0
+	 * @return WP_REST_Response
+	 */
+	public static function send_test_email(): WP_REST_Response {
+		return new WP_REST_Response( array( 'sent' => WeeklyEmail::send( true ) ), 200 );
 	}
 
 	/**
