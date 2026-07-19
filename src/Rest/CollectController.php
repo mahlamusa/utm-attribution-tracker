@@ -140,11 +140,12 @@ class CollectController {
 	/**
 	 * Same-origin sanity check for the collect request.
 	 *
-	 * The Origin header's host (Referer as fallback) must match the site
-	 * host. Browsers always send at least one of the two for a same-origin
-	 * POST/sendBeacon, so requests with neither header are rejected.
+	 * The Origin header's scheme and host (Referer as fallback) must match
+	 * the site's. Browsers always send at least one of the two for a
+	 * same-origin POST/sendBeacon, so requests with neither header are
+	 * rejected, as are downgraded-scheme origins (http on an https site).
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Scheme is now compared in addition to the host.
 	 * @param WP_REST_Request $request REST request.
 	 * @return bool
 	 */
@@ -157,10 +158,14 @@ class CollectController {
 			return false;
 		}
 
-		$origin_host = (string) wp_parse_url( $origin, PHP_URL_HOST );
-		$site_host   = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$origin_host   = (string) wp_parse_url( $origin, PHP_URL_HOST );
+		$origin_scheme = (string) wp_parse_url( $origin, PHP_URL_SCHEME );
+		$site_host     = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$site_scheme   = (string) wp_parse_url( home_url(), PHP_URL_SCHEME );
 
-		return '' !== $origin_host && strtolower( $origin_host ) === strtolower( $site_host );
+		return '' !== $origin_host
+			&& strtolower( $origin_host ) === strtolower( $site_host )
+			&& strtolower( $origin_scheme ) === strtolower( $site_scheme );
 	}
 
 	/**
