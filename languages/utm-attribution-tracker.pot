@@ -1,0 +1,610 @@
+# Copyright (C) 2026 Lindeni Mahlalela
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: UTM & Attribution Tracker 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/utm-attribution-tracker\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-19T21:13:02+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.7.1\n"
+"X-Domain: utm-attribution-tracker\n"
+
+#. Plugin Name of the plugin
+#: src/Privacy/PrivacyPolicy.php:47
+msgid "UTM & Attribution Tracker"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://github.com/mahlamusa/utm-attribution-tracker"
+msgstr ""
+
+#. Description of the plugin
+msgid "Track UTM-tagged links and purchase funnels with a live Chart.js dashboard."
+msgstr ""
+
+#. Author of the plugin
+msgid "Lindeni Mahlalela"
+msgstr ""
+
+#: src/Admin/Dashboard.php:43
+#: src/Admin/Dashboard.php:44
+#: src/Admin/Dashboard.php:78
+#: src/Admin/Dashboard.php:79
+#: src/Admin/Dashboard.php:207
+#: views/dashboard.php:19
+msgid "UTM Tracker"
+msgstr ""
+
+#: src/Admin/Dashboard.php:186
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: src/Admin/RestController.php:697
+msgid "Please provide a valid destination URL (http or https)."
+msgstr ""
+
+#: src/Admin/RestController.php:752
+msgid "Please provide a valid link slug (the slug \"incoming\" is reserved)."
+msgstr ""
+
+#: src/Admin/RestController.php:764
+msgid "A link with this slug already exists."
+msgstr ""
+
+#: src/Admin/RestController.php:795
+#: src/Admin/RestController.php:836
+msgid "Link not found."
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:98
+#: src/Integrations/WooCommerce.php:102
+msgid "Attribution"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:287
+msgid "Campaign attribution (UTM)"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:325
+#: src/Integrations/WooCommerce.php:370
+msgid "No attribution data"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:330
+msgid "First touch"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:331
+msgid "Last touch"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:350
+#: src/Reports/WeeklyEmail.php:211
+#: views/dashboard.php:217
+msgid "Source"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:351
+#: views/dashboard.php:222
+msgid "Medium"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:352
+#: src/Reports/WeeklyEmail.php:208
+#: src/Reports/WeeklyEmail.php:299
+#: views/dashboard.php:184
+#: views/dashboard.php:212
+msgid "Campaign"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:353
+msgid "Campaign ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:354
+#: views/dashboard.php:246
+msgid "Term"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:355
+#: views/dashboard.php:250
+msgid "Content"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:356
+msgid "Google click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:357
+msgid "Facebook click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:358
+msgid "Microsoft click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:359
+msgid "TikTok click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:360
+msgid "LinkedIn click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:361
+msgid "X / Twitter click ID"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:362
+msgid "Landing page"
+msgstr ""
+
+#: src/Integrations/WooCommerce.php:363
+msgid "Time"
+msgstr ""
+
+#. translators: %d: retention window in days.
+#: src/Privacy/PrivacyPolicy.php:37
+msgid "Recorded events are automatically deleted after %d days."
+msgstr ""
+
+#: src/Privacy/PrivacyPolicy.php:41
+msgid "Recorded events are kept until manually deleted."
+msgstr ""
+
+#: src/Privacy/PrivacyPolicy.php:44
+msgid "This site uses UTM & Attribution Tracker to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values and advertising click IDs) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address. The raw IP address is never stored, and the hash cannot be linked to you across other websites."
+msgstr ""
+
+#: src/Privacy/PrivacyPolicy.php:45
+msgid "This data is used only for aggregate campaign statistics and is not shared with third parties."
+msgstr ""
+
+#. translators: %s: site name.
+#: src/Reports/WeeklyEmail.php:115
+msgid "[%s] Weekly UTM campaign report"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:199
+msgid "Weekly UTM campaign report"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:200
+msgid "past 7 days"
+msgstr ""
+
+#. translators: %s: total click count.
+#: src/Reports/WeeklyEmail.php:203
+msgid "Total clicks: %s"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:207
+msgid "Top campaigns"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:210
+msgid "Top sources"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:214
+#: views/dashboard.php:162
+msgid "Revenue by campaign"
+msgstr ""
+
+#. translators: %s: plugin name.
+#: src/Reports/WeeklyEmail.php:220
+msgid "Sent by %s. Disable this report from the dashboard settings card."
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:257
+msgid "vs previous week"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:270
+msgid "No data recorded this week."
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:276
+#: views/dashboard.php:185
+#: views/dashboard.php:323
+msgid "Clicks"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:300
+#: views/dashboard.php:332
+msgid "Orders"
+msgstr ""
+
+#: src/Reports/WeeklyEmail.php:301
+#: views/dashboard.php:331
+msgid "Revenue"
+msgstr ""
+
+#: src/Rest/CollectController.php:91
+msgid "Cross-origin requests are not allowed."
+msgstr ""
+
+#: src/Rest/CollectController.php:98
+msgid "Too many requests."
+msgstr ""
+
+#: src/Rest/CollectController.php:117
+msgid "No UTM parameter or click ID present."
+msgstr ""
+
+#: views/dashboard.php:21
+msgid "Campaign clicks and UTM attribution, tracked on your own site."
+msgstr ""
+
+#: views/dashboard.php:27
+msgid "Date range"
+msgstr ""
+
+#: views/dashboard.php:29
+msgid "7 days"
+msgstr ""
+
+#: views/dashboard.php:32
+msgid "30 days"
+msgstr ""
+
+#: views/dashboard.php:35
+msgid "90 days"
+msgstr ""
+
+#: views/dashboard.php:40
+msgid "Filter by campaign"
+msgstr ""
+
+#: views/dashboard.php:43
+msgid "All campaigns"
+msgstr ""
+
+#: views/dashboard.php:47
+msgid "Download the raw events for the selected period as CSV (up to 10,000 rows)."
+msgstr ""
+
+#: views/dashboard.php:48
+#: views/dashboard.php:337
+msgid "Export CSV"
+msgstr ""
+
+#: views/dashboard.php:53
+msgid "clicks in this period"
+msgstr ""
+
+#: views/dashboard.php:62
+msgid "Loading data…"
+msgstr ""
+
+#: views/dashboard.php:72
+msgid "Get your first tracked click"
+msgstr ""
+
+#: views/dashboard.php:75
+msgid "Open any page of your site with UTM parameters appended, for example:"
+msgstr ""
+
+#: views/dashboard.php:79
+msgid "Or share a tracked link from the table below — the click is counted before the visitor is forwarded to the destination."
+msgstr ""
+
+#: views/dashboard.php:80
+msgid "Ad clicks carrying gclid, fbclid, msclkid, ttclid, li_fat_id, or twclid are tracked automatically, even without UTM parameters."
+msgstr ""
+
+#: views/dashboard.php:83
+msgid "Heads up: visits from logged-in administrators are not tracked by default, so test in a private browsing window. Bots and repeated reloads are filtered out automatically."
+msgstr ""
+
+#: views/dashboard.php:91
+msgid "Clicks over time"
+msgstr ""
+
+#: views/dashboard.php:94
+msgid "Clicks over time line chart"
+msgstr ""
+
+#: views/dashboard.php:96
+#: views/dashboard.php:106
+#: views/dashboard.php:116
+#: views/dashboard.php:126
+#: views/dashboard.php:136
+#: views/dashboard.php:167
+msgid "No data for this period."
+msgstr ""
+
+#: views/dashboard.php:101
+msgid "By source"
+msgstr ""
+
+#: views/dashboard.php:104
+msgid "Clicks by source doughnut chart"
+msgstr ""
+
+#: views/dashboard.php:111
+msgid "By campaign"
+msgstr ""
+
+#: views/dashboard.php:114
+msgid "Clicks by campaign bar chart"
+msgstr ""
+
+#: views/dashboard.php:121
+msgid "By medium"
+msgstr ""
+
+#: views/dashboard.php:124
+msgid "Clicks by medium bar chart"
+msgstr ""
+
+#: views/dashboard.php:131
+msgid "Top landing pages"
+msgstr ""
+
+#: views/dashboard.php:134
+msgid "Top landing pages bar chart"
+msgstr ""
+
+#: views/dashboard.php:141
+msgid "Top referrers"
+msgstr ""
+
+#: views/dashboard.php:144
+msgid "Top referrers bar chart"
+msgstr ""
+
+#: views/dashboard.php:146
+msgid "No external referrers recorded in this period."
+msgstr ""
+
+#: views/dashboard.php:151
+msgid "Ad platforms"
+msgstr ""
+
+#: views/dashboard.php:154
+msgid "Clicks by ad platform doughnut chart"
+msgstr ""
+
+#: views/dashboard.php:156
+msgid "No ad click IDs recorded in this period."
+msgstr ""
+
+#: views/dashboard.php:165
+msgid "Revenue by campaign bar chart"
+msgstr ""
+
+#: views/dashboard.php:175
+msgid "Tracked links"
+msgstr ""
+
+#: views/dashboard.php:177
+msgid "Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination."
+msgstr ""
+
+#: views/dashboard.php:183
+#: views/dashboard.php:202
+msgid "Label"
+msgstr ""
+
+#: views/dashboard.php:186
+msgid "Redirect URL"
+msgstr ""
+
+#: views/dashboard.php:187
+msgid "Destination"
+msgstr ""
+
+#: views/dashboard.php:188
+msgid "Actions"
+msgstr ""
+
+#: views/dashboard.php:198
+msgid "Add tracked link"
+msgstr ""
+
+#: views/dashboard.php:204
+msgid "Spring newsletter button"
+msgstr ""
+
+#: views/dashboard.php:207
+msgid "Destination URL"
+msgstr ""
+
+#: views/dashboard.php:236
+msgid "Some values were normalized for consistent reporting (lowercase, spaces replaced with \"-\")."
+msgstr ""
+
+#: views/dashboard.php:239
+msgid "Dismiss this notice"
+msgstr ""
+
+#: views/dashboard.php:243
+msgid "More UTM parameters"
+msgstr ""
+
+#: views/dashboard.php:254
+msgid "Campaign ID (utm_id)"
+msgstr ""
+
+#: views/dashboard.php:261
+#: views/dashboard.php:330
+msgid "Add link"
+msgstr ""
+
+#: views/dashboard.php:262
+msgid "Cancel"
+msgstr ""
+
+#: views/dashboard.php:270
+msgid "Settings"
+msgstr ""
+
+#: views/dashboard.php:272
+msgid "Data retention and reporting preferences."
+msgstr ""
+
+#: views/dashboard.php:277
+msgid "Keep events for (days)"
+msgstr ""
+
+#: views/dashboard.php:279
+msgid "Events older than this are deleted daily. 0 keeps events forever."
+msgstr ""
+
+#: views/dashboard.php:282
+msgid "Attribution window (days)"
+msgstr ""
+
+#: views/dashboard.php:284
+msgid "How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors."
+msgstr ""
+
+#: views/dashboard.php:289
+msgid "Send a weekly campaign summary email"
+msgstr ""
+
+#: views/dashboard.php:291
+msgid "Sent to the site admin email address every week. Off by default."
+msgstr ""
+
+#: views/dashboard.php:294
+msgid "Save settings"
+msgstr ""
+
+#: views/dashboard.php:296
+msgid "Send the weekly summary to the report recipient now, regardless of the toggle."
+msgstr ""
+
+#: views/dashboard.php:297
+msgid "Send test email"
+msgstr ""
+
+#: views/dashboard.php:306
+msgid "Shortcode"
+msgstr ""
+
+#: views/dashboard.php:307
+msgid "Embed a tracked link anywhere:"
+msgstr ""
+
+#: views/dashboard.php:308
+msgid "Click here"
+msgstr ""
+
+#: views/dashboard.php:310
+msgid "Incoming visits that already carry UTM parameters are tracked automatically — no shortcode required."
+msgstr ""
+
+#: views/dashboard.php:319
+msgid "Copy"
+msgstr ""
+
+#: views/dashboard.php:320
+msgid "Copied!"
+msgstr ""
+
+#: views/dashboard.php:321
+msgid "Could not load data:"
+msgstr ""
+
+#: views/dashboard.php:322
+msgid "No tracked links yet — add your first one below."
+msgstr ""
+
+#: views/dashboard.php:324
+msgid "Delete"
+msgstr ""
+
+#: views/dashboard.php:325
+msgid "Confirm?"
+msgstr ""
+
+#: views/dashboard.php:326
+msgid "Link added."
+msgstr ""
+
+#: views/dashboard.php:327
+msgid "Link updated."
+msgstr ""
+
+#: views/dashboard.php:328
+msgid "Edit"
+msgstr ""
+
+#: views/dashboard.php:329
+msgid "Save changes"
+msgstr ""
+
+#: views/dashboard.php:333
+msgid "QR"
+msgstr ""
+
+#: views/dashboard.php:334
+msgid "QR code"
+msgstr ""
+
+#: views/dashboard.php:335
+msgid "Download PNG"
+msgstr ""
+
+#: views/dashboard.php:336
+msgid "Exporting…"
+msgstr ""
+
+#: views/dashboard.php:338
+msgid "No events to export for this period."
+msgstr ""
+
+#: views/dashboard.php:339
+msgid "Settings saved."
+msgstr ""
+
+#: views/dashboard.php:340
+msgid "Google Ads"
+msgstr ""
+
+#: views/dashboard.php:341
+msgid "Facebook / Meta"
+msgstr ""
+
+#: views/dashboard.php:342
+msgid "Microsoft Ads"
+msgstr ""
+
+#: views/dashboard.php:343
+msgid "TikTok Ads"
+msgstr ""
+
+#: views/dashboard.php:344
+msgid "LinkedIn Ads"
+msgstr ""
+
+#: views/dashboard.php:345
+msgid "X / Twitter Ads"
+msgstr ""
+
+#: views/dashboard.php:346
+msgid "vs previous period"
+msgstr ""
+
+#: views/dashboard.php:347
+msgid "conversions"
+msgstr ""
+
+#: views/dashboard.php:348
+msgid "Sending…"
+msgstr ""
+
+#: views/dashboard.php:349
+msgid "Test email sent."
+msgstr ""
+
+#: views/dashboard.php:350
+msgid "Sending failed — check your mail configuration."
+msgstr ""
