@@ -26,7 +26,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 * **Pretty short links** — every managed link gets a clean `/go/{slug}/` URL (query-string form on plain permalinks). The click is counted before the visitor is forwarded to the destination with full UTM parameters appended.
 * **QR code per link** — generate a scannable QR code for any tracked link straight from the dashboard and download it as a PNG. Generated entirely in your browser — no external service is contacted.
-* **[utmat_link] shortcode** — embed tracked links in posts, pages, or widgets.
+* **[utmat_link] shortcode** — embed tracked links in posts, pages, or widgets; supports enclosing content: `[utmat_link id="sale"]Shop the <strong>sale</strong>[/utmat_link]`.
 * **UTM naming conventions** — the add-link form lowercases values and replaces spaces with `-` (with a heads-up notice), and suggests previously used sources, mediums, and campaigns — so `My Newsletter` and `my-newsletter` never fragment your reports into separate rows.
 
 **Reporting:**

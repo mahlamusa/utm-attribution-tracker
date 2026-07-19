@@ -2,10 +2,14 @@
 /**
  * TrackedLink shortcode — [utmat_link].
  *
- * Usage: [utmat_link id="example-campaign" label="Click here"]
+ * Usage:
+ *   [utmat_link id="example-campaign" label="Click here"]
+ *   [utmat_link id="example-campaign"]Click <strong>here</strong>[/utmat_link]
  *
  * Renders an anchor tag that points to the plugin's redirect endpoint so
  * clicks are counted before the visitor is forwarded to the destination.
+ * Enclosed content wins over the label attribute and may contain markup
+ * (filtered through wp_kses_post) and nested shortcodes.
  *
  * @package UTMAT\Shortcode
  */
@@ -24,9 +28,9 @@ class TrackedLink {
 	/**
 	 * Render the [utmat_link] shortcode.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Enclosed content is now rendered as the link text.
 	 * @param array<string, string>|string $atts    Shortcode attributes.
-	 * @param string|null                  $content Shortcode inner content (unused).
+	 * @param string|null                  $content Shortcode inner content; wins over the label attribute.
 	 * @return string HTML anchor tag or empty string.
 	 */
 	public static function render( $atts, ?string $content = null ): string {
@@ -51,17 +55,25 @@ class TrackedLink {
 			return '';
 		}
 
-		$label      = ! empty( $atts['label'] ) ? $atts['label'] : ( $link['label'] ?? $id );
 		$redirect   = esc_url( LinkManager::redirect_url( $id ) );
 		$class_attr = ! empty( $atts['class'] ) ? ' class="' . esc_attr( $atts['class'] ) . '"' : '';
 		$rel_attr   = ! empty( $atts['rel'] ) ? ' rel="' . esc_attr( $atts['rel'] ) . '"' : '';
+
+		// Enclosed content wins over the label attribute; it may carry markup
+		// (author-provided, filtered through wp_kses_post) and nested shortcodes.
+		if ( null !== $content && '' !== trim( $content ) ) {
+			$text = wp_kses_post( do_shortcode( $content ) );
+		} else {
+			$label = ! empty( $atts['label'] ) ? $atts['label'] : ( $link['label'] ?? $id );
+			$text  = esc_html( $label );
+		}
 
 		return sprintf(
 			'<a href="%s"%s%s>%s</a>',
 			$redirect,
 			$class_attr,
 			$rel_attr,
-			esc_html( $label )
+			$text
 		);
 	}
 }
