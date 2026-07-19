@@ -108,6 +108,16 @@ defined( 'ABSPATH' ) || exit;
 			</div>
 		</div>
 
+		<div class="utmat-card">
+			<h2 class="utmat-card__title"><?php esc_html_e( 'Top landing pages', 'utm-attribution-tracker' ); ?></h2>
+			<div class="utmat-card__body">
+				<canvas id="utmat-chart-landing"
+					aria-label="<?php esc_attr_e( 'Top landing pages bar chart', 'utm-attribution-tracker' ); ?>"
+					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+			</div>
+		</div>
+
 		<!-- Revenue by campaign — shown by JS only when WooCommerce is active -->
 		<div class="utmat-card" id="utmat-card-revenue" hidden>
 			<h2 class="utmat-card__title"><?php esc_html_e( 'Revenue by campaign', 'utm-attribution-tracker' ); ?></h2>

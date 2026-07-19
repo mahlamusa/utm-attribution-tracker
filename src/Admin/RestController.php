@@ -246,6 +246,21 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// Top landing pages — passive incoming visits only (redirect-link rows
+		// store the outbound destination, not a landing page). The query string
+		// is stripped so UTM variants of one URL group into a single row.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$by_landing = $wpdb->get_results(
+			"SELECT SUBSTRING_INDEX( destination, '?', 1 ) AS label, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$click_where} AND link_id = 'incoming' AND destination != ''
+			 GROUP BY SUBSTRING_INDEX( destination, '?', 1 )
+			 ORDER BY count DESC
+			 LIMIT 10",
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Revenue by campaign — conversion rows only (WooCommerce orders).
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$revenue_raw = $wpdb->get_results(
@@ -293,6 +308,7 @@ class RestController {
 				'by_source'           => array_values( (array) $by_source ),
 				'by_campaign'         => array_values( (array) $by_campaign ),
 				'by_medium'           => array_values( (array) $by_medium ),
+				'by_landing'          => array_values( (array) $by_landing ),
 				'revenue_by_campaign' => $revenue_by_campaign,
 				'total'               => $total,
 				'campaigns'           => array_values( (array) $campaigns ),

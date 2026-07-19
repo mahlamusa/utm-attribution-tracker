@@ -231,6 +231,18 @@
 		} );
 	}
 
+	// Shorten a landing URL for chart labels: same-host URLs show their path,
+	// other hosts keep host + path. Unparseable values pass through untouched.
+	function shortenUrl( url ) {
+		try {
+			const u = new URL( url );
+			const path = u.pathname || '/';
+			return u.hostname === window.location.hostname ? path : u.hostname + path;
+		} catch ( e ) {
+			return url;
+		}
+	}
+
 	function formatCurrency( value ) {
 		return ( currencySymbol || '' ) + Number( value ).toLocaleString();
 	}
@@ -784,6 +796,11 @@
 
 			// Bar — by medium.
 			makeBarChart( 'utmat-chart-medium', stats.by_medium || [] );
+
+			// Bar — top landing pages (labels shortened to the URL path).
+			makeBarChart( 'utmat-chart-landing', ( stats.by_landing || [] ).map( function ( d ) {
+				return { label: shortenUrl( d.label ), count: d.count };
+			} ) );
 
 			// Bar — revenue by campaign (WooCommerce only).
 			if ( wooActive && elRevenueCard ) {
