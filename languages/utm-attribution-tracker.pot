@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-19T21:13:02+00:00\n"
+"POT-Creation-Date: 2026-07-19T21:20:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utm-attribution-tracker\n"
@@ -44,20 +44,20 @@ msgstr ""
 msgid "You do not have permission to access this page."
 msgstr ""
 
-#: src/Admin/RestController.php:697
+#: src/Admin/RestController.php:718
 msgid "Please provide a valid destination URL (http or https)."
 msgstr ""
 
-#: src/Admin/RestController.php:752
+#: src/Admin/RestController.php:773
 msgid "Please provide a valid link slug (the slug \"incoming\" is reserved)."
 msgstr ""
 
-#: src/Admin/RestController.php:764
+#: src/Admin/RestController.php:785
 msgid "A link with this slug already exists."
 msgstr ""
 
-#: src/Admin/RestController.php:795
-#: src/Admin/RestController.php:836
+#: src/Admin/RestController.php:816
+#: src/Admin/RestController.php:857
 msgid "Link not found."
 msgstr ""
 
@@ -598,13 +598,17 @@ msgid "conversions"
 msgstr ""
 
 #: views/dashboard.php:348
-msgid "Sending…"
+msgid "Conversions"
 msgstr ""
 
 #: views/dashboard.php:349
-msgid "Test email sent."
+msgid "Sending…"
 msgstr ""
 
 #: views/dashboard.php:350
+msgid "Test email sent."
+msgstr ""
+
+#: views/dashboard.php:351
 msgid "Sending failed — check your mail configuration."
 msgstr ""
