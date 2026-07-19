@@ -67,6 +67,23 @@ defined( 'ABSPATH' ) || exit;
 		<p id="utmat-error-msg"></p>
 	</div>
 
+	<!-- First-run onboarding — shown by JS when no events have ever been recorded -->
+	<div class="utmat-section utmat-onboarding" id="utmat-onboarding" hidden>
+		<h2><?php esc_html_e( 'Get your first tracked click', 'utm-attribution-tracker' ); ?></h2>
+		<ol>
+			<li>
+				<?php esc_html_e( 'Open any page of your site with UTM parameters appended, for example:', 'utm-attribution-tracker' ); ?>
+				<br />
+				<code class="utmat-code"><?php echo esc_html( home_url( '/' ) . '?utm_source=newsletter&utm_medium=email&utm_campaign=launch' ); ?></code>
+			</li>
+			<li><?php esc_html_e( 'Or share a tracked link from the table below — the click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?></li>
+			<li><?php esc_html_e( 'Ad clicks carrying gclid, fbclid, msclkid, or ttclid are tracked automatically, even without UTM parameters.', 'utm-attribution-tracker' ); ?></li>
+		</ol>
+		<p class="description">
+			<?php esc_html_e( 'Heads up: visits from logged-in administrators are not tracked by default, so test in a private browsing window. Bots and repeated reloads are filtered out automatically.', 'utm-attribution-tracker' ); ?>
+		</p>
+	</div>
+
 	<!-- Charts -->
 	<div class="utmat-charts" id="utmat-charts" hidden>
 

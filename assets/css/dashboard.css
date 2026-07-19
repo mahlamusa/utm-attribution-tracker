@@ -483,3 +483,14 @@
 .utmat-trend--flat {
 	color: #646970;
 }
+
+/* First-run onboarding card. */
+.utmat-onboarding {
+	border-left: 4px solid #0d5ea3;
+}
+.utmat-onboarding ol {
+	margin: 12px 0 12px 20px;
+}
+.utmat-onboarding li {
+	margin-bottom: 10px;
+}

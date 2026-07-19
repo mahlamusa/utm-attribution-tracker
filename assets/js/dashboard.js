@@ -842,6 +842,12 @@
 			setLoading( false );
 			show( elCharts );
 
+			// First-run onboarding — visible only while nothing was ever recorded.
+			const onboarding = document.getElementById( 'utmat-onboarding' );
+			if ( onboarding ) {
+				onboarding.hidden = ( Number( stats.all_time_total ) || 0 ) > 0;
+			}
+
 			// Total count, conversions, and trend vs the previous period.
 			elTotal.textContent = stats.total;
 			renderConversions( stats.total, stats.conversions );

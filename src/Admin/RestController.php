@@ -310,6 +310,10 @@ class RestController {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$click_where}" );
 
+		// All-time event count — drives the dashboard's first-run onboarding.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$all_time_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+
 		// Conversions in the period (WooCommerce order rows) for the totals row.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$conversions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where} AND is_conversion = 1" );
@@ -347,6 +351,7 @@ class RestController {
 				'total'               => $total,
 				'previous_total'      => $previous_total,
 				'conversions'         => $conversions,
+				'all_time_total'      => $all_time_total,
 				'campaigns'           => array_values( (array) $campaigns ),
 			),
 			200
