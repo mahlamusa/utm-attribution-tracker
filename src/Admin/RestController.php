@@ -306,6 +306,12 @@ class RestController {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$click_where}" );
 
+		// Previous-period total — the same-length window immediately before
+		// this one, for the trend indicator next to the total.
+		$prev_where = self::build_previous_where( $period, $campaign ) . ' AND is_conversion = 0';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$previous_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$prev_where}" );
+
 		// Distinct campaigns for filter dropdown.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$campaigns = $wpdb->get_col(
@@ -331,6 +337,7 @@ class RestController {
 				'by_platform'         => array_values( (array) $by_platform ),
 				'revenue_by_campaign' => $revenue_by_campaign,
 				'total'               => $total,
+				'previous_total'      => $previous_total,
 				'campaigns'           => array_values( (array) $campaigns ),
 			),
 			200
@@ -358,6 +365,42 @@ class RestController {
 		$since       = $since_local->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
 
 		$where = $wpdb->prepare( 'clicked_at >= %s', $since );
+		if ( ! empty( $campaign ) ) {
+			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
+		}
+
+		return $where;
+	}
+
+	/**
+	 * Build the prepared WHERE clause for the period immediately before the
+	 * requested one.
+	 *
+	 * Covers site-local midnight `2 × $period` days ago up to (exclusive) the
+	 * current period's start, with the same optional campaign filter as
+	 * {@see build_where()}.
+	 *
+	 * @since 1.0.0
+	 * @param int    $period   Period length in days.
+	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
+	 */
+	private static function build_previous_where( int $period, string $campaign ): string {
+		global $wpdb;
+
+		$timezone  = wp_timezone();
+		$utc       = new DateTimeZone( 'UTC' );
+		$now_local = new DateTimeImmutable( 'now', $timezone );
+		$double    = 2 * $period;
+
+		$since_current = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
+		$since_prev    = $now_local->modify( "-{$double} days" )->setTime( 0, 0, 0 );
+
+		$where = $wpdb->prepare(
+			'clicked_at >= %s AND clicked_at < %s',
+			$since_prev->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+			$since_current->setTimezone( $utc )->format( 'Y-m-d H:i:s' )
+		);
 		if ( ! empty( $campaign ) ) {
 			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
 		}

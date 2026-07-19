@@ -51,6 +51,7 @@ defined( 'ABSPATH' ) || exit;
 		<p class="utmat-total" aria-live="polite">
 			<strong id="utmat-total-count">—</strong>
 			<?php esc_html_e( 'clicks in this period', 'utm-attribution-tracker' ); ?>
+			<span class="utmat-trend" id="utmat-trend" hidden></span>
 		</p>
 	</div>
 
@@ -303,6 +304,7 @@ defined( 'ABSPATH' ) || exit;
 			'platformFacebook'  => __( 'Facebook / Meta', 'utm-attribution-tracker' ),
 			'platformMicrosoft' => __( 'Microsoft Ads', 'utm-attribution-tracker' ),
 			'platformTiktok'    => __( 'TikTok Ads', 'utm-attribution-tracker' ),
+			'vsPrevious'        => __( 'vs previous period', 'utm-attribution-tracker' ),
 		)
 	);
 	?>

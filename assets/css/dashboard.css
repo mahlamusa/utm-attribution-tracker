@@ -467,3 +467,19 @@
 		margin-left: 0;
 	}
 }
+
+/* Trend indicator next to the period total. */
+.utmat-trend {
+	margin-left: 8px;
+	font-size: 12px;
+	font-weight: 600;
+}
+.utmat-trend--up {
+	color: #2e8540;
+}
+.utmat-trend--down {
+	color: #b32d2e;
+}
+.utmat-trend--flat {
+	color: #646970;
+}

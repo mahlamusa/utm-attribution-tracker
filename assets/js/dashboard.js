@@ -308,6 +308,39 @@
 		} );
 	}
 
+	// ── Trend indicator ───────────────────────────────────────────────────────
+	// Shows the change vs the same-length window immediately before the
+	// selected period, next to the total.
+	function renderTrend( current, previous ) {
+		const el = document.getElementById( 'utmat-trend' );
+		if ( ! el ) return;
+
+		current  = Number( current ) || 0;
+		previous = Number( previous ) || 0;
+
+		if ( ! previous ) {
+			el.hidden = true;
+			return;
+		}
+
+		const pct = Math.round( ( ( current - previous ) / previous ) * 100 );
+		let text, cls;
+		if ( pct > 0 ) {
+			text = '▲ ' + pct + '%';
+			cls  = 'up';
+		} else if ( pct < 0 ) {
+			text = '▼ ' + Math.abs( pct ) + '%';
+			cls  = 'down';
+		} else {
+			text = '±0%';
+			cls  = 'flat';
+		}
+
+		el.textContent = text + ' ' + ( i18n.vsPrevious || 'vs previous period' );
+		el.className   = 'utmat-trend utmat-trend--' + cls;
+		el.hidden      = false;
+	}
+
 	// ── Populate campaigns dropdown ────────────────────────────────────────────
 	function populateCampaigns( campaigns ) {
 		// Remove all options except the first ("All campaigns").
@@ -785,8 +818,9 @@
 			setLoading( false );
 			show( elCharts );
 
-			// Total count.
+			// Total count + trend vs the previous period.
 			elTotal.textContent = stats.total;
+			renderTrend( stats.total, stats.previous_total );
 
 			// Populate campaign filter.
 			populateCampaigns( stats.campaigns || [] );
