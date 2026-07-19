@@ -138,6 +138,16 @@ defined( 'ABSPATH' ) || exit;
 		</div>
 
 		<div class="utmat-card">
+			<h2 class="utmat-card__title"><?php esc_html_e( 'Top referrers', 'utm-attribution-tracker' ); ?></h2>
+			<div class="utmat-card__body">
+				<canvas id="utmat-chart-referrer"
+					aria-label="<?php esc_attr_e( 'Top referrers bar chart', 'utm-attribution-tracker' ); ?>"
+					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No external referrers recorded in this period.', 'utm-attribution-tracker' ); ?></p>
+			</div>
+		</div>
+
+		<div class="utmat-card">
 			<h2 class="utmat-card__title"><?php esc_html_e( 'Ad platforms', 'utm-attribution-tracker' ); ?></h2>
 			<div class="utmat-card__body utmat-card__body--center">
 				<canvas id="utmat-chart-platform"

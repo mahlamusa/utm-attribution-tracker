@@ -275,6 +275,26 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// Top referrers — grouped by the referrer's host so every path on a
+		// referring site collapses into one row; self-referrals (internal
+		// navigation) are excluded.
+		$site_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$by_referrer = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT SUBSTRING_INDEX( SUBSTRING_INDEX( referrer, '/', 3 ), '//', -1 ) AS label, COUNT(*) AS count
+				 FROM {$table}
+				 WHERE {$click_where} AND referrer != ''
+				   AND SUBSTRING_INDEX( SUBSTRING_INDEX( referrer, '/', 3 ), '//', -1 ) != %s
+				 GROUP BY label
+				 ORDER BY count DESC
+				 LIMIT 10",
+				$site_host
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Ad-platform breakdown — derived from which ad click ID a click
 		// carried. Rows without any click ID (organic/UTM-only traffic) are
 		// excluded; the dashboard maps the keys to display names.
@@ -359,6 +379,7 @@ class RestController {
 				'by_medium'           => array_values( (array) $by_medium ),
 				'by_landing'          => array_values( (array) $by_landing ),
 				'by_platform'         => array_values( (array) $by_platform ),
+				'by_referrer'         => array_values( (array) $by_referrer ),
 				'revenue_by_campaign' => $revenue_by_campaign,
 				'total'               => $total,
 				'previous_total'      => $previous_total,

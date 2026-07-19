@@ -898,6 +898,9 @@
 				return { label: shortenUrl( d.label ), count: d.count };
 			} ) );
 
+			// Bar — top referrers (external hosts only).
+			makeBarChart( 'utmat-chart-referrer', stats.by_referrer || [] );
+
 			// Doughnut — ad platforms, derived from click IDs.
 			makeDoughnutChart( 'utmat-chart-platform', ( stats.by_platform || [] ).map( function ( d ) {
 				return { label: PLATFORM_NAMES[ d.label ] || d.label, count: d.count };
