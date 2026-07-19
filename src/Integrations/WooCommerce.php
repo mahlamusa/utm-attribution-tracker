@@ -70,6 +70,103 @@ class WooCommerce {
 
 		// Order edit screen metabox (legacy post table and HPOS).
 		add_action( 'add_meta_boxes', array( self::class, 'register_metabox' ) );
+
+		// Attribution column on the orders list (HPOS and legacy post table).
+		add_filter( 'manage_woocommerce_page_wc-orders_columns', array( self::class, 'add_list_column' ) );
+		add_action( 'manage_woocommerce_page_wc-orders_custom_column', array( self::class, 'render_list_column_hpos' ), 10, 2 );
+		add_filter( 'manage_edit-shop_order_columns', array( self::class, 'add_list_column' ) );
+		add_action( 'manage_shop_order_posts_custom_column', array( self::class, 'render_list_column_legacy' ), 10, 2 );
+	}
+
+	/**
+	 * Add the Attribution column to the orders list, after the status column.
+	 *
+	 * Used for both the HPOS orders table and the legacy shop_order post
+	 * table (their column filters share this shape).
+	 *
+	 * @since 1.0.0
+	 * @param array<string, string> $columns Existing list table columns.
+	 * @return array<string, string>
+	 */
+	public static function add_list_column( $columns ): array {
+		$columns = is_array( $columns ) ? $columns : array();
+
+		$out = array();
+		foreach ( $columns as $key => $label ) {
+			$out[ $key ] = $label;
+			if ( 'order_status' === $key ) {
+				$out['utmat'] = __( 'Attribution', 'utm-attribution-tracker' );
+			}
+		}
+		if ( ! isset( $out['utmat'] ) ) {
+			$out['utmat'] = __( 'Attribution', 'utm-attribution-tracker' );
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Render the Attribution column on the HPOS orders table.
+	 *
+	 * @since 1.0.0
+	 * @param string        $column Column key being rendered.
+	 * @param WC_Order|null $order  The order for the current row.
+	 * @return void
+	 */
+	public static function render_list_column_hpos( $column, $order ): void {
+		if ( 'utmat' === $column && $order instanceof WC_Order ) {
+			self::render_list_column( $order );
+		}
+	}
+
+	/**
+	 * Render the Attribution column on the legacy shop_order post table.
+	 *
+	 * @since 1.0.0
+	 * @param string $column  Column key being rendered.
+	 * @param int    $post_id The order post ID for the current row.
+	 * @return void
+	 */
+	public static function render_list_column_legacy( $column, $post_id ): void {
+		if ( 'utmat' !== $column ) {
+			return;
+		}
+		$order = wc_get_order( $post_id );
+		if ( $order instanceof WC_Order ) {
+			self::render_list_column( $order );
+		}
+	}
+
+	/**
+	 * Echo the compact last-touch attribution summary for a list row.
+	 *
+	 * Shows `source / campaign` from the last touch (either part omitted
+	 * when empty), or an em dash when the order has no attribution meta.
+	 *
+	 * @since 1.0.0
+	 * @param WC_Order $order The order for the current row.
+	 * @return void
+	 */
+	private static function render_list_column( WC_Order $order ): void {
+		$last = $order->get_meta( self::META_LAST );
+		if ( ! is_array( $last ) || empty( $last ) ) {
+			echo '<span aria-hidden="true">&mdash;</span>';
+			return;
+		}
+
+		$parts = array_filter(
+			array(
+				(string) ( $last['utm_source'] ?? '' ),
+				(string) ( $last['utm_campaign'] ?? '' ),
+			)
+		);
+
+		if ( empty( $parts ) ) {
+			echo '<span aria-hidden="true">&mdash;</span>';
+			return;
+		}
+
+		echo esc_html( implode( ' / ', $parts ) );
 	}
 
 	/**
