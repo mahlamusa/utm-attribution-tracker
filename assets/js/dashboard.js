@@ -308,6 +308,26 @@
 		} );
 	}
 
+	// ── Conversions in the totals row ─────────────────────────────────────────
+	// Shown only when the period has conversion rows (WooCommerce orders);
+	// the rate is conversions over clicks for the same period.
+	function renderConversions( clicks, conversions ) {
+		const el = document.getElementById( 'utmat-conv' );
+		if ( ! el ) return;
+
+		clicks      = Number( clicks ) || 0;
+		conversions = Number( conversions ) || 0;
+
+		if ( ! conversions ) {
+			el.hidden = true;
+			return;
+		}
+
+		const rate = clicks > 0 ? ' (' + ( ( conversions / clicks ) * 100 ).toFixed( 1 ) + '%)' : '';
+		el.textContent = '· ' + conversions + ' ' + ( i18n.conversionsLabel || 'conversions' ) + rate;
+		el.hidden = false;
+	}
+
 	// ── Trend indicator ───────────────────────────────────────────────────────
 	// Shows the change vs the same-length window immediately before the
 	// selected period, next to the total.
@@ -818,8 +838,9 @@
 			setLoading( false );
 			show( elCharts );
 
-			// Total count + trend vs the previous period.
+			// Total count, conversions, and trend vs the previous period.
 			elTotal.textContent = stats.total;
+			renderConversions( stats.total, stats.conversions );
 			renderTrend( stats.total, stats.previous_total );
 
 			// Populate campaign filter.

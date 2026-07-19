@@ -306,6 +306,10 @@ class RestController {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$click_where}" );
 
+		// Conversions in the period (WooCommerce order rows) for the totals row.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$conversions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where} AND is_conversion = 1" );
+
 		// Previous-period total — the same-length window immediately before
 		// this one, for the trend indicator next to the total.
 		$prev_where = self::build_previous_where( $period, $campaign ) . ' AND is_conversion = 0';
@@ -338,6 +342,7 @@ class RestController {
 				'revenue_by_campaign' => $revenue_by_campaign,
 				'total'               => $total,
 				'previous_total'      => $previous_total,
+				'conversions'         => $conversions,
 				'campaigns'           => array_values( (array) $campaigns ),
 			),
 			200
