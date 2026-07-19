@@ -93,7 +93,6 @@ class Schema {
   KEY link_id (link_id(64)),
   KEY utm_campaign (utm_campaign(100)),
   KEY clicked_at (clicked_at),
-  KEY is_conversion (is_conversion),
   KEY conv_time (is_conversion, clicked_at)
 ) {$charset_collate};";
 
