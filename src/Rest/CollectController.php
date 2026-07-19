@@ -169,20 +169,40 @@ class CollectController {
 	}
 
 	/**
+	 * The collect rate limit in requests per minute per hashed client IP.
+	 *
+	 * Sites where many visitors share one IP — behind a CDN or SSL proxy
+	 * without the `utmat_client_ip` filter configured, or with heavy
+	 * NAT/CGNAT audiences — can raise the ceiling via the
+	 * `utmat_rate_limit` filter.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	private static function rate_limit(): int {
+		/**
+		 * Filter the collect endpoint rate limit (requests/minute/IP).
+		 *
+		 * @var int $limit
+		 */
+		return max( 1, (int) apply_filters( 'utmat_rate_limit', self::RATE_LIMIT ) );
+	}
+
+	/**
 	 * Per-IP rate limiting via a transient counter.
 	 *
-	 * Allows RATE_LIMIT requests per rolling minute per hashed client IP
+	 * Allows rate_limit() requests per rolling minute per hashed client IP
 	 * (`utmat_rl_{ip_hash}`, 60 s TTL); the counter is only
 	 * incremented for requests that pass.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Limit is now filterable via utmat_rate_limit.
 	 * @return bool True when the current request exceeds the limit.
 	 */
 	private static function is_rate_limited(): bool {
 		$key   = 'utmat_rl_' . Tracker::hash_ip( Tracker::client_ip() );
 		$count = (int) get_transient( $key );
 
-		if ( $count >= self::RATE_LIMIT ) {
+		if ( $count >= self::rate_limit() ) {
 			return true;
 		}
 
