@@ -107,35 +107,54 @@
 	}
 
 	// ── Chart factories ───────────────────────────────────────────────────────
-	function makeLineChart( canvasId, labels, values ) {
+	function makeLineChart( canvasId, labels, values, conversions ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
 		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
 
 		toggleNoData( canvasId, true );
 
+		const datasets = [ {
+			label:           i18n.clicksLabel || 'Clicks',
+			data:            values,
+			borderColor:     COLORS[ 0 ],
+			backgroundColor: 'rgba(13,94,163,0.08)',
+			borderWidth:     2,
+			pointRadius:     3,
+			pointHoverRadius: 5,
+			fill:            true,
+			tension:         0.3,
+		} ];
+
+		// Overlay conversions only when the period has any — a permanent flat
+		// zero line would just add noise on content sites without WooCommerce.
+		const hasConversions = ( conversions || [] ).some( function ( v ) { return v > 0; } );
+		if ( hasConversions ) {
+			datasets.push( {
+				label:           i18n.conversionsSeries || 'Conversions',
+				data:            conversions,
+				borderColor:     COLORS[ 1 ],
+				backgroundColor: 'rgba(46,133,64,0.08)',
+				borderWidth:     2,
+				pointRadius:     3,
+				pointHoverRadius: 5,
+				fill:            true,
+				tension:         0.3,
+			} );
+		}
+
 		charts[ canvasId ] = new Chart( ctx, {
 			type: 'line',
 			data: {
 				labels,
-				datasets: [ {
-					label:           i18n.clicksLabel || 'Clicks',
-					data:            values,
-					borderColor:     COLORS[ 0 ],
-					backgroundColor: 'rgba(13,94,163,0.08)',
-					borderWidth:     2,
-					pointRadius:     3,
-					pointHoverRadius: 5,
-					fill:            true,
-					tension:         0.3,
-				} ],
+				datasets: datasets,
 			},
 			options: {
 				responsive:          true,
 				maintainAspectRatio: true,
 				interaction:         { mode: 'index', intersect: false },
 				plugins: {
-					legend: { display: false },
+					legend: { display: hasConversions, position: 'bottom', labels: { boxWidth: 10 } },
 				},
 				scales: {
 					x: {
@@ -879,10 +898,11 @@
 			// Populate campaign filter.
 			populateCampaigns( stats.campaigns || [] );
 
-			// Line chart — clicks by day.
+			// Line chart — clicks (and conversions when present) by day.
 			const days   = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.date; } );
 			const counts = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.count; } );
-			makeLineChart( 'utmat-chart-line', days, counts );
+			const convs  = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.conversions || 0; } );
+			makeLineChart( 'utmat-chart-line', days, counts, convs );
 
 			// Doughnut — by source.
 			makeDoughnutChart( 'utmat-chart-source', stats.by_source || [] );

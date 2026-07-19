@@ -210,14 +210,34 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// Conversions by day (WooCommerce order rows), same local-date grouping.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$conv_day_raw = $wpdb->get_results(
+			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$where} AND is_conversion = 1
+			 GROUP BY DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) )
+			 ORDER BY day ASC",
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Build a full date scaffold so days with zero clicks still appear.
-		$by_day = array();
+		$by_day   = array();
+		$conv_day = array();
 		for ( $i = $period; $i >= 0; $i-- ) {
-			$by_day[ $now_local->modify( "-{$i} days" )->format( 'Y-m-d' ) ] = 0;
+			$day              = $now_local->modify( "-{$i} days" )->format( 'Y-m-d' );
+			$by_day[ $day ]   = 0;
+			$conv_day[ $day ] = 0;
 		}
 		foreach ( (array) $by_day_raw as $row ) {
 			if ( isset( $row['day'] ) ) {
 				$by_day[ $row['day'] ] = (int) $row['count'];
+			}
+		}
+		foreach ( (array) $conv_day_raw as $row ) {
+			if ( isset( $row['day'], $conv_day[ $row['day'] ] ) ) {
+				$conv_day[ $row['day'] ] = (int) $row['count'];
 			}
 		}
 
@@ -366,8 +386,9 @@ class RestController {
 		$clicks_by_day = array();
 		foreach ( $by_day as $date => $count ) {
 			$clicks_by_day[] = array(
-				'date'  => $date,
-				'count' => $count,
+				'date'        => $date,
+				'count'       => $count,
+				'conversions' => $conv_day[ $date ] ?? 0,
 			);
 		}
 

@@ -345,6 +345,7 @@ defined( 'ABSPATH' ) || exit;
 			'platformTwitter'   => __( 'X / Twitter Ads', 'utm-attribution-tracker' ),
 			'vsPrevious'        => __( 'vs previous period', 'utm-attribution-tracker' ),
 			'conversionsLabel'  => __( 'conversions', 'utm-attribution-tracker' ),
+			'conversionsSeries' => __( 'Conversions', 'utm-attribution-tracker' ),
 			'testEmailSending'  => __( 'Sending…', 'utm-attribution-tracker' ),
 			'testEmailSent'     => __( 'Test email sent.', 'utm-attribution-tracker' ),
 			'testEmailFailed'   => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),
