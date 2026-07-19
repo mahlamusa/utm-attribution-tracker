@@ -402,11 +402,14 @@ class RestController {
 	 * Build the prepared WHERE clause for the period immediately before the
 	 * requested one.
 	 *
-	 * Covers site-local midnight `2 × $period` days ago up to (exclusive) the
-	 * current period's start, with the same optional campaign filter as
+	 * Starts at site-local midnight `2 × $period` days ago and spans exactly
+	 * the same duration as the current window has elapsed so far (period days
+	 * plus the partial current day). Comparing equal durations keeps the
+	 * trend percentage fair early in the day, when the current window has
+	 * only a few hours of today in it. Same optional campaign filter as
 	 * {@see build_where()}.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Previous window now matches the current window's elapsed duration.
 	 * @param int    $period   Period length in days.
 	 * @param string $campaign Optional utm_campaign filter; empty for all.
 	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
@@ -421,11 +424,13 @@ class RestController {
 
 		$since_current = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
 		$since_prev    = $now_local->modify( "-{$double} days" )->setTime( 0, 0, 0 );
+		$elapsed       = $now_local->getTimestamp() - $since_current->getTimestamp();
+		$prev_end      = $since_prev->modify( '+' . $elapsed . ' seconds' );
 
 		$where = $wpdb->prepare(
 			'clicked_at >= %s AND clicked_at < %s',
 			$since_prev->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
-			$since_current->setTimezone( $utc )->format( 'Y-m-d H:i:s' )
+			$prev_end->setTimezone( $utc )->format( 'Y-m-d H:i:s' )
 		);
 		if ( ! empty( $campaign ) ) {
 			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
