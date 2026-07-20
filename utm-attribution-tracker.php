@@ -10,7 +10,7 @@
  * Text Domain:       utm-attribution-tracker
  * Domain Path:       /languages
  * Requires at least: 6.0
- * Tested up to:      6.7
+ * Tested up to:      7.0
  * Requires PHP:      8.0
  *
  * @package UTMAT
