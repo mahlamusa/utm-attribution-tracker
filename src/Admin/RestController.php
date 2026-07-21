@@ -241,6 +241,36 @@ class RestController {
 			}
 		}
 
+		// Previous-period clicks by day, for the chart overlay — a full
+		// calendar-day window exactly `$period` days earlier than the current
+		// one (distinct from build_previous_where()'s elapsed-duration window
+		// used by the trend indicator, which needs an equal-duration
+		// comparison rather than day-aligned buckets). Positions align with
+		// $by_day (both oldest-to-newest, $period + 1 entries) rather than
+		// actual dates, since the two windows cover different calendar days.
+		$prev_day_where = self::build_previous_day_where( $period, $campaign ) . ' AND is_conversion = 0';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$prev_day_raw = $wpdb->get_results(
+			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$prev_day_where}
+			 GROUP BY DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) )
+			 ORDER BY day ASC",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		$prev_day = array();
+		for ( $i = $period; $i >= 0; $i-- ) {
+			$prev_day[ $now_local->modify( '-' . ( $i + $period + 1 ) . ' days' )->format( 'Y-m-d' ) ] = 0;
+		}
+		foreach ( (array) $prev_day_raw as $row ) {
+			if ( isset( $row['day'], $prev_day[ $row['day'] ] ) ) {
+				$prev_day[ $row['day'] ] = (int) $row['count'];
+			}
+		}
+		$previous_clicks_by_day = array_values( $prev_day );
+
 		// By source.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$by_source = $wpdb->get_results(
@@ -394,19 +424,20 @@ class RestController {
 
 		return new WP_REST_Response(
 			array(
-				'clicks_by_day'       => $clicks_by_day,
-				'by_source'           => array_values( (array) $by_source ),
-				'by_campaign'         => array_values( (array) $by_campaign ),
-				'by_medium'           => array_values( (array) $by_medium ),
-				'by_landing'          => array_values( (array) $by_landing ),
-				'by_platform'         => array_values( (array) $by_platform ),
-				'by_referrer'         => array_values( (array) $by_referrer ),
-				'revenue_by_campaign' => $revenue_by_campaign,
-				'total'               => $total,
-				'previous_total'      => $previous_total,
-				'conversions'         => $conversions,
-				'all_time_total'      => $all_time_total,
-				'campaigns'           => array_values( (array) $campaigns ),
+				'clicks_by_day'          => $clicks_by_day,
+				'by_source'              => array_values( (array) $by_source ),
+				'by_campaign'            => array_values( (array) $by_campaign ),
+				'by_medium'              => array_values( (array) $by_medium ),
+				'by_landing'             => array_values( (array) $by_landing ),
+				'by_platform'            => array_values( (array) $by_platform ),
+				'by_referrer'            => array_values( (array) $by_referrer ),
+				'revenue_by_campaign'    => $revenue_by_campaign,
+				'total'                  => $total,
+				'previous_total'         => $previous_total,
+				'previous_clicks_by_day' => $previous_clicks_by_day,
+				'conversions'            => $conversions,
+				'all_time_total'         => $all_time_total,
+				'campaigns'              => array_values( (array) $campaigns ),
 			),
 			200
 		);
@@ -433,6 +464,43 @@ class RestController {
 		$since       = $since_local->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
 
 		$where = $wpdb->prepare( 'clicked_at >= %s', $since );
+		if ( ! empty( $campaign ) ) {
+			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
+		}
+
+		return $where;
+	}
+
+	/**
+	 * Build the prepared WHERE clause for the calendar-day window that lines
+	 * up with the chart's previous-period overlay.
+	 *
+	 * Covers the `$period + 1` site-local calendar days immediately before
+	 * the current window's days — a day-aligned window, distinct from
+	 * {@see build_previous_where()}'s equal-elapsed-duration window used by
+	 * the trend indicator (that window can end mid-day; this one always ends
+	 * at a local midnight so it lines up with $by_day's date buckets one-for-one).
+	 *
+	 * @since 1.0.0
+	 * @param int    $period   Period length in days.
+	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
+	 */
+	private static function build_previous_day_where( int $period, string $campaign ): string {
+		global $wpdb;
+
+		$timezone  = wp_timezone();
+		$utc       = new DateTimeZone( 'UTC' );
+		$now_local = new DateTimeImmutable( 'now', $timezone );
+
+		$since_local = $now_local->modify( '-' . ( 2 * $period + 1 ) . ' days' )->setTime( 0, 0, 0 );
+		$until_local = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
+
+		$where = $wpdb->prepare(
+			'clicked_at >= %s AND clicked_at < %s',
+			$since_local->setTimezone( $utc )->format( 'Y-m-d H:i:s' ),
+			$until_local->setTimezone( $utc )->format( 'Y-m-d H:i:s' )
+		);
 		if ( ! empty( $campaign ) ) {
 			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
 		}

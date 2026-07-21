@@ -112,7 +112,7 @@
 	}
 
 	// ── Chart factories ───────────────────────────────────────────────────────
-	function makeLineChart( canvasId, labels, values, conversions ) {
+	function makeLineChart( canvasId, labels, values, conversions, previous ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
 		if ( charts[ canvasId ] ) charts[ canvasId ].destroy();
@@ -129,7 +129,28 @@
 			pointHoverRadius: 5,
 			fill:            true,
 			tension:         0.3,
+			order:           1,
 		} ];
+
+		// Overlay the previous period only when it has any clicks — a dashed
+		// line plotted by day-position (not date, since the two windows cover
+		// different calendar days) so the two shapes are directly comparable.
+		const hasPrevious = ( previous || [] ).some( function ( v ) { return v > 0; } );
+		if ( hasPrevious ) {
+			datasets.push( {
+				label:           i18n.previousPeriodSeries || 'Previous period',
+				data:            previous,
+				borderColor:     '#8c8f94',
+				backgroundColor: 'transparent',
+				borderWidth:     2,
+				borderDash:      [ 5, 4 ],
+				pointRadius:     0,
+				pointHoverRadius: 4,
+				fill:            false,
+				tension:         0.3,
+				order:           3,
+			} );
+		}
 
 		// Overlay conversions only when the period has any — a permanent flat
 		// zero line would just add noise on content sites without WooCommerce.
@@ -145,6 +166,7 @@
 				pointHoverRadius: 5,
 				fill:            true,
 				tension:         0.3,
+				order:           2,
 			} );
 		}
 
@@ -159,7 +181,7 @@
 				maintainAspectRatio: true,
 				interaction:         { mode: 'index', intersect: false },
 				plugins: {
-					legend: { display: hasConversions, position: 'bottom', labels: { boxWidth: 10 } },
+					legend: { display: hasConversions || hasPrevious, position: 'bottom', labels: { boxWidth: 10 } },
 				},
 				scales: {
 					x: {
@@ -982,11 +1004,13 @@
 			// Populate campaign filter.
 			populateCampaigns( stats.campaigns || [] );
 
-			// Line chart — clicks (and conversions when present) by day.
+			// Line chart — clicks (plus conversions and the previous-period
+			// overlay when present) by day.
 			const days   = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.date; } );
 			const counts = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.count; } );
 			const convs  = ( stats.clicks_by_day || [] ).map( function ( d ) { return d.conversions || 0; } );
-			makeLineChart( 'utmat-chart-line', days, counts, convs );
+			const prev   = stats.previous_clicks_by_day || [];
+			makeLineChart( 'utmat-chart-line', days, counts, convs, prev );
 
 			// Doughnut — by source.
 			makeDoughnutChart( 'utmat-chart-source', stats.by_source || [] );
