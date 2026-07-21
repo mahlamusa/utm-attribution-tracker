@@ -11,7 +11,7 @@
 	'use strict';
 
 	// ── Config ────────────────────────────────────────────────────────────────
-	const { apiBase, nonce, wooActive, currencySymbol, settings } = utmatData;
+	const { apiBase, nonce, wooActive, currencySymbol, settings, cachePlugin } = utmatData;
 
 	// Translated strings from the PHP JSON block.
 	const i18nEl = document.getElementById( 'utmat-i18n' );
@@ -924,6 +924,16 @@
 		elRetention.value  = settings.retentionDays;
 		elWeekly.checked   = !! settings.weeklyEmail;
 		elCookieDays.value = settings.cookieDays || 90;
+	}
+
+	// Reassure the admin that a detected full-page cache doesn't break
+	// tracking — the front-end beacon already handles it.
+	const elCacheNotice = document.getElementById( 'utmat-cache-notice' );
+	if ( elCacheNotice && cachePlugin ) {
+		elCacheNotice.querySelector( 'p' ).textContent =
+			( i18n.cacheDetected || 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.' )
+				.replace( '%s', cachePlugin );
+		show( elCacheNotice );
 	}
 
 	elSettingsForm.addEventListener( 'submit', function ( e ) {

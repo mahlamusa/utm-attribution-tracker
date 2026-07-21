@@ -171,8 +171,52 @@ class Dashboard {
 					'weeklyEmail'   => WeeklyEmail::enabled(),
 					'cookieDays'    => (int) get_option( 'utmat_cookie_days', 90 ),
 				),
+				'cachePlugin'    => self::detect_cache_plugin(),
 			)
 		);
+	}
+
+	/**
+	 * Detect a known full-page cache plugin by its telltale constant or class.
+	 *
+	 * Purely informational — the plugin already tracks cached pages correctly
+	 * via the front-end beacon, but caching is the single most common cause
+	 * of "why isn't anything being recorded?" support requests for
+	 * server-side-only trackers, so the dashboard reassures the admin that
+	 * their specific cache is accounted for instead of leaving them to
+	 * wonder. Detection is a fixed allow-list of well-known plugins; an
+	 * unrecognised cache returns an empty string and the notice is skipped.
+	 *
+	 * @since 1.0.0
+	 * @return string The detected plugin's display name, or '' when none matched.
+	 */
+	private static function detect_cache_plugin(): string {
+		if ( defined( 'WP_ROCKET_VERSION' ) ) {
+			return 'WP Rocket';
+		}
+		if ( defined( 'LSCWP_V' ) ) {
+			return 'LiteSpeed Cache';
+		}
+		if ( defined( 'W3TC' ) ) {
+			return 'W3 Total Cache';
+		}
+		if ( function_exists( 'wpsc_init' ) ) {
+			return 'WP Super Cache';
+		}
+		if ( class_exists( 'Cache_Enabler' ) ) {
+			return 'Cache Enabler';
+		}
+		if ( class_exists( 'WpFastestCache' ) ) {
+			return 'WP Fastest Cache';
+		}
+		if ( defined( 'SG_CACHEPRESS_VERSION' ) ) {
+			return 'SiteGround Optimizer';
+		}
+		if ( defined( 'WPO_VERSION' ) ) {
+			return 'WP-Optimize';
+		}
+
+		return '';
 	}
 
 	/**

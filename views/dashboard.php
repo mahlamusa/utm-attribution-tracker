@@ -281,6 +281,11 @@ defined( 'ABSPATH' ) || exit;
 			<?php esc_html_e( 'Data retention and reporting preferences.', 'utm-attribution-tracker' ); ?>
 		</p>
 
+		<!-- Shown by JS when a known full-page cache plugin is detected -->
+		<div class="notice notice-info inline utmat-cache-notice" id="utmat-cache-notice" hidden>
+			<p></p>
+		</div>
+
 		<form id="utmat-settings-form" class="utmat-settings-form">
 			<p>
 				<label for="utmat-retention-days"><?php esc_html_e( 'Keep events for (days)', 'utm-attribution-tracker' ); ?></label>
@@ -360,6 +365,8 @@ defined( 'ABSPATH' ) || exit;
 			'conversionsLabel'     => __( 'conversions', 'utm-attribution-tracker' ),
 			'conversionsSeries'    => __( 'Conversions', 'utm-attribution-tracker' ),
 			'previousPeriodSeries' => __( 'Previous period', 'utm-attribution-tracker' ),
+			// translators: %s is replaced client-side with the detected cache plugin's name.
+			'cacheDetected'        => __( 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.', 'utm-attribution-tracker' ),
 			'testEmailSending'     => __( 'Sending…', 'utm-attribution-tracker' ),
 			'testEmailSent'        => __( 'Test email sent.', 'utm-attribution-tracker' ),
 			'testEmailFailed'      => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),

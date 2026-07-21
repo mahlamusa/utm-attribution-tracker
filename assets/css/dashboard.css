@@ -510,3 +510,8 @@
 .utmat-sort-arrow {
 	font-size: 10px;
 }
+
+/* Cache-plugin detection notice on the settings card. */
+.utmat-cache-notice {
+	margin: 0 0 16px;
+}
