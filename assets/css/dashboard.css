@@ -494,3 +494,19 @@
 .utmat-onboarding li {
 	margin-bottom: 10px;
 }
+
+/* Tracked-links search box and sortable Clicks column header. */
+.utmat-links-search {
+	margin: 0 0 8px;
+}
+.utmat-col-sortable {
+	cursor: pointer;
+	user-select: none;
+}
+.utmat-col-sortable:hover,
+.utmat-col-sortable:focus {
+	color: #0d5ea3;
+}
+.utmat-sort-arrow {
+	font-size: 10px;
+}

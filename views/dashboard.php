@@ -177,12 +177,21 @@ defined( 'ABSPATH' ) || exit;
 			<?php esc_html_e( 'Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?>
 		</p>
 
+		<p class="utmat-links-search">
+			<label for="utmat-links-filter" class="screen-reader-text"><?php esc_html_e( 'Search tracked links', 'utm-attribution-tracker' ); ?></label>
+			<input type="search" id="utmat-links-filter" class="regular-text"
+				placeholder="<?php esc_attr_e( 'Search by label, campaign, source, or medium…', 'utm-attribution-tracker' ); ?>" />
+		</p>
+
 		<table class="wp-list-table widefat fixed striped" id="utmat-links-table">
 			<thead>
 				<tr>
 					<th scope="col" class="utmat-col-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></th>
 					<th scope="col" class="utmat-col-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></th>
-					<th scope="col" class="utmat-col-clicks"><?php esc_html_e( 'Clicks', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmat-col-clicks utmat-col-sortable" id="utmat-sort-clicks" tabindex="0" role="button"
+						aria-label="<?php esc_attr_e( 'Sort by clicks', 'utm-attribution-tracker' ); ?>">
+						<?php esc_html_e( 'Clicks', 'utm-attribution-tracker' ); ?> <span class="utmat-sort-arrow" aria-hidden="true"></span>
+					</th>
 					<th scope="col" class="utmat-col-url"><?php esc_html_e( 'Redirect URL', 'utm-attribution-tracker' ); ?></th>
 					<th scope="col" class="utmat-col-url"><?php esc_html_e( 'Destination', 'utm-attribution-tracker' ); ?></th>
 					<th scope="col" class="utmat-col-actions"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'utm-attribution-tracker' ); ?></span></th>
@@ -320,6 +329,7 @@ defined( 'ABSPATH' ) || exit;
 			'copied'            => __( 'Copied!', 'utm-attribution-tracker' ),
 			'errorPrefix'       => __( 'Could not load data:', 'utm-attribution-tracker' ),
 			'noLinks'           => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
+			'noLinksMatch'      => __( 'No tracked links match your search.', 'utm-attribution-tracker' ),
 			'clicksLabel'       => __( 'Clicks', 'utm-attribution-tracker' ),
 			'delete'            => __( 'Delete', 'utm-attribution-tracker' ),
 			'confirmDelete'     => __( 'Confirm?', 'utm-attribution-tracker' ),

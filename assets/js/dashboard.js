@@ -28,6 +28,9 @@
 	let activeCampaign = '';
 	let charts         = {};
 	let editingId      = null;
+	let allLinks       = [];
+	let linksFilter    = '';
+	let clicksSortDir  = ''; // '' (server order), 'asc', or 'desc'.
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	const elLoading      = document.getElementById( 'utmat-loading' );
@@ -51,6 +54,8 @@
 	const elWeekly       = document.getElementById( 'utmat-weekly-email' );
 	const elCookieDays   = document.getElementById( 'utmat-cookie-days' );
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
+	const elLinksFilter  = document.getElementById( 'utmat-links-filter' );
+	const elSortClicks   = document.getElementById( 'utmat-sort-clicks' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -483,16 +488,50 @@
 		btn.setAttribute( 'aria-expanded', 'true' );
 	}
 
+	// ── Search + sort over the already-fetched links list ─────────────────────
+	// Both operate client-side on the full list held in `allLinks` — no extra
+	// request, since the whole list is already in memory for the table.
+	function visibleLinks() {
+		let list = allLinks;
+
+		const needle = linksFilter.trim().toLowerCase();
+		if ( needle ) {
+			list = list.filter( function ( link ) {
+				return [ link.label, link.utm_campaign, link.utm_source, link.utm_medium ]
+					.some( function ( field ) { return ( field || '' ).toLowerCase().indexOf( needle ) !== -1; } );
+			} );
+		}
+
+		if ( clicksSortDir ) {
+			list = list.slice().sort( function ( a, b ) {
+				return clicksSortDir === 'asc' ? a.clicks - b.clicks : b.clicks - a.clicks;
+			} );
+		}
+
+		return list;
+	}
+
+	function refreshLinksTable() {
+		renderLinksTable( visibleLinks() );
+	}
+
 	// ── Populate links table ───────────────────────────────────────────────────
 	function renderLinksTable( links ) {
 		elLinksTbody.innerHTML = '';
+
+		if ( elSortClicks ) {
+			elSortClicks.querySelector( '.utmat-sort-arrow' ).textContent =
+				clicksSortDir === 'asc' ? '▲' : ( clicksSortDir === 'desc' ? '▼' : '' );
+		}
 
 		if ( ! links.length ) {
 			const row = elLinksTbody.insertRow();
 			const cell = row.insertCell();
 			cell.colSpan = 6;
 			cell.className = 'description';
-			cell.textContent = i18n.noLinks || 'No tracked links found.';
+			cell.textContent = allLinks.length
+				? ( i18n.noLinksMatch || 'No tracked links match your search.' )
+				: ( i18n.noLinks || 'No tracked links found.' );
 			return;
 		}
 
@@ -593,13 +632,14 @@
 	function deleteLink( id, row ) {
 		apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
 			.then( function () {
+				allLinks = allLinks.filter( function ( link ) { return link.id !== id; } );
 				const next = row.nextElementSibling;
 				if ( next && next.classList.contains( 'utmat-qr-row' ) ) {
 					next.remove();
 				}
 				row.remove();
 				if ( ! elLinksTbody.rows.length ) {
-					loadDashboard();
+					refreshLinksTable();
 				}
 			} )
 			.catch( function ( err ) {
@@ -933,7 +973,8 @@
 			}
 
 			// Links table + suggestion datalists.
-			renderLinksTable( linksRes.links || [] );
+			allLinks = linksRes.links || [];
+			refreshLinksTable();
 			populateDatalists( linksRes.suggestions || {} );
 		} ).catch( function ( err ) {
 			setLoading( false );
@@ -959,6 +1000,27 @@
 		activeCampaign = elCampaignSel.value;
 		loadDashboard();
 	} );
+
+	if ( elLinksFilter ) {
+		elLinksFilter.addEventListener( 'input', function () {
+			linksFilter = elLinksFilter.value;
+			refreshLinksTable();
+		} );
+	}
+
+	if ( elSortClicks ) {
+		const toggleClicksSort = function () {
+			clicksSortDir = clicksSortDir === 'desc' ? 'asc' : 'desc';
+			refreshLinksTable();
+		};
+		elSortClicks.addEventListener( 'click', toggleClicksSort );
+		elSortClicks.addEventListener( 'keydown', function ( e ) {
+			if ( 'Enter' === e.key || ' ' === e.key ) {
+				e.preventDefault();
+				toggleClicksSort();
+			}
+		} );
+	}
 
 	// ── Boot ──────────────────────────────────────────────────────────────────
 	loadDashboard();
