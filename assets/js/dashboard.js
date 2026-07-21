@@ -31,6 +31,7 @@
 	let allLinks       = [];
 	let linksFilter    = '';
 	let clicksSortDir  = ''; // '' (server order), 'asc', or 'desc'.
+	const selectedLinks = new Set(); // Link IDs checked for bulk delete.
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	const elLoading      = document.getElementById( 'utmat-loading' );
@@ -56,6 +57,8 @@
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 	const elLinksFilter  = document.getElementById( 'utmat-links-filter' );
 	const elSortClicks   = document.getElementById( 'utmat-sort-clicks' );
+	const elSelectAll    = document.getElementById( 'utmat-select-all' );
+	const elBulkDeleteBtn = document.getElementById( 'utmat-bulk-delete-btn' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -482,7 +485,7 @@
 		const tr = document.createElement( 'tr' );
 		tr.className = 'utmat-qr-row';
 		const td = document.createElement( 'td' );
-		td.colSpan = 6;
+		td.colSpan = 7;
 
 		const box = document.createElement( 'div' );
 		box.className = 'utmat-qr-box';
@@ -544,6 +547,72 @@
 		renderLinksTable( visibleLinks() );
 	}
 
+	// ── Bulk select + delete ──────────────────────────────────────────────────
+	// The "select all" checkbox only ever affects the currently visible
+	// (filtered) rows — selecting "all" while a search is active should not
+	// silently pick up rows the admin can't see.
+	function updateBulkDeleteButton() {
+		if ( elBulkDeleteBtn ) {
+			elBulkDeleteBtn.hidden = selectedLinks.size === 0;
+			elBulkDeleteBtn.textContent = selectedLinks.size
+				? ( i18n.deleteSelected || 'Delete selected' ) + ' (' + selectedLinks.size + ')'
+				: ( i18n.deleteSelected || 'Delete selected' );
+		}
+		if ( elSelectAll ) {
+			const visible = visibleLinks();
+			const allSelected = visible.length > 0 && visible.every( function ( l ) { return selectedLinks.has( l.id ); } );
+			elSelectAll.checked = allSelected;
+			elSelectAll.indeterminate = ! allSelected && visible.some( function ( l ) { return selectedLinks.has( l.id ); } );
+		}
+	}
+
+	if ( elSelectAll ) {
+		elSelectAll.addEventListener( 'change', function () {
+			visibleLinks().forEach( function ( link ) {
+				if ( elSelectAll.checked ) {
+					selectedLinks.add( link.id );
+				} else {
+					selectedLinks.delete( link.id );
+				}
+			} );
+			refreshLinksTable();
+		} );
+	}
+
+	if ( elBulkDeleteBtn ) {
+		elBulkDeleteBtn.addEventListener( 'click', function () {
+			if ( ! elBulkDeleteBtn.dataset.confirming ) {
+				elBulkDeleteBtn.dataset.confirming = '1';
+				const label = elBulkDeleteBtn.textContent;
+				elBulkDeleteBtn.textContent = i18n.confirmDelete || 'Confirm?';
+				setTimeout( function () {
+					delete elBulkDeleteBtn.dataset.confirming;
+					elBulkDeleteBtn.textContent = label;
+				}, 3000 );
+				return;
+			}
+
+			delete elBulkDeleteBtn.dataset.confirming;
+			const ids = Array.from( selectedLinks );
+			elBulkDeleteBtn.disabled = true;
+
+			Promise.all( ids.map( function ( id ) {
+				return apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
+					.then( function () { return { id: id, ok: true }; } )
+					.catch( function () { return { id: id, ok: false }; } );
+			} ) ).then( function ( results ) {
+				results.forEach( function ( r ) {
+					if ( r.ok ) {
+						selectedLinks.delete( r.id );
+						allLinks = allLinks.filter( function ( l ) { return l.id !== r.id; } );
+					}
+				} );
+				elBulkDeleteBtn.disabled = false;
+				refreshLinksTable();
+			} );
+		} );
+	}
+
 	// ── Populate links table ───────────────────────────────────────────────────
 	function renderLinksTable( links ) {
 		elLinksTbody.innerHTML = '';
@@ -556,17 +625,35 @@
 		if ( ! links.length ) {
 			const row = elLinksTbody.insertRow();
 			const cell = row.insertCell();
-			cell.colSpan = 6;
+			cell.colSpan = 7;
 			cell.className = 'description';
 			cell.textContent = allLinks.length
 				? ( i18n.noLinksMatch || 'No tracked links match your search.' )
 				: ( i18n.noLinks || 'No tracked links found.' );
+			updateBulkDeleteButton();
 			return;
 		}
 
 		links.forEach( function ( link ) {
 			const row = elLinksTbody.insertRow();
 			row.dataset.linkId = link.id;
+
+			// Bulk-select checkbox.
+			const cbCell = row.insertCell();
+			cbCell.className = 'check-column';
+			const cb = document.createElement( 'input' );
+			cb.type    = 'checkbox';
+			cb.className = 'utmat-row-select';
+			cb.checked = selectedLinks.has( link.id );
+			cb.addEventListener( 'change', function () {
+				if ( cb.checked ) {
+					selectedLinks.add( link.id );
+				} else {
+					selectedLinks.delete( link.id );
+				}
+				updateBulkDeleteButton();
+			} );
+			cbCell.appendChild( cb );
 
 			// Label.
 			row.insertCell().textContent = link.label;
@@ -664,6 +751,7 @@
 			actionsCell.appendChild( deleteBtn );
 		} );
 
+		updateBulkDeleteButton();
 		show( elLinksSection );
 	}
 
@@ -672,6 +760,7 @@
 		apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
 			.then( function () {
 				allLinks = allLinks.filter( function ( link ) { return link.id !== id; } );
+				selectedLinks.delete( id );
 				const next = row.nextElementSibling;
 				if ( next && next.classList.contains( 'utmat-qr-row' ) ) {
 					next.remove();

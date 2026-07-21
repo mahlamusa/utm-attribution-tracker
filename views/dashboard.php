@@ -187,15 +187,24 @@ defined( 'ABSPATH' ) || exit;
 			<?php esc_html_e( 'Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?>
 		</p>
 
-		<p class="utmat-links-search">
-			<label for="utmat-links-filter" class="screen-reader-text"><?php esc_html_e( 'Search tracked links', 'utm-attribution-tracker' ); ?></label>
-			<input type="search" id="utmat-links-filter" class="regular-text"
-				placeholder="<?php esc_attr_e( 'Search by label, campaign, source, or medium…', 'utm-attribution-tracker' ); ?>" />
-		</p>
+		<div class="utmat-links-toolbar">
+			<p class="utmat-links-search">
+				<label for="utmat-links-filter" class="screen-reader-text"><?php esc_html_e( 'Search tracked links', 'utm-attribution-tracker' ); ?></label>
+				<input type="search" id="utmat-links-filter" class="regular-text"
+					placeholder="<?php esc_attr_e( 'Search by label, campaign, source, or medium…', 'utm-attribution-tracker' ); ?>" />
+			</p>
+			<button type="button" class="button utmat-bulk-delete-btn" id="utmat-bulk-delete-btn" hidden>
+				<?php esc_html_e( 'Delete selected', 'utm-attribution-tracker' ); ?>
+			</button>
+		</div>
 
 		<table class="wp-list-table widefat fixed striped" id="utmat-links-table">
 			<thead>
 				<tr>
+					<td class="manage-column column-cb check-column">
+						<label for="utmat-select-all" class="screen-reader-text"><?php esc_html_e( 'Select all', 'utm-attribution-tracker' ); ?></label>
+						<input type="checkbox" id="utmat-select-all" />
+					</td>
 					<th scope="col" class="utmat-col-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></th>
 					<th scope="col" class="utmat-col-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></th>
 					<th scope="col" class="utmat-col-clicks utmat-col-sortable" id="utmat-sort-clicks" tabindex="0" role="button"
@@ -345,6 +354,7 @@ defined( 'ABSPATH' ) || exit;
 			'errorPrefix'          => __( 'Could not load data:', 'utm-attribution-tracker' ),
 			'noLinks'              => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
 			'noLinksMatch'         => __( 'No tracked links match your search.', 'utm-attribution-tracker' ),
+			'deleteSelected'       => __( 'Delete selected', 'utm-attribution-tracker' ),
 			'duplicate'            => __( 'Duplicate', 'utm-attribution-tracker' ),
 			'duplicateHint'        => __( 'Pre-fill the add-link form with this link’s values to create a variant.', 'utm-attribution-tracker' ),
 			'copySuffix'           => __( '(copy)', 'utm-attribution-tracker' ),

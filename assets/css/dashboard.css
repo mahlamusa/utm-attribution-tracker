@@ -515,3 +515,23 @@
 .utmat-cache-notice {
 	margin: 0 0 16px;
 }
+
+/* Links table toolbar (search + bulk delete) and checkbox column. */
+.utmat-links-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.utmat-links-toolbar .utmat-links-search {
+	flex: 1 1 auto;
+}
+.utmat-bulk-delete-btn {
+	color: #b32d2e;
+}
+#utmat-links-table .check-column {
+	width: 2.2em;
+	padding: 8px 0 0 6px;
+	vertical-align: top;
+}
