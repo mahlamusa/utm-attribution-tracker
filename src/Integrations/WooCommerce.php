@@ -5,7 +5,9 @@
  * Attaches the first/last-touch attribution sets (read from the
  * `utmat_attr` cookie via Attribution) to WooCommerce orders as order
  * meta, records a conversion event row for the revenue-by-campaign report,
- * and renders a "Campaign attribution" metabox on the order edit screen.
+ * renders a "Campaign attribution" metabox on the order edit screen, and —
+ * when a URL is configured — POSTs the conversion to a webhook (see
+ * UTMAT\Reports\ConversionWebhook).
  *
  * Every hook in this class is registered only when WooCommerce is active
  * (checked at `plugins_loaded` priority 20, after Woo has loaded). On a site
@@ -16,6 +18,7 @@
 
 namespace UTMAT\Integrations;
 
+use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
 use WC_Order;
@@ -259,6 +262,16 @@ class WooCommerce {
 		}
 
 		Tracker::record( $event );
+
+		if ( '' !== ConversionWebhook::url() ) {
+			ConversionWebhook::send_conversion(
+				$order->get_id(),
+				(float) $order->get_total(),
+				$order->get_currency(),
+				$first,
+				$last
+			);
+		}
 	}
 
 	/**

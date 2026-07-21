@@ -33,6 +33,7 @@ class Bootstrap {
 		require_once $base . 'Tracking/Tracker.php';
 		require_once $base . 'Tracking/Rewrites.php';
 		require_once $base . 'Reports/WeeklyEmail.php';
+		require_once $base . 'Reports/ConversionWebhook.php';
 		require_once $base . 'Rest/CollectController.php';
 		require_once $base . 'Integrations/WooCommerce.php';
 		require_once $base . 'Integrations/Forms/ContactForm7.php';

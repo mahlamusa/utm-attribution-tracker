@@ -350,11 +350,27 @@ defined( 'ABSPATH' ) || exit;
 				</label>
 				<span class="description"><?php esc_html_e( 'Sent to the site admin email address every week. Off by default.', 'utm-attribution-tracker' ); ?></span>
 			</p>
+			<p>
+				<label for="utmat-webhook-url"><?php esc_html_e( 'Conversion webhook URL', 'utm-attribution-tracker' ); ?></label>
+				<input type="url" id="utmat-webhook-url" name="webhook_url" class="regular-text" placeholder="https://example.com/webhooks/utm" />
+				<span class="description"><?php esc_html_e( 'POSTs a JSON payload here whenever a WooCommerce order is attributed. Leave blank to disable.', 'utm-attribution-tracker' ); ?></span>
+			</p>
+			<p id="utmat-webhook-secret-row" hidden>
+				<label for="utmat-webhook-secret"><?php esc_html_e( 'Webhook signing secret', 'utm-attribution-tracker' ); ?></label>
+				<input type="text" id="utmat-webhook-secret" class="regular-text" readonly onclick="this.select();" />
+				<span class="description"><?php esc_html_e( 'Every request carries an X-UTMAT-Signature header (sha256=HMAC of the JSON body using this secret) so your receiver can verify it came from this site.', 'utm-attribution-tracker' ); ?></span>
+				<br />
+				<span id="utmat-webhook-last" class="description"></span>
+			</p>
 			<p class="utmat-settings-form__actions">
 				<button type="submit" class="button button-primary" id="utmat-settings-save"><?php esc_html_e( 'Save settings', 'utm-attribution-tracker' ); ?></button>
 				<button type="button" class="button" id="utmat-test-email"
 					title="<?php esc_attr_e( 'Send the weekly summary to the report recipient now, regardless of the toggle.', 'utm-attribution-tracker' ); ?>">
 					<?php esc_html_e( 'Send test email', 'utm-attribution-tracker' ); ?>
+				</button>
+				<button type="button" class="button" id="utmat-test-webhook" hidden
+					title="<?php esc_attr_e( 'Send a synthetic conversion payload to the configured webhook URL now.', 'utm-attribution-tracker' ); ?>">
+					<?php esc_html_e( 'Send test webhook', 'utm-attribution-tracker' ); ?>
 				</button>
 				<span class="utmat-add-form__msg" id="utmat-settings-msg" role="status"></span>
 			</p>
@@ -385,6 +401,13 @@ defined( 'ABSPATH' ) || exit;
 			'presetSaved'          => __( 'Preset saved.', 'utm-attribution-tracker' ),
 			'presetNameRequired'   => __( 'Please enter a preset name.', 'utm-attribution-tracker' ),
 			'confirmDeletePreset'  => __( 'Delete this preset?', 'utm-attribution-tracker' ),
+			'testWebhookSending'   => __( 'Sending…', 'utm-attribution-tracker' ),
+			'testWebhookSent'      => __( 'Test webhook sent.', 'utm-attribution-tracker' ),
+			'testWebhookFailed'    => __( 'Delivery failed — check the URL and your receiver.', 'utm-attribution-tracker' ),
+			// translators: both %s are replaced client-side — the delivery time, then the HTTP status or error detail.
+			'webhookLastOk'        => __( 'Last delivery: %1$s succeeded (%2$s)', 'utm-attribution-tracker' ),
+			// translators: both %s are replaced client-side — the delivery time, then the HTTP status or error detail.
+			'webhookLastFailed'    => __( 'Last delivery: %1$s failed (%2$s)', 'utm-attribution-tracker' ),
 			'duplicate'            => __( 'Duplicate', 'utm-attribution-tracker' ),
 			'duplicateHint'        => __( 'Pre-fill the add-link form with this link’s values to create a variant.', 'utm-attribution-tracker' ),
 			'copySuffix'           => __( '(copy)', 'utm-attribution-tracker' ),

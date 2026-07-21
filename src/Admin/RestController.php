@@ -21,6 +21,7 @@ namespace UTMAT\Admin;
 use DateTimeImmutable;
 use DateTimeZone;
 use UTMAT\DB\Schema;
+use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
 use WP_REST_Request;
@@ -177,6 +178,16 @@ class RestController {
 
 		register_rest_route(
 			'utmat/v1',
+			'/test-webhook',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'send_test_webhook' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
 			'/settings',
 			array(
 				'methods'             => 'POST',
@@ -194,6 +205,10 @@ class RestController {
 					'cookie_days'    => array(
 						'default'           => 90,
 						'sanitize_callback' => 'absint',
+					),
+					'webhook_url'    => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
 			)
@@ -722,13 +737,28 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/settings
+	 * POST utmat/v1/test-webhook — send a synthetic conversion payload now.
 	 *
-	 * Saves the retention window (0 = keep forever) and the weekly email
-	 * toggle. The weekly report cron is scheduled or unscheduled here, at
-	 * save time, so no scheduling work happens on normal page loads.
+	 * Lets the admin verify their receiver and HMAC signature checking work
+	 * before relying on the webhook for real orders. No-ops (returns
+	 * sent:false) when no URL is configured.
 	 *
 	 * @since 1.0.0
+	 * @return WP_REST_Response
+	 */
+	public static function send_test_webhook(): WP_REST_Response {
+		return new WP_REST_Response( array( 'sent' => ConversionWebhook::send_test() ), 200 );
+	}
+
+	/**
+	 * POST utmat/v1/settings
+	 *
+	 * Saves the retention window (0 = keep forever), the weekly email
+	 * toggle, and the conversion webhook URL (empty disables it). The
+	 * weekly report cron is scheduled or unscheduled here, at save time, so
+	 * no scheduling work happens on normal page loads.
+	 *
+	 * @since 1.0.0 Added the webhook_url setting.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -737,10 +767,12 @@ class RestController {
 		$weekly    = (bool) $request->get_param( 'weekly_email' );
 		$cookie    = absint( $request->get_param( 'cookie_days' ) );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
+		$webhook   = esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) );
 
 		update_option( 'utmat_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
 		update_option( 'utmat_cookie_days', $cookie );
+		update_option( ConversionWebhook::OPTION_URL, $webhook );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -753,6 +785,7 @@ class RestController {
 				'retention_days' => $retention,
 				'weekly_email'   => $weekly,
 				'cookie_days'    => $cookie,
+				'webhook_url'    => $webhook,
 			),
 			200
 		);

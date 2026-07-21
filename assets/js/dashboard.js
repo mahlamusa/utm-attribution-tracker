@@ -1147,10 +1147,36 @@
 	elExportBtn.addEventListener( 'click', exportCsv );
 
 	// ── Settings card ─────────────────────────────────────────────────────────
+	const elWebhookUrl      = document.getElementById( 'utmat-webhook-url' );
+	const elWebhookSecret   = document.getElementById( 'utmat-webhook-secret' );
+	const elWebhookSecretRow = document.getElementById( 'utmat-webhook-secret-row' );
+	const elTestWebhook     = document.getElementById( 'utmat-test-webhook' );
+
+	function toggleWebhookExtras( hasUrl ) {
+		if ( elWebhookSecretRow ) elWebhookSecretRow.hidden = ! hasUrl;
+		if ( elTestWebhook ) elTestWebhook.hidden = ! hasUrl;
+	}
+
 	if ( settings ) {
 		elRetention.value  = settings.retentionDays;
 		elWeekly.checked   = !! settings.weeklyEmail;
 		elCookieDays.value = settings.cookieDays || 90;
+		if ( elWebhookUrl ) {
+			elWebhookUrl.value = settings.webhookUrl || '';
+			toggleWebhookExtras( !! settings.webhookUrl );
+		}
+	}
+	if ( elWebhookSecret ) {
+		elWebhookSecret.value = utmatData.webhookSecret || '';
+	}
+	const elWebhookLast = document.getElementById( 'utmat-webhook-last' );
+	if ( elWebhookLast && utmatData.webhookLast ) {
+		const last = utmatData.webhookLast;
+		const when = new Date( last.time * 1000 ).toLocaleString();
+		elWebhookLast.textContent = ( last.ok
+			? ( i18n.webhookLastOk || 'Last delivery: %s succeeded (%s)' )
+			: ( i18n.webhookLastFailed || 'Last delivery: %s failed (%s)' )
+		).replace( '%s', when ).replace( '%s', last.detail || '' );
 	}
 
 	// Reassure the admin that a detected full-page cache doesn't break
@@ -1176,11 +1202,16 @@
 				retention_days: parseInt( elRetention.value, 10 ) || 0,
 				weekly_email:   elWeekly.checked,
 				cookie_days:    parseInt( elCookieDays.value, 10 ) || 90,
+				webhook_url:    elWebhookUrl ? elWebhookUrl.value.trim() : '',
 			} ),
 		} ).then( function ( body ) {
 			elRetention.value  = body.retention_days;
 			elWeekly.checked   = !! body.weekly_email;
 			elCookieDays.value = body.cookie_days || 90;
+			if ( elWebhookUrl ) {
+				elWebhookUrl.value = body.webhook_url || '';
+				toggleWebhookExtras( !! body.webhook_url );
+			}
 			elSettingsMsg.textContent = i18n.settingsSaved || 'Settings saved.';
 			elSettingsMsg.className   = 'utmat-add-form__msg is-success';
 		} ).catch( function ( err ) {
@@ -1209,6 +1240,27 @@
 			elTestEmail.disabled = false;
 		} );
 	} );
+
+	// ── Test webhook ──────────────────────────────────────────────────────────
+	if ( elTestWebhook ) {
+		elTestWebhook.addEventListener( 'click', function () {
+			elTestWebhook.disabled    = true;
+			elSettingsMsg.textContent = i18n.testWebhookSending || 'Sending…';
+			elSettingsMsg.className   = 'utmat-add-form__msg';
+
+			apiFetch( '/test-webhook', { method: 'POST' } ).then( function ( body ) {
+				elSettingsMsg.textContent = body.sent
+					? ( i18n.testWebhookSent || 'Test webhook sent.' )
+					: ( i18n.testWebhookFailed || 'Delivery failed — check the URL and your receiver.' );
+				elSettingsMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
+			} ).catch( function ( err ) {
+				elSettingsMsg.textContent = err.message || 'Unknown error.';
+				elSettingsMsg.className   = 'utmat-add-form__msg is-error';
+			} ).then( function () {
+				elTestWebhook.disabled = false;
+			} );
+		} );
+	}
 
 	// ── Date range query string ───────────────────────────────────────────────
 	// Shared by the stats and export requests. A custom range (both dates set)

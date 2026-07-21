@@ -11,6 +11,7 @@
 
 namespace UTMAT\Admin;
 
+use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
 
@@ -170,8 +171,11 @@ class Dashboard {
 					'retentionDays' => (int) get_option( 'utmat_retention_days', 180 ),
 					'weeklyEmail'   => WeeklyEmail::enabled(),
 					'cookieDays'    => (int) get_option( 'utmat_cookie_days', 90 ),
+					'webhookUrl'    => ConversionWebhook::url(),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
+				'webhookSecret'  => ConversionWebhook::secret(),
+				'webhookLast'    => ConversionWebhook::last_delivery(),
 			)
 		);
 	}
