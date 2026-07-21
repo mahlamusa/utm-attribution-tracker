@@ -78,7 +78,7 @@ When a visitor arrives with a UTM parameter or ad click ID, the plugin sets a fi
 
 The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites). Change the lifetime with `utmat_cookie_days` or disable the cookie entirely with `utmat_enable_cookie` (see the filter reference below).
 
-**Consent note:** the plugin does not ship a consent banner and does not integrate with consent managers. If your jurisdiction requires consent before setting non-essential cookies, gate the cookie yourself by returning `false` from `utmat_enable_cookie` until consent is given.
+**Consent note:** the plugin does not ship a consent banner. If a plugin implementing the [WP Consent API](https://github.com/rlankhorst/wp-consent-level-api) is active (Complianz, Real Cookie Banner, Borlabs Cookie, and others implement it), the cookie is only written once the visitor has granted marketing or statistics consent — no configuration needed. Without a Consent API plugin, the cookie is written by default; gate it yourself by returning `false` from `utmat_enable_cookie` until consent is given.
 
 = How does WooCommerce order attribution work? =
 

@@ -198,12 +198,28 @@ class Attribution {
 	 * @return bool
 	 */
 	public static function enabled(): bool {
+		$enabled = true;
+
+		// Auto-detect the WP Consent API (github.com/rlankhorst/wp-consent-level-api),
+		// the de-facto standard several consent-management plugins (Complianz,
+		// Real Cookie Banner, Borlabs Cookie, Cookiebot's WP integration)
+		// implement. When present, the visitor must have granted "marketing"
+		// or "statistics" consent before the cookie is written; when absent,
+		// the plugin falls back to its previous always-on behaviour (consent
+		// integration remains the site owner's responsibility per the readme).
+		if ( function_exists( 'wp_has_consent' ) ) {
+			$enabled = wp_has_consent( 'marketing' ) || wp_has_consent( 'statistics' );
+		}
+
 		/**
 		 * Filter whether the attribution cookie may be written.
 		 *
+		 * Runs after the WP Consent API auto-detection above, so a filter can
+		 * still force the decision either way.
+		 *
 		 * @var bool $enabled
 		 */
-		return (bool) apply_filters( 'utmat_enable_cookie', true );
+		return (bool) apply_filters( 'utmat_enable_cookie', $enabled );
 	}
 
 	/**
