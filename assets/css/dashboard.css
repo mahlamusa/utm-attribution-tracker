@@ -535,3 +535,13 @@
 	padding: 8px 0 0 6px;
 	vertical-align: top;
 }
+
+/* Custom date range picker, next to the period presets. */
+.utmat-daterange {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.utmat-daterange input[type="date"] {
+	max-width: 140px;
+}

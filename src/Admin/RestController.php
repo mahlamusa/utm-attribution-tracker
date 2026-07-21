@@ -56,6 +56,14 @@ class RestController {
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'since'    => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'until'    => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
 				),
 			)
 		);
@@ -117,6 +125,14 @@ class RestController {
 						'sanitize_callback' => 'absint',
 					),
 					'campaign' => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'since'    => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'until'    => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
@@ -188,14 +204,14 @@ class RestController {
 	public static function get_stats( WP_REST_Request $request ): WP_REST_Response {
 		global $wpdb;
 		$table    = Schema::table();
-		$period   = max( 1, min( 365, (int) $request->get_param( 'period' ) ) );
 		$campaign = (string) $request->get_param( 'campaign' );
 
 		$timezone  = wp_timezone();
-		$now_local = new DateTimeImmutable( 'now', $timezone );
+		$now_local = self::resolve_now_local( $request, $timezone );
+		$period    = self::resolve_period( $request, $now_local );
 		$offset    = (int) $timezone->getOffset( $now_local );
 
-		$where       = self::build_where( $period, $campaign );
+		$where       = self::build_where( $period, $campaign, $now_local );
 		$click_where = $where . ' AND is_conversion = 0';
 
 		// Clicks by day, grouped on the site-local date.
@@ -248,7 +264,7 @@ class RestController {
 		// comparison rather than day-aligned buckets). Positions align with
 		// $by_day (both oldest-to-newest, $period + 1 entries) rather than
 		// actual dates, since the two windows cover different calendar days.
-		$prev_day_where = self::build_previous_day_where( $period, $campaign ) . ' AND is_conversion = 0';
+		$prev_day_where = self::build_previous_day_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$prev_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
@@ -415,7 +431,7 @@ class RestController {
 
 		// Previous-period total — the same-length window immediately before
 		// this one, for the trend indicator next to the total.
-		$prev_where = self::build_previous_where( $period, $campaign ) . ' AND is_conversion = 0';
+		$prev_where = self::build_previous_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$previous_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$prev_where}" );
 
@@ -458,26 +474,96 @@ class RestController {
 	}
 
 	/**
-	 * Build the prepared WHERE clause shared by the stats and export queries.
+	 * Resolve the reference "now" instant a stats/export request anchors to.
 	 *
-	 * The period boundary is midnight (site-local) `$period` days ago,
-	 * converted to UTC to match the stored `clicked_at` values. An optional
-	 * campaign filter is appended.
+	 * Normally the actual current moment. When a valid `until` date (Y-m-d,
+	 * not in the future) is supplied for a custom range, the reference point
+	 * becomes 23:59:59 site-local on that date instead — every date-relative
+	 * calculation downstream (`build_where()`'s upper bound, the day
+	 * scaffolds, the previous-period comparisons) is written in terms of this
+	 * single anchor, so a custom range reuses the exact same logic a preset
+	 * period does. An invalid or future `until` is ignored and real "now" is
+	 * used, so malformed input degrades to normal preset behaviour rather
+	 * than erroring.
 	 *
 	 * @since 1.0.0
-	 * @param int    $period   Period length in days.
-	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @param WP_REST_Request $request  REST request.
+	 * @param DateTimeZone    $timezone Site timezone.
+	 * @return DateTimeImmutable
+	 */
+	private static function resolve_now_local( WP_REST_Request $request, DateTimeZone $timezone ): DateTimeImmutable {
+		$now_local = new DateTimeImmutable( 'now', $timezone );
+		$until_raw = (string) $request->get_param( 'until' );
+
+		if ( '' === $until_raw || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $until_raw ) ) {
+			return $now_local;
+		}
+
+		$until_local = DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $until_raw . ' 23:59:59', $timezone );
+		if ( false === $until_local || $until_local > $now_local ) {
+			return $now_local;
+		}
+
+		return $until_local;
+	}
+
+	/**
+	 * Resolve the period length in days for a stats/export request.
+	 *
+	 * When valid `since` and `until` dates (Y-m-d, since <= until) are both
+	 * supplied, the period is the inclusive day-count between them; otherwise
+	 * falls back to the `period` integer parameter, clamped to [1, 365] as
+	 * before. `$now_local` must already reflect {@see resolve_now_local()}
+	 * (its date is the effective `until` when a custom range is in play).
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request   $request   REST request.
+	 * @param DateTimeImmutable $now_local Resolved reference instant.
+	 * @return int
+	 */
+	private static function resolve_period( WP_REST_Request $request, DateTimeImmutable $now_local ): int {
+		$since_raw = (string) $request->get_param( 'since' );
+		$until_raw = (string) $request->get_param( 'until' );
+
+		if ( 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $since_raw ) && 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $until_raw ) ) {
+			$since_date = DateTimeImmutable::createFromFormat( 'Y-m-d', $since_raw, $now_local->getTimezone() );
+			if ( false !== $since_date && $since_date->format( 'Y-m-d' ) <= $now_local->format( 'Y-m-d' ) ) {
+				$days = (int) $since_date->setTime( 0, 0, 0 )->diff( $now_local->setTime( 0, 0, 0 ) )->days;
+				if ( $days >= 0 ) {
+					return max( 1, min( 365, $days ) );
+				}
+			}
+		}
+
+		return max( 1, min( 365, (int) $request->get_param( 'period' ) ) );
+	}
+
+	/**
+	 * Build the prepared WHERE clause shared by the stats and export queries.
+	 *
+	 * The period boundary is midnight (site-local) `$period` days before
+	 * `$now_local`, converted to UTC to match the stored `clicked_at` values.
+	 * An upper bound of `$now_local` itself is also applied — for a live
+	 * (non-custom-range) request this is a no-op, since no row's `clicked_at`
+	 * can be later than the actual current moment, but it is what correctly
+	 * bounds a custom past date range instead of leaking events after it. An
+	 * optional campaign filter is appended.
+	 *
+	 * @since 1.0.0 Added the upper bound so a custom `until` date is respected.
+	 * @param int               $period    Period length in days.
+	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
+	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
 	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
 	 */
-	private static function build_where( int $period, string $campaign ): string {
+	private static function build_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
 		global $wpdb;
 
-		$timezone    = wp_timezone();
-		$now_local   = new DateTimeImmutable( 'now', $timezone );
+		$utc         = new DateTimeZone( 'UTC' );
 		$since_local = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
-		$since       = $since_local->setTimezone( new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' );
+		$since       = $since_local->setTimezone( $utc )->format( 'Y-m-d H:i:s' );
+		$until       = $now_local->setTimezone( $utc )->format( 'Y-m-d H:i:s' );
 
-		$where = $wpdb->prepare( 'clicked_at >= %s', $since );
+		$where = $wpdb->prepare( 'clicked_at >= %s AND clicked_at <= %s', $since, $until );
 		if ( ! empty( $campaign ) ) {
 			$where .= $wpdb->prepare( ' AND utm_campaign = %s', $campaign );
 		}
@@ -495,17 +581,16 @@ class RestController {
 	 * the trend indicator (that window can end mid-day; this one always ends
 	 * at a local midnight so it lines up with $by_day's date buckets one-for-one).
 	 *
-	 * @since 1.0.0
-	 * @param int    $period   Period length in days.
-	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @since 1.0.0 Now takes the caller-resolved $now_local instead of the live instant.
+	 * @param int               $period    Period length in days.
+	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
+	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
 	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
 	 */
-	private static function build_previous_day_where( int $period, string $campaign ): string {
+	private static function build_previous_day_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
 		global $wpdb;
 
-		$timezone  = wp_timezone();
-		$utc       = new DateTimeZone( 'UTC' );
-		$now_local = new DateTimeImmutable( 'now', $timezone );
+		$utc = new DateTimeZone( 'UTC' );
 
 		$since_local = $now_local->modify( '-' . ( 2 * $period + 1 ) . ' days' )->setTime( 0, 0, 0 );
 		$until_local = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
@@ -533,18 +618,17 @@ class RestController {
 	 * only a few hours of today in it. Same optional campaign filter as
 	 * {@see build_where()}.
 	 *
-	 * @since 1.0.0 Previous window now matches the current window's elapsed duration.
-	 * @param int    $period   Period length in days.
-	 * @param string $campaign Optional utm_campaign filter; empty for all.
+	 * @since 1.0.0 Previous window now matches the current window's elapsed duration, and takes the caller-resolved $now_local.
+	 * @param int               $period    Period length in days.
+	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
+	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
 	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
 	 */
-	private static function build_previous_where( int $period, string $campaign ): string {
+	private static function build_previous_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
 		global $wpdb;
 
-		$timezone  = wp_timezone();
-		$utc       = new DateTimeZone( 'UTC' );
-		$now_local = new DateTimeImmutable( 'now', $timezone );
-		$double    = 2 * $period;
+		$utc    = new DateTimeZone( 'UTC' );
+		$double = 2 * $period;
 
 		$since_current = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
 		$since_prev    = $now_local->modify( "-{$double} days" )->setTime( 0, 0, 0 );
@@ -578,9 +662,11 @@ class RestController {
 	public static function export_events( WP_REST_Request $request ): WP_REST_Response {
 		global $wpdb;
 		$table    = Schema::table();
-		$period   = max( 1, min( 365, (int) $request->get_param( 'period' ) ) );
 		$campaign = (string) $request->get_param( 'campaign' );
-		$where    = self::build_where( $period, $campaign );
+
+		$now_local = self::resolve_now_local( $request, wp_timezone() );
+		$period    = self::resolve_period( $request, $now_local );
+		$where     = self::build_where( $period, $campaign, $now_local );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $wpdb->get_results(

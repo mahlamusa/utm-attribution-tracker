@@ -26,6 +26,8 @@
 	// ── State ─────────────────────────────────────────────────────────────────
 	let activePeriod   = 7;
 	let activeCampaign = '';
+	let activeSince    = ''; // Custom date range (Y-m-d); both must be set to take effect.
+	let activeUntil    = '';
 	let charts         = {};
 	let editingId      = null;
 	let allLinks       = [];
@@ -976,8 +978,7 @@
 		elExportBtn.disabled    = true;
 		elExportBtn.textContent = i18n.exporting || 'Exporting…';
 
-		const url = '/export?period=' + activePeriod +
-			( activeCampaign ? '&campaign=' + encodeURIComponent( activeCampaign ) : '' );
+		const url = '/export?' + rangeQuery();
 
 		apiFetch( url ).then( function ( body ) {
 			const rows = body.rows || [];
@@ -1079,12 +1080,26 @@
 		} );
 	} );
 
+	// ── Date range query string ───────────────────────────────────────────────
+	// Shared by the stats and export requests. A custom range (both dates set)
+	// takes precedence server-side over `period`; `period` is still sent so a
+	// malformed/partial range degrades to the preset instead of erroring.
+	function rangeQuery() {
+		let qs = 'period=' + activePeriod;
+		if ( activeCampaign ) {
+			qs += '&campaign=' + encodeURIComponent( activeCampaign );
+		}
+		if ( activeSince && activeUntil ) {
+			qs += '&since=' + encodeURIComponent( activeSince ) + '&until=' + encodeURIComponent( activeUntil );
+		}
+		return qs;
+	}
+
 	// ── Main fetch ────────────────────────────────────────────────────────────
 	function loadDashboard() {
 		setLoading( true );
 
-		const statsUrl = '/stats?period=' + activePeriod +
-			( activeCampaign ? '&campaign=' + encodeURIComponent( activeCampaign ) : '' );
+		const statsUrl = '/stats?' + rangeQuery();
 
 		Promise.all( [
 			apiFetch( statsUrl ),
@@ -1171,6 +1186,7 @@
 			btn.classList.add( 'active' );
 			btn.setAttribute( 'aria-pressed', 'true' );
 			activePeriod = parseInt( btn.dataset.period, 10 );
+			clearDateRange();
 			loadDashboard();
 		} );
 	} );
@@ -1179,6 +1195,53 @@
 		activeCampaign = elCampaignSel.value;
 		loadDashboard();
 	} );
+
+	// ── Custom date range ─────────────────────────────────────────────────────
+	const elDateSince = document.getElementById( 'utmat-date-since' );
+	const elDateUntil = document.getElementById( 'utmat-date-until' );
+	const elDateApply = document.getElementById( 'utmat-date-apply' );
+	const elDateClear = document.getElementById( 'utmat-date-clear' );
+
+	function clearDateRange() {
+		activeSince = '';
+		activeUntil = '';
+		if ( elDateSince ) elDateSince.value = '';
+		if ( elDateUntil ) elDateUntil.value = '';
+		if ( elDateClear ) elDateClear.hidden = true;
+	}
+
+	if ( elDateApply ) {
+		elDateApply.addEventListener( 'click', function () {
+			const since = elDateSince.value;
+			const until = elDateUntil.value;
+			if ( ! since || ! until || since > until ) {
+				return;
+			}
+
+			activeSince = since;
+			activeUntil = until;
+
+			// A custom range replaces the preset selection visually.
+			document.querySelectorAll( '.utmat-period-btn' ).forEach( function ( b ) {
+				b.classList.remove( 'active' );
+				b.setAttribute( 'aria-pressed', 'false' );
+			} );
+			elDateClear.hidden = false;
+			loadDashboard();
+		} );
+	}
+
+	if ( elDateClear ) {
+		elDateClear.addEventListener( 'click', function () {
+			clearDateRange();
+			const first = document.querySelector( '.utmat-period-btn[data-period="' + activePeriod + '"]' );
+			if ( first ) {
+				first.classList.add( 'active' );
+				first.setAttribute( 'aria-pressed', 'true' );
+			}
+			loadDashboard();
+		} );
+	}
 
 	if ( elLinksFilter ) {
 		elLinksFilter.addEventListener( 'input', function () {

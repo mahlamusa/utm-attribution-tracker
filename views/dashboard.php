@@ -36,6 +36,16 @@ defined( 'ABSPATH' ) || exit;
 			</button>
 		</div>
 
+		<div class="utmat-daterange">
+			<label for="utmat-date-since" class="screen-reader-text"><?php esc_html_e( 'Custom range start date', 'utm-attribution-tracker' ); ?></label>
+			<input type="date" id="utmat-date-since" />
+			<span aria-hidden="true">&ndash;</span>
+			<label for="utmat-date-until" class="screen-reader-text"><?php esc_html_e( 'Custom range end date', 'utm-attribution-tracker' ); ?></label>
+			<input type="date" id="utmat-date-until" />
+			<button type="button" class="button" id="utmat-date-apply"><?php esc_html_e( 'Apply', 'utm-attribution-tracker' ); ?></button>
+			<button type="button" class="button-link" id="utmat-date-clear" hidden><?php esc_html_e( 'Clear', 'utm-attribution-tracker' ); ?></button>
+		</div>
+
 		<label for="utmat-campaign-filter" class="screen-reader-text">
 			<?php esc_html_e( 'Filter by campaign', 'utm-attribution-tracker' ); ?>
 		</label>
