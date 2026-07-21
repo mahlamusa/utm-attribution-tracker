@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       UTM & Attribution Tracker
  * Plugin URI:        https://github.com/mahlamusa/utm-attribution-tracker
- * Description:       Track UTM-tagged links and purchase funnels with a live Chart.js dashboard.
+ * Description:       Track UTM-tagged links, click IDs, and first/last-touch attribution across form leads and WooCommerce orders, with a live Chart.js dashboard.
  * Version:           1.0.0
  * Author:            Lindeni Mahlalela
  * License:           GPL-2.0-or-later

@@ -127,7 +127,7 @@ class Plugin {
 
 			add_action( 'admin_enqueue_scripts', array( Dashboard::class, 'enqueue_assets' ) );
 
-			// "UTM Tracker" row link on the Plugins screen.
+			// "UTM & Attribution" row link on the Plugins screen.
 			add_filter( 'plugin_action_links_' . UTM_ATTRIBUTION_TRACKER_BASENAME, array( Dashboard::class, 'add_plugin_action_link' ) );
 		}
 

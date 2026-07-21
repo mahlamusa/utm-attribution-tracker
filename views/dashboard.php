@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
 <div class="wrap utmat-wrap" id="utmat-dashboard">
 
 	<div class="utmat-header">
-		<h1><?php esc_html_e( 'UTM Tracker', 'utm-attribution-tracker' ); ?></h1>
+		<h1><?php esc_html_e( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ); ?></h1>
 		<p class="utmat-header__sub">
 			<?php esc_html_e( 'Campaign clicks and UTM attribution, tracked on your own site.', 'utm-attribution-tracker' ); ?>
 		</p>

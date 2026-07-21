@@ -52,7 +52,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 1. Upload the `utm-attribution-tracker` folder to `/wp-content/plugins/`.
 2. Activate the plugin via **Plugins > Installed Plugins**.
-3. Go to **UTM Tracker** in the admin sidebar (or under **the companion SMTP plugin** if that plugin is active).
+3. Go to **UTM & Attribution** in the admin sidebar (or under **the companion SMTP plugin** if that plugin is active).
 
 == Frequently Asked Questions ==
 

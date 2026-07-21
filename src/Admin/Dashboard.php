@@ -41,8 +41,8 @@ class Dashboard {
 	 */
 	public static function register_menu(): void {
 		self::$hook_suffix = (string) add_menu_page(
-			__( 'UTM Tracker', 'utm-attribution-tracker' ),
-			__( 'UTM Tracker', 'utm-attribution-tracker' ),
+			__( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ),
+			__( 'UTM & Attribution', 'utm-attribution-tracker' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
@@ -57,9 +57,9 @@ class Dashboard {
 	 *
 	 * the companion SMTP plugin fires this action as the last step of its own menu
 	 * registration, after its "Settings" submenu — so the default
-	 * (position-less) `add_submenu_page()` call would always append UTM
-	 * Tracker below Settings. Insert it just above the last registered item
-	 * instead, so it appears above Settings regardless of which of
+	 * (position-less) `add_submenu_page()` call would always append UTM &
+	 * Attribution below Settings. Insert it just above the last registered
+	 * item instead, so it appears above Settings regardless of which of
 	 * the companion plugin's optional submenus (Email Logs, Queue) are enabled.
 	 *
 	 * @since 1.0.0
@@ -76,8 +76,8 @@ class Dashboard {
 
 		self::$hook_suffix = (string) add_submenu_page(
 			$parent_slug,
-			__( 'UTM Tracker', 'utm-attribution-tracker' ),
-			__( 'UTM Tracker', 'utm-attribution-tracker' ),
+			__( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ),
+			__( 'UTM & Attribution', 'utm-attribution-tracker' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
@@ -237,7 +237,7 @@ class Dashboard {
 	}
 
 	/**
-	 * Add a "UTM Tracker" action link on the Plugins screen.
+	 * Add a "UTM & Attribution" action link on the Plugins screen.
 	 *
 	 * The link always points to `admin.php?page=utm-attribution-tracker` — the
 	 * page URL is the same whether the plugin registered as a standalone
@@ -252,7 +252,7 @@ class Dashboard {
 		$links[] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ),
-			esc_html__( 'UTM Tracker', 'utm-attribution-tracker' )
+			esc_html__( 'UTM & Attribution', 'utm-attribution-tracker' )
 		);
 		return $links;
 	}
