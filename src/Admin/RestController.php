@@ -310,6 +310,19 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// By device type — computed once at insert time (Tracker::device_type),
+		// so this is a plain GROUP BY like every other breakdown.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$by_device = $wpdb->get_results(
+			"SELECT device AS label, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$click_where} AND device != ''
+			 GROUP BY device
+			 ORDER BY count DESC",
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Top landing pages — passive incoming visits only (redirect-link rows
 		// store the outbound destination, not a landing page). The query string
 		// is stripped so UTM variants of one URL group into a single row.
@@ -428,6 +441,7 @@ class RestController {
 				'by_source'              => array_values( (array) $by_source ),
 				'by_campaign'            => array_values( (array) $by_campaign ),
 				'by_medium'              => array_values( (array) $by_medium ),
+				'by_device'              => array_values( (array) $by_device ),
 				'by_landing'             => array_values( (array) $by_landing ),
 				'by_platform'            => array_values( (array) $by_platform ),
 				'by_referrer'            => array_values( (array) $by_referrer ),

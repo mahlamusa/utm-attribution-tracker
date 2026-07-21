@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 class Schema {
 
 	private const DB_VERSION_OPTION = 'utmat_db_version';
-	private const DB_VERSION        = '3';
+	private const DB_VERSION        = '4';
 
 	/**
 	 * Create / upgrade the events table on activation.
@@ -85,6 +85,7 @@ class Schema {
   is_conversion TINYINT(1) NOT NULL DEFAULT 0,
   touch VARCHAR(10) NOT NULL DEFAULT '',
   order_total DECIMAL(19,4) NULL DEFAULT NULL,
+  device VARCHAR(10) NOT NULL DEFAULT '',
   ip_hash VARCHAR(64) NOT NULL DEFAULT '',
   user_agent VARCHAR(500) NOT NULL DEFAULT '',
   referrer VARCHAR(2083) NOT NULL DEFAULT '',

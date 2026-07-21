@@ -325,13 +325,14 @@ class Tracker {
 			'twclid'        => substr( $data['twclid'] ?? '', 0, 255 ),
 			'is_conversion' => empty( $data['is_conversion'] ) ? 0 : 1,
 			'touch'         => substr( $data['touch'] ?? '', 0, 10 ),
+			'device'        => self::device_type( $ua ),
 			'ip_hash'       => self::hash_ip( $ip ),
 			'user_agent'    => $ua,
 			'referrer'      => substr( $ref, 0, 2083 ),
 			'clicked_at'    => current_time( 'mysql', true ),
 		);
 
-		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s' );
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' );
 
 		// $wpdb->insert() cannot pass a typed NULL, so omit the column instead.
 		if ( isset( $data['order_total'] ) && is_numeric( $data['order_total'] ) ) {
@@ -411,6 +412,35 @@ class Tracker {
 		 * @var int $window
 		 */
 		return (int) apply_filters( 'utmat_dedup_window', 30 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Classify a user agent string as `mobile`, `tablet`, or `desktop`.
+	 *
+	 * A lightweight regex heuristic computed once at insert time and stored
+	 * on the row, so the dashboard's device breakdown is a plain GROUP BY
+	 * like every other chart instead of re-parsing raw user agents per
+	 * request. Tablets are checked before the broader mobile pattern since
+	 * "iPad" and tablet-class Android strings would otherwise match it.
+	 *
+	 * @since 1.0.0
+	 * @param string $ua The user agent string.
+	 * @return string
+	 */
+	public static function device_type( string $ua ): string {
+		if ( '' === trim( $ua ) ) {
+			return '';
+		}
+
+		if ( preg_match( '/iPad|Android(?!.*Mobile)|Tablet|Kindle|Silk/i', $ua ) ) {
+			return 'tablet';
+		}
+
+		if ( preg_match( '/Mobi|iPhone|iPod|Android|BlackBerry|IEMobile|Opera Mini|Windows Phone/i', $ua ) ) {
+			return 'mobile';
+		}
+
+		return 'desktop';
 	}
 
 	/**

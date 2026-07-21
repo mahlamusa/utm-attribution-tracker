@@ -278,6 +278,13 @@
 		} );
 	}
 
+	// Display names for the device keys derived server-side from user agents.
+	const DEVICE_NAMES = {
+		desktop: i18n.deviceDesktop || 'Desktop',
+		mobile:  i18n.deviceMobile || 'Mobile',
+		tablet:  i18n.deviceTablet || 'Tablet',
+	};
+
 	// Display names for the ad-platform keys derived server-side from click IDs.
 	const PLATFORM_NAMES = {
 		google:    i18n.platformGoogle || 'Google Ads',
@@ -1030,6 +1037,11 @@
 
 			// Bar — by medium.
 			makeBarChart( 'utmat-chart-medium', stats.by_medium || [] );
+
+			// Doughnut — by device type.
+			makeDoughnutChart( 'utmat-chart-device', ( stats.by_device || [] ).map( function ( d ) {
+				return { label: DEVICE_NAMES[ d.label ] || d.label, count: d.count };
+			} ) );
 
 			// Bar — top landing pages (labels shortened to the URL path).
 			makeBarChart( 'utmat-chart-landing', ( stats.by_landing || [] ).map( function ( d ) {
