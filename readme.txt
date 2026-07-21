@@ -80,6 +80,8 @@ The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites)
 
 **Consent note:** the plugin does not ship a consent banner. If a plugin implementing the [WP Consent API](https://github.com/rlankhorst/wp-consent-level-api) is active (Complianz, Real Cookie Banner, Borlabs Cookie, and others implement it), the cookie is only written once the visitor has granted marketing or statistics consent — no configuration needed. Without a Consent API plugin, the cookie is written by default; gate it yourself by returning `false` from `utmat_enable_cookie` until consent is given.
 
+**Caching caveat:** the consent decision is read server-side and baked into the page at render time, including into the front-end beacon's cached HTML. On a full-page cache, the consent state served to every visitor is whatever it was when that page was cached, until the cache entry regenerates. If your consent banner can change a visitor's stored consent without a full page reload, exclude logged-out page loads from the cache for a short window after consent changes, or configure your cache plugin to vary by your consent cookie, so the served consent state stays current.
+
 = How does WooCommerce order attribution work? =
 
 When a visitor who previously arrived through a tracked campaign places an order, the order is stamped with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen), and a conversion event with the order total is recorded. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
