@@ -34,6 +34,7 @@
 	let linksFilter    = '';
 	let clicksSortDir  = ''; // '' (server order), 'asc', or 'desc'.
 	const selectedLinks = new Set(); // Link IDs checked for bulk delete.
+	let allPresets      = [];
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	const elLoading      = document.getElementById( 'utmat-loading' );
@@ -846,6 +847,135 @@
 		} );
 	}
 
+	// ── Saved UTM presets ──────────────────────────────────────────────────────
+	// A preset is a reusable source/medium/term/content combination applied
+	// to the add-link form on demand — distinct from the passive datalist
+	// suggestions above, which only ever fill empty fields; selecting a
+	// preset is an explicit action and overwrites the current values.
+	const elPresetSelect     = document.getElementById( 'utmat-preset-select' );
+	const elPresetDelete     = document.getElementById( 'utmat-preset-delete' );
+	const elPresetSave       = document.getElementById( 'utmat-preset-save' );
+	const elPresetNameRow    = document.getElementById( 'utmat-preset-name-row' );
+	const elPresetName       = document.getElementById( 'utmat-preset-name' );
+	const elPresetNameOk     = document.getElementById( 'utmat-preset-name-confirm' );
+	const elPresetNameCancel = document.getElementById( 'utmat-preset-name-cancel' );
+
+	function populatePresets( presets ) {
+		allPresets = presets || [];
+		if ( ! elPresetSelect ) {
+			return;
+		}
+
+		const current = elPresetSelect.value;
+		while ( elPresetSelect.options.length > 1 ) {
+			elPresetSelect.remove( 1 );
+		}
+		allPresets.forEach( function ( preset ) {
+			const opt = document.createElement( 'option' );
+			opt.value = preset.id;
+			opt.textContent = preset.name;
+			elPresetSelect.appendChild( opt );
+		} );
+		elPresetSelect.value = allPresets.some( function ( p ) { return p.id === current; } ) ? current : '';
+		if ( elPresetDelete ) {
+			elPresetDelete.hidden = ! elPresetSelect.value;
+		}
+	}
+
+	if ( elPresetSelect ) {
+		elPresetSelect.addEventListener( 'change', function () {
+			const preset = allPresets.find( function ( p ) { return p.id === elPresetSelect.value; } );
+			if ( elPresetDelete ) {
+				elPresetDelete.hidden = ! preset;
+			}
+			if ( ! preset ) {
+				return;
+			}
+			elAddForm.elements.utm_source.value  = preset.utm_source;
+			elAddForm.elements.utm_medium.value  = preset.utm_medium;
+			elAddForm.elements.utm_term.value    = preset.utm_term;
+			elAddForm.elements.utm_content.value = preset.utm_content;
+			const advanced = elAddForm.querySelector( '.utmat-add-form__advanced' );
+			if ( advanced && ( preset.utm_term || preset.utm_content ) ) {
+				advanced.open = true;
+			}
+		} );
+	}
+
+	if ( elPresetSave ) {
+		elPresetSave.addEventListener( 'click', function () {
+			show( elPresetNameRow );
+			elPresetName.value = '';
+			elPresetName.focus();
+		} );
+	}
+
+	if ( elPresetNameCancel ) {
+		elPresetNameCancel.addEventListener( 'click', function () {
+			hide( elPresetNameRow );
+		} );
+	}
+
+	if ( elPresetNameOk ) {
+		elPresetNameOk.addEventListener( 'click', function () {
+			const name = elPresetName.value.trim();
+			if ( ! name ) {
+				window.alert( i18n.presetNameRequired || 'Please enter a preset name.' ); // eslint-disable-line no-alert
+				return;
+			}
+
+			apiFetch( '/presets', {
+				method:  'POST',
+				headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
+				body:    JSON.stringify( {
+					name:        name,
+					utm_source:  elAddForm.elements.utm_source.value,
+					utm_medium:  elAddForm.elements.utm_medium.value,
+					utm_term:    elAddForm.elements.utm_term.value,
+					utm_content: elAddForm.elements.utm_content.value,
+				} ),
+			} ).then( function ( saved ) {
+				const without = allPresets.filter( function ( p ) { return p.id !== saved.id; } );
+				populatePresets( without.concat( [ saved ] ) );
+				elPresetSelect.value = saved.id;
+				elPresetDelete.hidden = false;
+				hide( elPresetNameRow );
+				elAddMsg.textContent = i18n.presetSaved || 'Preset saved.';
+				elAddMsg.className   = 'utmat-add-form__msg is-success';
+			} ).catch( function ( err ) {
+				window.alert( err.message || 'Unknown error.' ); // eslint-disable-line no-alert
+			} );
+		} );
+	}
+
+	if ( elPresetDelete ) {
+		elPresetDelete.addEventListener( 'click', function () {
+			const id = elPresetSelect.value;
+			if ( ! id ) {
+				return;
+			}
+			if ( ! elPresetDelete.dataset.confirming ) {
+				elPresetDelete.dataset.confirming = '1';
+				const label = elPresetDelete.textContent;
+				elPresetDelete.textContent = i18n.confirmDeletePreset || 'Delete this preset?';
+				setTimeout( function () {
+					delete elPresetDelete.dataset.confirming;
+					elPresetDelete.textContent = label;
+				}, 3000 );
+				return;
+			}
+			delete elPresetDelete.dataset.confirming;
+
+			apiFetch( '/presets/' + encodeURIComponent( id ), { method: 'DELETE' } ).then( function () {
+				populatePresets( allPresets.filter( function ( p ) { return p.id !== id; } ) );
+				elPresetSelect.value = '';
+				elPresetDelete.hidden = true;
+			} ).catch( function ( err ) {
+				window.alert( err.message || 'Unknown error.' ); // eslint-disable-line no-alert
+			} );
+		} );
+	}
+
 	// ── Add / edit link form ──────────────────────────────────────────────────
 	// Editing reuses the add form: fields are pre-filled from the link, the
 	// submit button becomes "Save changes", and the slug is locked (it is not
@@ -1170,6 +1300,7 @@
 			allLinks = linksRes.links || [];
 			refreshLinksTable();
 			populateDatalists( linksRes.suggestions || {} );
+			populatePresets( linksRes.presets || [] );
 		} ).catch( function ( err ) {
 			setLoading( false );
 			showError( err.message || 'Unknown error.' );

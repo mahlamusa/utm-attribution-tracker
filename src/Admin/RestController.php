@@ -142,6 +142,31 @@ class RestController {
 
 		register_rest_route(
 			'utmat/v1',
+			'/presets',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( self::class, 'create_preset' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/presets/(?P<id>[a-z0-9_\-]+)',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => array( self::class, 'delete_preset' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array(
+					'id' => array(
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
 			'/test-email',
 			array(
 				'methods'             => 'POST',
@@ -771,9 +796,95 @@ class RestController {
 			array(
 				'links'       => $result,
 				'suggestions' => self::suggestions( $links ),
+				'presets'     => self::presets(),
 			),
 			200
 		);
+	}
+
+	/**
+	 * Return the saved UTM presets for the add-link form's preset dropdown.
+	 *
+	 * @since 1.0.0
+	 * @return array<int, array<string, string>>
+	 */
+	private static function presets(): array {
+		$out = array();
+		foreach ( (array) get_option( 'utmat_presets', array() ) as $id => $preset ) {
+			if ( ! is_array( $preset ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'          => (string) $id,
+				'name'        => (string) ( $preset['name'] ?? $id ),
+				'utm_source'  => (string) ( $preset['utm_source'] ?? '' ),
+				'utm_medium'  => (string) ( $preset['utm_medium'] ?? '' ),
+				'utm_term'    => (string) ( $preset['utm_term'] ?? '' ),
+				'utm_content' => (string) ( $preset['utm_content'] ?? '' ),
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * POST utmat/v1/presets — save a named UTM preset.
+	 *
+	 * A preset is a reusable source/medium/term/content combination (e.g.
+	 * "Instagram Story") the admin can apply to the add-link form instead of
+	 * retyping the same values for every new campaign link. Saving a name
+	 * that already exists overwrites that preset — this is an explicit,
+	 * low-stakes admin action, not data with history worth preserving.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function create_preset( WP_REST_Request $request ): WP_REST_Response {
+		$name = sanitize_text_field( self::param_string( $request, 'name' ) );
+		$id   = sanitize_title( $name );
+
+		if ( '' === $id ) {
+			return new WP_REST_Response(
+				array( 'message' => __( 'Please provide a preset name.', 'utm-attribution-tracker' ) ),
+				400
+			);
+		}
+
+		$presets        = (array) get_option( 'utmat_presets', array() );
+		$presets[ $id ] = array(
+			'name'        => $name,
+			'utm_source'  => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_source' ) ) ),
+			'utm_medium'  => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_medium' ) ) ),
+			'utm_term'    => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_term' ) ) ),
+			'utm_content' => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_content' ) ) ),
+		);
+		update_option( 'utmat_presets', $presets );
+
+		return new WP_REST_Response( array_merge( array( 'id' => $id ), $presets[ $id ] ), 201 );
+	}
+
+	/**
+	 * DELETE utmat/v1/presets/<id> — delete a saved UTM preset.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function delete_preset( WP_REST_Request $request ): WP_REST_Response {
+		$id      = (string) $request->get_param( 'id' );
+		$presets = (array) get_option( 'utmat_presets', array() );
+
+		if ( ! isset( $presets[ $id ] ) ) {
+			return new WP_REST_Response(
+				array( 'message' => __( 'Preset not found.', 'utm-attribution-tracker' ) ),
+				404
+			);
+		}
+
+		unset( $presets[ $id ] );
+		update_option( 'utmat_presets', $presets );
+
+		return new WP_REST_Response( array( 'deleted' => true ), 200 );
 	}
 
 	/**

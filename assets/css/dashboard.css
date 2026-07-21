@@ -545,3 +545,21 @@
 .utmat-daterange input[type="date"] {
 	max-width: 140px;
 }
+
+/* Saved UTM presets row on the add-link form. */
+.utmat-presets-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+.utmat-presets-row label {
+	font-size: 12px;
+	font-weight: 600;
+}
+.utmat-preset-name-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}

@@ -235,6 +235,23 @@ defined( 'ABSPATH' ) || exit;
 		<form class="utmat-add-form" id="utmat-add-form">
 			<h3><?php esc_html_e( 'Add tracked link', 'utm-attribution-tracker' ); ?></h3>
 
+			<p class="utmat-presets-row">
+				<label for="utmat-preset-select"><?php esc_html_e( 'Apply a saved preset', 'utm-attribution-tracker' ); ?></label>
+				<select id="utmat-preset-select">
+					<option value=""><?php esc_html_e( 'None', 'utm-attribution-tracker' ); ?></option>
+				</select>
+				<button type="button" class="button-link" id="utmat-preset-delete" hidden><?php esc_html_e( 'Delete preset', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="button" id="utmat-preset-save"><?php esc_html_e( 'Save current as preset', 'utm-attribution-tracker' ); ?></button>
+			</p>
+
+			<!-- Shown by JS when "Save current as preset" is clicked -->
+			<p class="utmat-preset-name-row" id="utmat-preset-name-row" hidden>
+				<label for="utmat-preset-name" class="screen-reader-text"><?php esc_html_e( 'Preset name', 'utm-attribution-tracker' ); ?></label>
+				<input type="text" id="utmat-preset-name" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. Instagram Story', 'utm-attribution-tracker' ); ?>" />
+				<button type="button" class="button button-primary" id="utmat-preset-name-confirm"><?php esc_html_e( 'Save', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="button" id="utmat-preset-name-cancel"><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
+			</p>
+
 			<div class="utmat-add-form__grid">
 				<p>
 					<label for="utmat-new-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></label>
@@ -365,6 +382,9 @@ defined( 'ABSPATH' ) || exit;
 			'noLinks'              => __( 'No tracked links yet — add your first one below.', 'utm-attribution-tracker' ),
 			'noLinksMatch'         => __( 'No tracked links match your search.', 'utm-attribution-tracker' ),
 			'deleteSelected'       => __( 'Delete selected', 'utm-attribution-tracker' ),
+			'presetSaved'          => __( 'Preset saved.', 'utm-attribution-tracker' ),
+			'presetNameRequired'   => __( 'Please enter a preset name.', 'utm-attribution-tracker' ),
+			'confirmDeletePreset'  => __( 'Delete this preset?', 'utm-attribution-tracker' ),
 			'duplicate'            => __( 'Duplicate', 'utm-attribution-tracker' ),
 			'duplicateHint'        => __( 'Pre-fill the add-link form with this link’s values to create a variant.', 'utm-attribution-tracker' ),
 			'copySuffix'           => __( '(copy)', 'utm-attribution-tracker' ),
