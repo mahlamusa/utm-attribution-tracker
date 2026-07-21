@@ -606,6 +606,16 @@
 			} );
 			actionsCell.appendChild( editBtn );
 
+			const dupBtn = document.createElement( 'button' );
+			dupBtn.type      = 'button';
+			dupBtn.className = 'button button-small utmat-duplicate-btn';
+			dupBtn.textContent = i18n.duplicate || 'Duplicate';
+			dupBtn.title      = i18n.duplicateHint || 'Pre-fill the add-link form with this link’s values to create a variant.';
+			dupBtn.addEventListener( 'click', function () {
+				enterDuplicateMode( link );
+			} );
+			actionsCell.appendChild( dupBtn );
+
 			const deleteBtn = document.createElement( 'button' );
 			deleteBtn.type      = 'button';
 			deleteBtn.className = 'button button-small button-link-delete utmat-delete-btn';
@@ -742,6 +752,40 @@
 		elAddMsg.textContent = '';
 		elAddMsg.className = 'utmat-add-form__msg';
 		elAddForm.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+	}
+
+	/**
+	 * Pre-fill the add-link form from an existing link to create a variant.
+	 *
+	 * Unlike enterEditMode(), editingId stays null — submitting the form
+	 * always POSTs a new link (a fresh slug derived from the label). The
+	 * label gets a " (copy)" suffix so the create-time slug never collides
+	 * with the original.
+	 */
+	function enterDuplicateMode( link ) {
+		editingId = null;
+
+		elAddForm.elements.label.value        = ( link.label || '' ) + ' ' + ( i18n.copySuffix || '(copy)' );
+		elAddForm.elements.destination.value  = link.destination_raw;
+		elAddForm.elements.utm_campaign.value = link.utm_campaign;
+		elAddForm.elements.utm_source.value   = link.utm_source;
+		elAddForm.elements.utm_medium.value   = link.utm_medium;
+		elAddForm.elements.utm_term.value     = link.utm_term;
+		elAddForm.elements.utm_content.value  = link.utm_content;
+		elAddForm.elements.utm_id.value       = link.utm_id;
+
+		const advanced = elAddForm.querySelector( '.utmat-add-form__advanced' );
+		if ( advanced ) {
+			advanced.open = !! ( link.utm_term || link.utm_content || link.utm_id );
+		}
+
+		elSubmitBtn.textContent = i18n.addLink || 'Add link';
+		hide( elCancelBtn );
+		elAddMsg.textContent = '';
+		elAddMsg.className = 'utmat-add-form__msg';
+		elAddForm.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+		elAddForm.elements.label.focus();
+		elAddForm.elements.label.select();
 	}
 
 	function exitEditMode() {

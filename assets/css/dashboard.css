@@ -234,12 +234,12 @@
 }
 
 .utmat-col-actions {
-	width: 120px;
+	width: 160px;
+	white-space: normal;
 }
 
-.utmat-edit-btn,
-.utmat-qr-btn {
-	margin-right: 6px;
+.utmat-col-actions .button {
+	margin: 0 6px 4px 0;
 }
 
 /* QR expander row
