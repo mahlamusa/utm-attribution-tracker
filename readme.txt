@@ -97,6 +97,8 @@ Every tracked parameter is available to forms under a `utmat_*` field name: `utm
 
 **Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utmat_source` or `utmat_source_first`.
 
+**Ninja Forms:** add a Hidden field to your form and set its default value to `{utmat:utm_source}` (or any other tracked parameter, e.g. `{utmat:gclid}`, `{utmat:landing}`, `{utmat:utm_source_first}`) to capture attribution.
+
 **Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utmat_source` — the generic layer fills it on page load.
 
 **WPForms:** WPForms does not expose a field's HTML `name`, so the generic layer cannot target it. Use a Hidden Field with the `{query_var key="utm_source"}` Smart Tag to capture parameters from the URL the form is submitted on.

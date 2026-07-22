@@ -20,6 +20,7 @@ use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
 use UTMAT\Integrations\Forms\ContactForm7;
 use UTMAT\Integrations\Forms\GravityForms;
+use UTMAT\Integrations\Forms\NinjaForms;
 use UTMAT\Rest\CollectController;
 use UTMAT\Shortcode\TrackedLink;
 
@@ -61,6 +62,7 @@ class Plugin {
 	 * Register all WordPress hooks.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the Ninja Forms adapter to the form-plugin wiring.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -107,6 +109,7 @@ class Plugin {
 		// each maybe_init() adds zero hooks when its plugin is absent.
 		add_action( 'plugins_loaded', array( ContactForm7::class, 'maybe_init' ), 20 );
 		add_action( 'plugins_loaded', array( GravityForms::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( NinjaForms::class, 'maybe_init' ), 20 );
 
 		// Admin dashboard.
 		if ( is_admin() ) {

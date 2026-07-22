@@ -20,6 +20,7 @@ class Bootstrap {
 	 * Require all source files.
 	 *
 	 * @since 1.0.0 Added Diagnostics/Checks.php.
+	 * @since 1.0.0 Added Integrations/Forms/NinjaForms.php.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -39,6 +40,7 @@ class Bootstrap {
 		require_once $base . 'Integrations/WooCommerce.php';
 		require_once $base . 'Integrations/Forms/ContactForm7.php';
 		require_once $base . 'Integrations/Forms/GravityForms.php';
+		require_once $base . 'Integrations/Forms/NinjaForms.php';
 		require_once $base . 'Admin/Dashboard.php';
 		require_once $base . 'Diagnostics/Checks.php';
 		require_once $base . 'Admin/RestController.php';
