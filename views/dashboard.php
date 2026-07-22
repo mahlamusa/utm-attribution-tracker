@@ -148,6 +148,16 @@ defined( 'ABSPATH' ) || exit;
 		</div>
 
 		<div class="utmat-card">
+			<h2 class="utmat-card__title"><?php esc_html_e( 'Traffic source', 'utm-attribution-tracker' ); ?></h2>
+			<div class="utmat-card__body utmat-card__body--center">
+				<canvas id="utmat-chart-traffic-source"
+					aria-label="<?php esc_attr_e( 'Clicks by traffic source doughnut chart', 'utm-attribution-tracker' ); ?>"
+					role="img"></canvas>
+				<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+			</div>
+		</div>
+
+		<div class="utmat-card">
 			<h2 class="utmat-card__title"><?php esc_html_e( 'Top landing pages', 'utm-attribution-tracker' ); ?></h2>
 			<div class="utmat-card__body">
 				<canvas id="utmat-chart-landing"

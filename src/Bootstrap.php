@@ -28,6 +28,7 @@ class Bootstrap {
 		require_once $base . 'DB/Schema.php';
 		require_once $base . 'DB/Retention.php';
 		require_once $base . 'Privacy/PrivacyPolicy.php';
+		require_once $base . 'Tracking/TrafficSource.php';
 		require_once $base . 'Tracking/LinkManager.php';
 		require_once $base . 'Tracking/Attribution.php';
 		require_once $base . 'Tracking/Tracker.php';

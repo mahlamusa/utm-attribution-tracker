@@ -1329,6 +1329,9 @@
 				return { label: DEVICE_NAMES[ d.label ] || d.label, count: d.count };
 			} ) );
 
+			// Doughnut — traffic source (Direct/Organic-Referral/Paid/Google Ads/Tagged).
+			makeDoughnutChart( 'utmat-chart-traffic-source', stats.by_traffic_source || [] );
+
 			// Bar — top landing pages (labels shortened to the URL path).
 			makeBarChart( 'utmat-chart-landing', ( stats.by_landing || [] ).map( function ( d ) {
 				return { label: shortenUrl( d.label ), count: d.count };

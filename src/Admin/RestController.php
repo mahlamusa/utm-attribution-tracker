@@ -24,6 +24,7 @@ use UTMAT\DB\Schema;
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
+use UTMAT\Tracking\TrafficSource;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -379,6 +380,23 @@ class RestController {
 		);
 		// phpcs:enable
 
+		// By traffic source — Direct/Organic-Referral/Paid/Google-Ads/Tagged,
+		// classified per row by the shared rule set in TrafficSource so this
+		// aggregate breakdown and spec 012's per-lead classification cannot
+		// drift apart. Ordered by R1's priority order (not count) so the
+		// chart legend reads consistently across periods.
+		$traffic_source_case = TrafficSource::sql_case_expression();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$by_traffic_source = $wpdb->get_results(
+			"SELECT {$traffic_source_case} AS label, COUNT(*) AS count
+			 FROM {$table}
+			 WHERE {$click_where}
+			 GROUP BY label
+			 ORDER BY FIELD( label, 'Google Ads', 'Paid', 'Direct', 'Organic / Referral', 'Tagged' )",
+			ARRAY_A
+		);
+		// phpcs:enable
+
 		// Top landing pages — passive incoming visits only (redirect-link rows
 		// store the outbound destination, not a landing page). The query string
 		// is stripped so UTM variants of one URL group into a single row.
@@ -498,6 +516,7 @@ class RestController {
 				'by_campaign'            => array_values( (array) $by_campaign ),
 				'by_medium'              => array_values( (array) $by_medium ),
 				'by_device'              => array_values( (array) $by_device ),
+				'by_traffic_source'      => array_values( (array) $by_traffic_source ),
 				'by_landing'             => array_values( (array) $by_landing ),
 				'by_platform'            => array_values( (array) $by_platform ),
 				'by_referrer'            => array_values( (array) $by_referrer ),

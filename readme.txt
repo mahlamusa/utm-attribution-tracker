@@ -31,7 +31,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Reporting:**
 
-* **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign.
+* **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, traffic source (Direct/Organic-Referral/Paid/Google Ads/Tagged), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign.
 * **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn.
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows). Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
 * **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active. Pairs well with the companion SMTP plugin for reliable delivery.
