@@ -1262,6 +1262,117 @@
 		} );
 	}
 
+	// ── Diagnostics (Tracking Doctor) ────────────────────────────────────────
+	const elRunDiagnostics         = document.getElementById( 'utmat-run-diagnostics' );
+	const elDiagnosticsMsg         = document.getElementById( 'utmat-diagnostics-msg' );
+	const elDiagnosticsList        = document.getElementById( 'utmat-diagnostics-list' );
+	const elDiagnosticsForms       = document.getElementById( 'utmat-diagnostics-forms' );
+	const elDiagnosticsFormsTbody  = document.getElementById( 'utmat-diagnostics-forms-tbody' );
+	const elDiagnosticsUnsupported = document.getElementById( 'utmat-diagnostics-unsupported' );
+
+	const DIAG_STATUS_LABELS = {
+		pass: i18n.diagStatusPass || 'Pass',
+		warn: i18n.diagStatusWarn || 'Warn',
+		fail: i18n.diagStatusFail || 'Fail',
+		skip: i18n.diagStatusSkip || 'Skip',
+	};
+
+	const FORM_STATUS_LABELS = {
+		complete: i18n.diagFormComplete || 'Complete',
+		partial:  i18n.diagFormPartial || 'Partial',
+		none:     i18n.diagFormNone || 'None',
+	};
+
+	// The forms-matrix badge reuses the check badge's pass/warn/fail palette.
+	const FORM_STATUS_BADGE = { complete: 'pass', partial: 'warn', none: 'fail' };
+
+	function renderFormsMatrix( details ) {
+		const matrix      = ( details && details.matrix ) || [];
+		const unsupported = ( details && details.unsupported_plugins ) || [];
+
+		elDiagnosticsFormsTbody.innerHTML = '';
+
+		if ( ! matrix.length && ! unsupported.length ) {
+			hide( elDiagnosticsForms );
+			return;
+		}
+
+		matrix.forEach( function ( row ) {
+			const tr = elDiagnosticsFormsTbody.insertRow();
+			tr.insertCell().textContent = row.form_title;
+			tr.insertCell().textContent = row.integration || '';
+
+			const statusCell = tr.insertCell();
+			const badge       = document.createElement( 'span' );
+			badge.className   = 'utmat-diagnostic-badge is-' + ( FORM_STATUS_BADGE[ row.status ] || 'skip' );
+			badge.textContent = FORM_STATUS_LABELS[ row.status ] || row.status;
+			statusCell.appendChild( badge );
+
+			tr.insertCell().textContent = ( row.present && row.present.length ) ? row.present.join( ', ' ) : ( i18n.diagNone || '—' );
+			tr.insertCell().textContent = ( row.missing && row.missing.length ) ? row.missing.join( ', ' ) : ( i18n.diagNone || '—' );
+		} );
+
+		if ( unsupported.length ) {
+			elDiagnosticsUnsupported.textContent = unsupported.map( function ( p ) {
+				return p.label + ': ' + p.message;
+			} ).join( ' ' );
+			show( elDiagnosticsUnsupported );
+		} else {
+			hide( elDiagnosticsUnsupported );
+		}
+
+		show( elDiagnosticsForms );
+	}
+
+	function renderDiagnostics( checks ) {
+		elDiagnosticsList.innerHTML = '';
+		hide( elDiagnosticsForms );
+
+		checks.forEach( function ( check ) {
+			const li   = document.createElement( 'li' );
+			li.className = 'utmat-diagnostic-item';
+
+			const badge       = document.createElement( 'span' );
+			badge.className   = 'utmat-diagnostic-badge is-' + check.status;
+			badge.textContent = DIAG_STATUS_LABELS[ check.status ] || check.status;
+
+			const body = document.createElement( 'span' );
+			body.className = 'utmat-diagnostic-body';
+			const strong = document.createElement( 'strong' );
+			strong.textContent = check.label + ': ';
+			body.appendChild( strong );
+			body.appendChild( document.createTextNode( check.message ) );
+
+			li.appendChild( badge );
+			li.appendChild( body );
+			elDiagnosticsList.appendChild( li );
+
+			if ( 'forms' === check.id ) {
+				renderFormsMatrix( check.details );
+			}
+		} );
+
+		show( elDiagnosticsList );
+	}
+
+	if ( elRunDiagnostics ) {
+		elRunDiagnostics.addEventListener( 'click', function () {
+			elRunDiagnostics.disabled = true;
+			elDiagnosticsMsg.textContent = i18n.diagnosticsRunning || 'Running…';
+			elDiagnosticsMsg.className   = 'utmat-add-form__msg';
+
+			apiFetch( '/diagnostics' ).then( function ( body ) {
+				renderDiagnostics( body.checks || [] );
+				elDiagnosticsMsg.textContent = '';
+			} ).catch( function ( err ) {
+				elDiagnosticsMsg.textContent = err.message || ( i18n.diagnosticsFailed || 'Could not run diagnostics.' );
+				elDiagnosticsMsg.className   = 'utmat-add-form__msg is-error';
+			} ).then( function () {
+				elRunDiagnostics.disabled = false;
+			} );
+		} );
+	}
+
 	// ── Date range query string ───────────────────────────────────────────────
 	// Shared by the stats and export requests. A custom range (both dates set)
 	// takes precedence server-side over `period`; `period` is still sent so a

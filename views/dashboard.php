@@ -387,6 +387,43 @@ defined( 'ABSPATH' ) || exit;
 		</form>
 	</div>
 
+	<!-- Diagnostics -->
+	<div class="utmat-section" id="utmat-diagnostics-section">
+		<h2><?php esc_html_e( 'Diagnostics', 'utm-attribution-tracker' ); ?></h2>
+		<p class="utmat-section__desc">
+			<?php esc_html_e( 'Run a set of local checks that confirm caching, consent, cookies, form capture, and WooCommerce attribution are set up correctly. Rule-based only — nothing is sent to any external service.', 'utm-attribution-tracker' ); ?>
+		</p>
+
+		<p class="utmat-settings-form__actions">
+			<button type="button" class="button button-primary" id="utmat-run-diagnostics">
+				<?php esc_html_e( 'Run diagnostics', 'utm-attribution-tracker' ); ?>
+			</button>
+			<span class="utmat-add-form__msg" id="utmat-diagnostics-msg" role="status"></span>
+		</p>
+
+		<ul class="utmat-diagnostics-list" id="utmat-diagnostics-list" hidden></ul>
+
+		<!-- Forms coverage matrix — populated by JS only when the forms check has rows -->
+		<div class="utmat-diagnostics-forms" id="utmat-diagnostics-forms" hidden>
+			<h3><?php esc_html_e( 'Forms coverage', 'utm-attribution-tracker' ); ?></h3>
+			<table class="wp-list-table widefat fixed striped" id="utmat-diagnostics-forms-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Form', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Integration', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Status', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Present', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Missing', 'utm-attribution-tracker' ); ?></th>
+					</tr>
+				</thead>
+				<tbody id="utmat-diagnostics-forms-tbody">
+					<!-- Populated by JS -->
+				</tbody>
+			</table>
+			<p class="description" id="utmat-diagnostics-unsupported" hidden></p>
+		</div>
+	</div>
+
 	<!-- Shortcode reference -->
 	<div class="utmat-section utmat-section--muted">
 		<h2><?php esc_html_e( 'Shortcode', 'utm-attribution-tracker' ); ?></h2>
@@ -456,6 +493,16 @@ defined( 'ABSPATH' ) || exit;
 			'testEmailSending'     => __( 'Sending…', 'utm-attribution-tracker' ),
 			'testEmailSent'        => __( 'Test email sent.', 'utm-attribution-tracker' ),
 			'testEmailFailed'      => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),
+			'diagnosticsRunning'   => __( 'Running…', 'utm-attribution-tracker' ),
+			'diagnosticsFailed'    => __( 'Could not run diagnostics.', 'utm-attribution-tracker' ),
+			'diagStatusPass'       => __( 'Pass', 'utm-attribution-tracker' ),
+			'diagStatusWarn'       => __( 'Warn', 'utm-attribution-tracker' ),
+			'diagStatusFail'       => __( 'Fail', 'utm-attribution-tracker' ),
+			'diagStatusSkip'       => __( 'Skip', 'utm-attribution-tracker' ),
+			'diagFormComplete'     => __( 'Complete', 'utm-attribution-tracker' ),
+			'diagFormPartial'      => __( 'Partial', 'utm-attribution-tracker' ),
+			'diagFormNone'         => __( 'None', 'utm-attribution-tracker' ),
+			'diagNone'             => __( '—', 'utm-attribution-tracker' ),
 		)
 	);
 	?>

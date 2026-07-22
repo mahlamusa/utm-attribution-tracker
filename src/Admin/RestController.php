@@ -10,6 +10,7 @@
  *   DELETE utmat/v1/links/<id>  — delete a managed link
  *   GET    utmat/v1/export      — raw event rows for CSV export
  *   POST   utmat/v1/settings    — save retention days + weekly email toggle
+ *   GET    utmat/v1/diagnostics — Tracking Doctor diagnostic check results
  *
  * All routes require the `manage_options` capability.
  *
@@ -21,6 +22,7 @@ namespace UTMAT\Admin;
 use DateTimeImmutable;
 use DateTimeZone;
 use UTMAT\DB\Schema;
+use UTMAT\Diagnostics\Checks;
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\LinkManager;
@@ -212,6 +214,16 @@ class RestController {
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/diagnostics',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'get_diagnostics' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
 			)
 		);
 	}
@@ -767,6 +779,19 @@ class RestController {
 	 */
 	public static function send_test_webhook(): WP_REST_Response {
 		return new WP_REST_Response( array( 'sent' => ConversionWebhook::send_test() ), 200 );
+	}
+
+	/**
+	 * GET utmat/v1/diagnostics — run the Tracking Doctor checks.
+	 *
+	 * Computed fresh on every request; every check is a cheap local read
+	 * (option/meta reads, a bounded orders query), never cached.
+	 *
+	 * @since 1.0.0
+	 * @return WP_REST_Response
+	 */
+	public static function get_diagnostics(): WP_REST_Response {
+		return new WP_REST_Response( array( 'checks' => Checks::run_all() ), 200 );
 	}
 
 	/**

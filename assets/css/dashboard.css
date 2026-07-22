@@ -563,3 +563,39 @@
 	gap: 8px;
 	margin-bottom: 12px;
 }
+
+/* Tracking Doctor diagnostics list + forms coverage matrix. */
+.utmat-diagnostics-list {
+	list-style: none;
+	margin: 16px 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.utmat-diagnostic-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+}
+.utmat-diagnostic-badge {
+	flex-shrink: 0;
+	min-width: 48px;
+	text-align: center;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: #fff;
+}
+.utmat-diagnostic-badge.is-pass { background: #007017; }
+.utmat-diagnostic-badge.is-warn { background: #996800; }
+.utmat-diagnostic-badge.is-fail { background: #b32d2e; }
+.utmat-diagnostic-badge.is-skip { background: var(--utmat-muted); }
+.utmat-diagnostic-body {
+	color: var(--utmat-text);
+}
+.utmat-diagnostics-forms {
+	margin-top: 16px;
+}

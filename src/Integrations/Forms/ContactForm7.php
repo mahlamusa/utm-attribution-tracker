@@ -18,6 +18,7 @@ namespace UTMAT\Integrations\Forms;
 
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
+use WPCF7_ContactForm;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -117,5 +118,38 @@ class ContactForm7 {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return $html ? esc_html( $value ) : $value;
+	}
+
+	/**
+	 * Report per-form attribution field coverage for Tracking Doctor diagnostics.
+	 *
+	 * Every CF7 form is always `complete`: add_hidden_fields() unconditionally
+	 * appends every recognised field to every form via `wpcf7_form_hidden_fields`,
+	 * so there is nothing a form author could misconfigure. Returns an empty
+	 * array when CF7 is inactive.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return array<int, array{form_id: int|string, form_title: string, status: string, present: string[], missing: string[]}>
+	 */
+	public static function get_form_status(): array {
+		if ( ! defined( 'WPCF7_VERSION' ) || ! class_exists( 'WPCF7_ContactForm' ) ) {
+			return array();
+		}
+
+		$present = Attribution::field_names();
+		$rows    = array();
+
+		foreach ( WPCF7_ContactForm::find() as $form ) {
+			$rows[] = array(
+				'form_id'    => $form->id(),
+				'form_title' => $form->title(),
+				'status'     => 'complete',
+				'present'    => $present,
+				'missing'    => array(),
+			);
+		}
+
+		return $rows;
 	}
 }

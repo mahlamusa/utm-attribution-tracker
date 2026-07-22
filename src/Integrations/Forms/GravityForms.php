@@ -17,6 +17,7 @@
 
 namespace UTMAT\Integrations\Forms;
 
+use GFAPI;
 use UTMAT\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
@@ -64,5 +65,58 @@ class GravityForms {
 				}
 			);
 		}
+	}
+
+	/**
+	 * Report per-form attribution field coverage for Tracking Doctor diagnostics.
+	 *
+	 * For each GF form, inspects every field for `allowsPrepopulate` fields
+	 * whose `inputName` matches a recognised attribution field name — the
+	 * same dynamic-population mechanism maybe_init() relies on to fill
+	 * values. Returns an empty array when Gravity Forms is inactive.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @return array<int, array{form_id: int|string, form_title: string, status: string, present: string[], missing: string[]}>
+	 */
+	public static function get_form_status(): array {
+		if ( ! class_exists( 'GFAPI' ) ) {
+			return array();
+		}
+
+		$names = Attribution::field_names();
+		$rows  = array();
+
+		foreach ( GFAPI::get_forms() as $form ) {
+			$present = array();
+			foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
+				// GF_Field's own camelCase property names; not ours to rename.
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+				if ( ! empty( $field->allowsPrepopulate ) && in_array( $field->inputName, $names, true ) ) {
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+					$present[] = $field->inputName;
+				}
+			}
+			$present = array_values( array_unique( $present ) );
+			$missing = array_values( array_diff( $names, $present ) );
+
+			if ( empty( $present ) ) {
+				$status = 'none';
+			} elseif ( empty( $missing ) ) {
+				$status = 'complete';
+			} else {
+				$status = 'partial';
+			}
+
+			$rows[] = array(
+				'form_id'    => $form['id'],
+				'form_title' => $form['title'],
+				'status'     => $status,
+				'present'    => $present,
+				'missing'    => $missing,
+			);
+		}
+
+		return $rows;
 	}
 }

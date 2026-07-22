@@ -35,6 +35,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 * **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn.
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows). Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
 * **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active. Pairs well with the companion SMTP plugin for reliable delivery.
+* **Tracking Doctor diagnostics** — a "Run diagnostics" panel on the settings card runs five rule-based local checks (caching, consent, cookies, per-form attribution coverage, WooCommerce order attribution) and reports pass/warn/fail/skip with a plain-language explanation for each. No AI, no external calls — every check inspects local plugin/site state only.
 
 **Forms & integrations:**
 

@@ -191,10 +191,10 @@ class Dashboard {
 	 * wonder. Detection is a fixed allow-list of well-known plugins; an
 	 * unrecognised cache returns an empty string and the notice is skipped.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Made public so Diagnostics\Checks::caching() can reuse the same allow-list.
 	 * @return string The detected plugin's display name, or '' when none matched.
 	 */
-	private static function detect_cache_plugin(): string {
+	public static function detect_cache_plugin(): string {
 		if ( defined( 'WP_ROCKET_VERSION' ) ) {
 			return 'WP Rocket';
 		}
