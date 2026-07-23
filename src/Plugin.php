@@ -16,6 +16,7 @@ use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Tracking\Rewrites;
 use UTMAT\Admin\Dashboard;
+use UTMAT\Admin\DashboardWidget;
 use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
 use UTMAT\Integrations\Forms\ContactForm7;
@@ -64,6 +65,7 @@ class Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Added the Ninja Forms adapter to the form-plugin wiring.
+	 * @since 1.0.0 Added the recent-leads Dashboard widget.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -131,6 +133,9 @@ class Plugin {
 			}
 
 			add_action( 'admin_enqueue_scripts', array( Dashboard::class, 'enqueue_assets' ) );
+
+			// Recent-leads widget on wp-admin → Dashboard → Home.
+			add_action( 'wp_dashboard_setup', array( DashboardWidget::class, 'register' ) );
 
 			// "UTM & Attribution" row link on the Plugins screen.
 			add_filter( 'plugin_action_links_' . UTM_ATTRIBUTION_TRACKER_BASENAME, array( Dashboard::class, 'add_plugin_action_link' ) );

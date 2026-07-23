@@ -16,6 +16,7 @@
 
 namespace UTMAT\Integrations\Forms;
 
+use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
 use WPCF7_ContactForm;
@@ -36,6 +37,7 @@ class ContactForm7 {
 	 * Bails without adding a single hook when CF7 is absent.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the recent-leads recorder on `wpcf7_mail_sent`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -45,6 +47,7 @@ class ContactForm7 {
 
 		add_filter( 'wpcf7_form_hidden_fields', array( self::class, 'add_hidden_fields' ) );
 		add_filter( 'wpcf7_special_mail_tags', array( self::class, 'resolve_mail_tag' ), 10, 3 );
+		add_action( 'wpcf7_mail_sent', array( self::class, 'record_lead' ) );
 	}
 
 	/**
@@ -118,6 +121,34 @@ class ContactForm7 {
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		return $html ? esc_html( $value ) : $value;
+	}
+
+	/**
+	 * Record a lead for the recent-leads dashboard widget on successful submission.
+	 *
+	 * Fires on `wpcf7_mail_sent` — CF7 only runs this action after the
+	 * notification email was sent, i.e. a genuine successful submission.
+	 * Skips silently when the visitor carries no attribution data (nothing
+	 * to classify).
+	 *
+	 * @since 1.0.0
+	 * @param WPCF7_ContactForm $contact_form The submitted form.
+	 * @return void
+	 */
+	public static function record_lead( $contact_form ): void {
+		if ( ! $contact_form instanceof WPCF7_ContactForm || ! Attribution::has_data() ) {
+			return;
+		}
+
+		Recorder::record(
+			'contact-form-7',
+			array(
+				'form_id'    => $contact_form->id(),
+				'form_title' => $contact_form->title(),
+				'posted'     => Attribution::get_last(),
+				'created_at' => time(),
+			)
+		);
 	}
 
 	/**

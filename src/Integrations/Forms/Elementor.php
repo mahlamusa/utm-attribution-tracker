@@ -13,6 +13,7 @@
 
 namespace UTMAT\Integrations\Forms;
 
+use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
@@ -29,6 +30,7 @@ class Elementor {
 	 * Elementor Pro are both active.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the recent-leads recorder on `elementor_pro/forms/new_record`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -37,6 +39,38 @@ class Elementor {
 		}
 
 		add_filter( 'elementor_pro/forms/render/item/hidden', array( self::class, 'fill_hidden_field' ), 10, 3 );
+		add_action( 'elementor_pro/forms/new_record', array( self::class, 'record_lead' ), 10, 2 );
+	}
+
+	/**
+	 * Record a lead for the recent-leads dashboard widget on successful submission.
+	 *
+	 * Fires on `elementor_pro/forms/new_record` — the hook Elementor Pro
+	 * runs once a submission passes validation and its record is created,
+	 * before the form's configured actions (email, webhook, etc.) run.
+	 * Skips silently when the visitor carries no attribution data (nothing
+	 * to classify) or when $record doesn't expose get_form_settings()
+	 * (a shape change in a future Elementor Pro version).
+	 *
+	 * @since 1.0.0
+	 * @param mixed $record  The Elementor Pro form record instance (`Elementor\Pro\Modules\Forms\Classes\Form_Record`).
+	 * @param mixed $handler The Elementor Pro Ajax handler instance (unused).
+	 * @return void
+	 */
+	public static function record_lead( $record, $handler ): void {
+		if ( ! Attribution::has_data() || ! is_object( $record ) || ! method_exists( $record, 'get_form_settings' ) ) {
+			return;
+		}
+
+		Recorder::record(
+			'elementor',
+			array(
+				'form_id'    => (string) $record->get_form_settings( 'id' ),
+				'form_title' => (string) $record->get_form_settings( 'form_name' ),
+				'posted'     => Attribution::get_last(),
+				'created_at' => time(),
+			)
+		);
 	}
 
 	/**

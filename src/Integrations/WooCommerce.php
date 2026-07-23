@@ -18,6 +18,7 @@
 
 namespace UTMAT\Integrations;
 
+use UTMAT\Insights\Recorder;
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
@@ -220,6 +221,7 @@ class WooCommerce {
 	 * distinct conversion and must never be deduplicated away.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Also records the conversion for the recent-leads dashboard widget.
 	 * @param WC_Order $order The order to attach attribution to.
 	 * @param bool     $save  Whether to call save() (true for the Store API path, where the order is already persisted).
 	 * @return void
@@ -262,6 +264,27 @@ class WooCommerce {
 		}
 
 		Tracker::record( $event );
+
+		// On the classic path the order has no ID yet (see the $destination
+		// fallback above) — get_order_number() defaults to get_id(), so a
+		// real order number is only available once the order is saved.
+		$order_id = $order->get_id();
+
+		Recorder::record(
+			'woocommerce',
+			array(
+				'form_id'    => $order_id,
+				'form_title' => $order_id
+					? sprintf(
+						/* translators: %s: order number. */
+						__( 'Order #%s', 'utm-attribution-tracker' ),
+						$order->get_order_number()
+					)
+					: __( 'New order', 'utm-attribution-tracker' ),
+				'posted'     => $last,
+				'created_at' => time(),
+			)
+		);
 
 		if ( '' !== ConversionWebhook::url() ) {
 			ConversionWebhook::send_conversion(

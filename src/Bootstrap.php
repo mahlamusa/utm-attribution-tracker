@@ -21,6 +21,7 @@ class Bootstrap {
 	 *
 	 * @since 1.0.0 Added Diagnostics/Checks.php.
 	 * @since 1.0.0 Added Integrations/Forms/NinjaForms.php.
+	 * @since 1.0.0 Added Insights/Recorder.php, Insights/Insights.php, and Admin/DashboardWidget.php.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -36,6 +37,8 @@ class Bootstrap {
 		require_once $base . 'Tracking/Rewrites.php';
 		require_once $base . 'Reports/WeeklyEmail.php';
 		require_once $base . 'Reports/ConversionWebhook.php';
+		require_once $base . 'Insights/Recorder.php';
+		require_once $base . 'Insights/Insights.php';
 		require_once $base . 'Rest/CollectController.php';
 		require_once $base . 'Integrations/WooCommerce.php';
 		require_once $base . 'Integrations/Forms/ContactForm7.php';
@@ -43,6 +46,7 @@ class Bootstrap {
 		require_once $base . 'Integrations/Forms/NinjaForms.php';
 		require_once $base . 'Integrations/Forms/Elementor.php';
 		require_once $base . 'Admin/Dashboard.php';
+		require_once $base . 'Admin/DashboardWidget.php';
 		require_once $base . 'Diagnostics/Checks.php';
 		require_once $base . 'Admin/RestController.php';
 		require_once $base . 'Shortcode/TrackedLink.php';

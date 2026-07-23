@@ -18,6 +18,7 @@
 namespace UTMAT\Integrations\Forms;
 
 use GFAPI;
+use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
@@ -42,6 +43,7 @@ class GravityForms {
 	 * escaping them here too would double-encode.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the recent-leads recorder on `gform_after_submission`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -65,6 +67,36 @@ class GravityForms {
 				}
 			);
 		}
+
+		add_action( 'gform_after_submission', array( self::class, 'record_lead' ), 10, 2 );
+	}
+
+	/**
+	 * Record a lead for the recent-leads dashboard widget on successful submission.
+	 *
+	 * Fires on `gform_after_submission`, which only runs once the entry has
+	 * been successfully saved. Skips silently when the visitor carries no
+	 * attribution data (nothing to classify).
+	 *
+	 * @since 1.0.0
+	 * @param array $entry The submitted entry (unused — attribution comes from the request-scoped cookie, not the entry's field values).
+	 * @param array $form  The form the entry belongs to.
+	 * @return void
+	 */
+	public static function record_lead( $entry, $form ): void {
+		if ( ! Attribution::has_data() ) {
+			return;
+		}
+
+		Recorder::record(
+			'gravity-forms',
+			array(
+				'form_id'    => is_array( $form ) ? ( $form['id'] ?? '' ) : '',
+				'form_title' => is_array( $form ) ? ( $form['title'] ?? '' ) : '',
+				'posted'     => Attribution::get_last(),
+				'created_at' => time(),
+			)
+		);
 	}
 
 	/**

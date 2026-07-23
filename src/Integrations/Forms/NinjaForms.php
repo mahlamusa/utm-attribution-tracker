@@ -30,6 +30,7 @@
 
 namespace UTMAT\Integrations\Forms;
 
+use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
 
@@ -51,6 +52,7 @@ class NinjaForms {
 	 * file not autoloaded on front-end requests.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the recent-leads recorder on `ninja_forms_after_submission`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -63,6 +65,34 @@ class NinjaForms {
 		}
 
 		add_action( 'ninja_forms_loaded', array( self::class, 'register_merge_tags' ) );
+		add_action( 'ninja_forms_after_submission', array( self::class, 'record_lead' ) );
+	}
+
+	/**
+	 * Record a lead for the recent-leads dashboard widget on successful submission.
+	 *
+	 * Fires on `ninja_forms_after_submission`, which Ninja Forms runs once a
+	 * submission has been processed and saved. Skips silently when the
+	 * visitor carries no attribution data (nothing to classify).
+	 *
+	 * @since 1.0.0
+	 * @param array $form_data Submission data Ninja Forms passes to the action (`form_id`, `fields`, `settings`, etc.).
+	 * @return void
+	 */
+	public static function record_lead( $form_data ): void {
+		if ( ! is_array( $form_data ) || ! Attribution::has_data() ) {
+			return;
+		}
+
+		Recorder::record(
+			'ninja-forms',
+			array(
+				'form_id'    => $form_data['form_id'] ?? '',
+				'form_title' => $form_data['settings']['title'] ?? '',
+				'posted'     => Attribution::get_last(),
+				'created_at' => time(),
+			)
+		);
 	}
 
 	/**
