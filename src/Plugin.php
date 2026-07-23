@@ -19,6 +19,7 @@ use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
 use UTMAT\Integrations\Forms\ContactForm7;
+use UTMAT\Integrations\Forms\Elementor;
 use UTMAT\Integrations\Forms\GravityForms;
 use UTMAT\Integrations\Forms\NinjaForms;
 use UTMAT\Rest\CollectController;
@@ -110,6 +111,7 @@ class Plugin {
 		add_action( 'plugins_loaded', array( ContactForm7::class, 'maybe_init' ), 20 );
 		add_action( 'plugins_loaded', array( GravityForms::class, 'maybe_init' ), 20 );
 		add_action( 'plugins_loaded', array( NinjaForms::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( Elementor::class, 'maybe_init' ), 20 );
 
 		// Admin dashboard.
 		if ( is_admin() ) {

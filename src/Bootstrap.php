@@ -41,6 +41,7 @@ class Bootstrap {
 		require_once $base . 'Integrations/Forms/ContactForm7.php';
 		require_once $base . 'Integrations/Forms/GravityForms.php';
 		require_once $base . 'Integrations/Forms/NinjaForms.php';
+		require_once $base . 'Integrations/Forms/Elementor.php';
 		require_once $base . 'Admin/Dashboard.php';
 		require_once $base . 'Diagnostics/Checks.php';
 		require_once $base . 'Admin/RestController.php';

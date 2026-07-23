@@ -39,7 +39,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Forms & integrations:**
 
-* **Form attribution capture** — add a hidden field named `utmat_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms.
+* **Form attribution capture** — add a hidden field named `utmat_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms, plus Ninja Forms and Elementor Pro Forms.
 * **the companion SMTP plugin integration** — when the companion SMTP plugin is active, the tracker appears as a submenu item within the the companion SMTP plugin admin panel.
 
 **Privacy & housekeeping:**
@@ -98,6 +98,8 @@ Every tracked parameter is available to forms under a `utmat_*` field name: `utm
 **Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utmat_source` or `utmat_source_first`.
 
 **Ninja Forms:** add a Hidden field to your form and set its default value to `{utmat:utm_source}` (or any other tracked parameter, e.g. `{utmat:gclid}`, `{utmat:landing}`, `{utmat:utm_source_first}`) to capture attribution.
+
+**Elementor (Pro Forms):** add a Hidden field to your form (Advanced tab), set its Field ID to `utmat_source` (or any other tracked parameter name, e.g. `utmat_source_first` for first touch), and it is auto-filled from attribution data on render. Requires Elementor Pro — free Elementor has no form builder.
 
 **Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utmat_source` — the generic layer fills it on page load.
 
