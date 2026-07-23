@@ -4,10 +4,10 @@
  *
  * Single source of truth for the Direct / Organic-Referral / Paid / Google
  * Ads / Tagged bucketing rule order, consumed two ways: sql_case_expression()
- * for the dashboard's aggregate `by_traffic_source` breakdown (spec 010), and
- * classify() for spec 012's per-lead classification. Both must stay derived
- * from the same rule order and the same PAID_MEDIA whitelist so the two
- * evaluation paths cannot silently diverge.
+ * for the dashboard's aggregate `by_traffic_source` breakdown, and classify()
+ * for per-lead classification (e.g. the recent-leads dashboard widget). Both
+ * must stay derived from the same rule order and the same PAID_MEDIA
+ * whitelist so the two evaluation paths cannot silently diverge.
  *
  * @package UTMAT\Tracking
  */

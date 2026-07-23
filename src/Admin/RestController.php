@@ -394,9 +394,10 @@ class RestController {
 
 		// By traffic source — Direct/Organic-Referral/Paid/Google-Ads/Tagged,
 		// classified per row by the shared rule set in TrafficSource so this
-		// aggregate breakdown and spec 012's per-lead classification cannot
-		// drift apart. Ordered by R1's priority order (not count) so the
-		// chart legend reads consistently across periods.
+		// aggregate breakdown and any per-lead classification elsewhere in
+		// the plugin cannot drift apart. Ordered by the rule set's priority
+		// order (not count) so the chart legend reads consistently across
+		// periods.
 		$traffic_source_case = TrafficSource::sql_case_expression();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$by_traffic_source = $wpdb->get_results(
