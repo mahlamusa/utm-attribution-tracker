@@ -2,7 +2,7 @@
 /**
  * DashboardWidget — wp-core Dashboard widget showing recent leads.
  *
- * The per-lead counterpart to the dashboard's aggregate traffic-source
+ * The per-lead counterpart to the dashboard's aggregate Channels
  * breakdown: a real WordPress-core Dashboard widget (wp-admin → Dashboard →
  * Home) listing the most recent form/order conversions, each tagged with a
  * traffic-source classification from Insights::classify(). Directly ports

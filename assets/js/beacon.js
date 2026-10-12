@@ -375,7 +375,7 @@
 				recordTouch( touch.touch );
 			}
 			if ( config.gateEvents ) {
-				sendVisit( touch.touch.lp, touch.ref );
+				sendVisit( touch.url || touch.touch.lp, touch.ref );
 			}
 			return;
 		}
@@ -443,8 +443,10 @@
 	}
 
 	/**
-	 * Remember that this tab already reported its landing, so later untagged
-	 * page views in the tab are never counted as landings.
+	 * Remember that this tab is already inside the site (it reported its
+	 * landing, or it was opened from an internal link), so later untagged
+	 * page views in the tab, including returns from a payment gateway or a
+	 * login provider, are never counted as landings.
 	 */
 	function markVisit() {
 		try {
@@ -650,7 +652,14 @@
 		}
 
 		// --- Untagged load: a landing visit, once per tab. ---
-		if ( ! config.visitEnabled || host === window.location.hostname.toLowerCase() ) {
+		if ( host === window.location.hostname.toLowerCase() ) {
+			// Reached from an internal link (a new tab opened from the site):
+			// the tab is inside the site, so a later external return in it
+			// (payment gateway, login provider) must never read as a landing.
+			markVisit();
+			return;
+		}
+		if ( ! config.visitEnabled ) {
 			return;
 		}
 		landed = false;
@@ -675,10 +684,11 @@
 			recordTouch( touch );
 		}
 
+		// The visit row takes the full URL; only the cookie touch is capped.
 		if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
-			sendVisit( touch.lp, document.referrer || '' );
+			sendVisit( window.location.href, document.referrer || '' );
 		} else if ( 'undecided' === state ) {
-			pending = { kind: 'visit', touch: touch, ref: document.referrer || '' };
+			pending = { kind: 'visit', touch: touch, ref: document.referrer || '', url: window.location.href };
 		}
 	}
 

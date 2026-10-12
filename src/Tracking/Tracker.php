@@ -344,12 +344,15 @@ class Tracker {
 	 * server-side cookie write.
 	 *
 	 * The touch also carries the external referrer host (`rh`) when the
-	 * request has one; the channel is derived by the reader, never written,
-	 * so both writers stay symmetrical.
+	 * request has one; the channel is derived by the reader and never written
+	 * for a tagged touch. A channel the beacon stored for an untagged first
+	 * landing is preserved verbatim when the first touch is re-serialised, so
+	 * both writers stay symmetrical.
 	 *
 	 * @since 1.0.0 Bails unless the visitor's server-side consent verdict is granted.
 	 * @since 1.0.0 Adds the referrer host to the touch.
 	 * @since 1.0.0 Drops the derived channel from the preserved first touch before re-serialising it.
+	 * @since 1.0.0 Preserves a beacon-stored channel in the first touch instead of dropping it.
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
@@ -374,11 +377,16 @@ class Tracker {
 		}
 		$touch['ts'] = time();
 
-		$first = Attribution::get_first();
-		// The reader derives `ch` on every parse; keep it out of the cookie.
+		$first         = Attribution::get_first();
+		$first_channel = Attribution::stored_first_channel();
+		// The reader derives `ch` on every parse, so the recomputed value stays
+		// out of the cookie; a channel the beacon stored for an untagged first
+		// landing is preserved verbatim, as the beacon preserves it.
 		unset( $first['ch'] );
 		if ( empty( $first ) ) {
 			$first = $touch;
+		} elseif ( '' !== $first_channel ) {
+			$first['ch'] = $first_channel;
 		}
 
 		$value = wp_json_encode(

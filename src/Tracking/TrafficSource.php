@@ -512,9 +512,14 @@ class TrafficSource {
 	 * leading `www.`, and additionally matches when the source equals an
 	 * entry's first label (`perplexity` for `perplexity.ai`, `facebook` for
 	 * `facebook.com`), because AI assistants and social networks tag their
-	 * outbound links with either form.
+	 * outbound links with either form. The first-label shortcut skips entries
+	 * that carry a subdomain (`chat.openai.com`, `search.brave.com`): their
+	 * first label is a generic word, not a brand, and a campaign tagged
+	 * `utm_source=chat` (a live-chat tool) or `utm_source=search` must not be
+	 * filed as an AI assistant or a search engine.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 The first-label shortcut ignores entries with a subdomain.
 	 * @param string   $source The utm_source value.
 	 * @param string[] $hosts  Host list entries.
 	 * @return bool
@@ -533,7 +538,7 @@ class TrafficSource {
 
 		foreach ( $hosts as $entry ) {
 			$entry = strtolower( trim( (string) $entry ) );
-			if ( '' !== $entry && explode( '.', $entry )[0] === $source ) {
+			if ( '' !== $entry && substr_count( $entry, '.' ) < 2 && explode( '.', $entry )[0] === $source ) {
 				return true;
 			}
 		}

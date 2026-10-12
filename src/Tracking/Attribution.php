@@ -118,6 +118,26 @@ class Attribution {
 	}
 
 	/**
+	 * The channel slug the cookie's first-touch set itself carries, if any.
+	 *
+	 * The beacon writes `ch` only for untagged landings (search, social, AI
+	 * assistant, referral), and get_first() replaces it with a recomputed
+	 * value. The PHP cookie writer needs the stored value so it can preserve
+	 * a beacon-written channel verbatim, as the beacon does, instead of
+	 * dropping it when it re-serialises the first touch next to a new last
+	 * touch. Only a known channel slug is returned.
+	 *
+	 * @since 1.0.0
+	 * @return string One of TrafficSource::CHANNELS, or '' when the first touch stores no valid channel.
+	 */
+	public static function stored_first_channel(): string {
+		$decoded = self::decoded_cookie();
+		$channel = $decoded['first']['ch'] ?? '';
+
+		return ( is_string( $channel ) && in_array( $channel, TrafficSource::CHANNELS, true ) ) ? $channel : '';
+	}
+
+	/**
 	 * Whether the current request carries any usable attribution data.
 	 *
 	 * @since 1.0.0
