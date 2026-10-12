@@ -23,6 +23,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * CollectController
+ *
+ * @since 1.0.0 Route arguments and extraction follow Tracker::param_whitelist().
  */
 class CollectController {
 
@@ -38,12 +40,12 @@ class CollectController {
 	/**
 	 * Register the collect REST route.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 One argument per Tracker::param_whitelist() entry, so custom parameters are accepted.
 	 * @return void
 	 */
 	public static function register_routes(): void {
 		$args = array();
-		foreach ( Tracker::PARAM_WHITELIST as $key ) {
+		foreach ( Tracker::param_whitelist() as $key ) {
 			$args[ $key ] = array(
 				'type'              => 'string',
 				'default'           => '',
@@ -81,7 +83,7 @@ class CollectController {
 	 * 200 with `recorded: false` so they learn nothing; duplicates within
 	 * the dedup window respond the same way.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Extracts every Tracker::param_whitelist() entry, custom parameters included.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -105,7 +107,7 @@ class CollectController {
 		}
 
 		$params = array();
-		foreach ( Tracker::PARAM_WHITELIST as $key ) {
+		foreach ( Tracker::param_whitelist() as $key ) {
 			$value = (string) $request->get_param( $key );
 			if ( '' !== $value ) {
 				$params[ $key ] = $value;

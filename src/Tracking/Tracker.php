@@ -10,28 +10,34 @@
  * Filter `utmat_track_logged_in_users` (bool, default false) controls whether
  * administrator clicks are recorded.
  *
+ * @since 1.0.0 Added the custom-parameter accessors and the channel, visitor_id, custom and meta row fields.
+ *
  * @package UTMAT\Tracking
  */
 
 namespace UTMAT\Tracking;
 
 use UTMAT\DB\Schema;
+use WP;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Tracker
+ *
+ * @since 1.0.0 Added param_whitelist() and the custom-parameter validation helpers.
  */
 class Tracker {
 
 	/**
-	 * Query parameters that trigger and populate tracking events.
+	 * Built-in query parameters that trigger and populate tracking events.
 	 *
-	 * Shared by the passive PHP path, the public collect REST endpoint, and
-	 * the front-end beacon (duplicated there as a JS const — keep in sync
-	 * with assets/js/beacon.js).
+	 * This is the fixed list only. Runtime readers (the passive PHP path, the
+	 * collect endpoint, the attribution cookie, the form adapters and the
+	 * front-end beacon via `utmatBeacon.params`) use param_whitelist(), which
+	 * merges in the admin-defined custom parameters.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Runtime readers moved to param_whitelist(); the constant is the built-in list only.
 	 *
 	 * @var string[]
 	 */
@@ -51,6 +57,181 @@ class Tracker {
 	);
 
 	/**
+	 * Maximum number of admin-defined custom parameters.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var int
+	 */
+	public const MAX_CUSTOM_PARAMS = 10;
+
+	/**
+	 * Names a custom parameter may never take, beyond the built-in whitelist.
+	 *
+	 * Grouped by the collision each entry prevents: attribution form-field
+	 * names (`landing_page`, the Ninja Forms `landing` tag param, `channel`
+	 * and `referrer_host`), cookie touch keys (`lp`, `ts`, `ch`, `rh`), the
+	 * collect endpoint's own arguments (`page_url`, `referrer`, `visit`,
+	 * `vid`), events-table column names that record() reads straight from
+	 * `$data`, and common form or credential field names that the beacon
+	 * would otherwise pre-fill on every page. Names starting with `utm_` or
+	 * `utmat_` and names ending in `_first` are rejected by rule rather than
+	 * listed here. `ref` is deliberately absent: the referrer-host touch key
+	 * is `rh`, so `ref` stays free for affiliate-style parameters.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	private const RESERVED_PARAM_NAMES = array(
+		// Attribution form-field names.
+		'landing_page',
+		'landing',
+		'channel',
+		'referrer_host',
+		// Cookie touch keys.
+		'lp',
+		'ts',
+		'ch',
+		'rh',
+		// Collect endpoint arguments.
+		'page_url',
+		'referrer',
+		'visit',
+		'vid',
+		// Events-table columns.
+		'id',
+		'link_id',
+		'destination',
+		'is_conversion',
+		'touch',
+		'order_total',
+		'device',
+		'ip_hash',
+		'user_agent',
+		'clicked_at',
+		'custom',
+		'visitor_id',
+		'meta',
+		// Common form and credential field names.
+		'email',
+		'name',
+		'phone',
+		'subject',
+		'message',
+		'author',
+		'url',
+		'comment',
+		'log',
+		'pwd',
+		'password',
+		'user_login',
+		'user_email',
+		'user_pass',
+	);
+
+	/**
+	 * The admin-defined custom parameter names, validated on every read.
+	 *
+	 * Reads the `utmat_custom_params` option and re-applies the cheap
+	 * validation rules (shape, reserved names, uniqueness, the cap) so a
+	 * hand-edited option can never inject an unsafe key. The query-var check
+	 * is save-time only. Not memoised: the option comes from the alloptions
+	 * cache and the rules are a regex over at most ten strings.
+	 *
+	 * @since 1.0.0
+	 * @return string[] Validated names in saved order, at most MAX_CUSTOM_PARAMS.
+	 */
+	public static function custom_params(): array {
+		$stored = get_option( 'utmat_custom_params', array() );
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+
+		$names = array();
+		foreach ( $stored as $name ) {
+			if ( ! is_string( $name ) ) {
+				continue;
+			}
+			$name = strtolower( trim( $name ) );
+			if ( in_array( $name, $names, true ) || ! self::is_valid_custom_param( $name ) ) {
+				continue;
+			}
+			$names[] = $name;
+			if ( count( $names ) >= self::MAX_CUSTOM_PARAMS ) {
+				break;
+			}
+		}
+
+		return $names;
+	}
+
+	/**
+	 * The full list of tracked parameters: built-ins plus custom parameters.
+	 *
+	 * Every runtime reader of the whitelist uses this accessor so an
+	 * admin-defined parameter is captured exactly like a built-in one.
+	 *
+	 * @since 1.0.0
+	 * @return string[] Built-in names first, then custom names in saved order.
+	 */
+	public static function param_whitelist(): array {
+		return array_values( array_unique( array_merge( self::PARAM_WHITELIST, self::custom_params() ) ) );
+	}
+
+	/**
+	 * The names a custom parameter may not take.
+	 *
+	 * The built-in whitelist plus RESERVED_PARAM_NAMES and, by default, the
+	 * public WordPress query variables (as filtered by `query_vars`, so
+	 * plugin-registered ones count). That is the save-time set; the read
+	 * path passes false because it runs on every request and the query-var
+	 * list instantiates WP when no request has been parsed, as under WP-CLI.
+	 *
+	 * @since 1.0.0
+	 * @param bool $include_query_vars Whether to add the public query variables.
+	 * @return string[]
+	 */
+	public static function reserved_param_names( bool $include_query_vars = true ): array {
+		$reserved = array_merge( self::PARAM_WHITELIST, self::RESERVED_PARAM_NAMES );
+
+		if ( $include_query_vars ) {
+			$wp = ( isset( $GLOBALS['wp'] ) && $GLOBALS['wp'] instanceof WP ) ? $GLOBALS['wp'] : new WP();
+			/** This filter is documented in wp-includes/class-wp.php */
+			$query_vars = apply_filters( 'query_vars', $wp->public_query_vars );
+			$reserved   = array_merge( $reserved, is_array( $query_vars ) ? $query_vars : array() );
+		}
+
+		return array_values( array_unique( $reserved ) );
+	}
+
+	/**
+	 * Whether a (lowercased, trimmed) name is acceptable as a custom parameter.
+	 *
+	 * A valid name starts with a letter and is 1 to 32 characters of
+	 * `[a-z0-9_]`, does not start with `utm_` or `utmat_`, does not end in
+	 * `_first` (the first-touch field suffix) and is not reserved. The
+	 * leading letter keeps underscore-prefixed names away from the REST
+	 * API's own `_fields`-style arguments and keeps all-digit names from
+	 * turning the stored JSON object into a list.
+	 *
+	 * @since 1.0.0
+	 * @param string $name             Candidate name, already lowercased and trimmed.
+	 * @param bool   $check_query_vars Also reject public WordPress query variables (save time only).
+	 * @return bool
+	 */
+	public static function is_valid_custom_param( string $name, bool $check_query_vars = false ): bool {
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{0,31}$/D', $name ) ) {
+			return false;
+		}
+		if ( str_starts_with( $name, 'utm_' ) || str_starts_with( $name, 'utmat_' ) || str_ends_with( $name, '_first' ) ) {
+			return false;
+		}
+
+		return ! in_array( $name, self::reserved_param_names( $check_query_vars ), true );
+	}
+
+	/**
 	 * Register the utmat_track query variable so WordPress parses it.
 	 *
 	 * @since 1.0.0
@@ -65,7 +246,7 @@ class Tracker {
 	/**
 	 * Main entry-point hooked on `init` (priority 1).
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Passive capture reads param_whitelist() so custom parameters count as tagged visits.
 	 * @return void
 	 */
 	public static function handle_incoming_request(): void {
@@ -117,7 +298,7 @@ class Tracker {
 		}
 
 		$params = array();
-		foreach ( self::PARAM_WHITELIST as $key ) {
+		foreach ( self::param_whitelist() as $key ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$value = isset( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
 			if ( '' !== $value ) {
@@ -294,7 +475,14 @@ class Tracker {
 	 * each order is a distinct conversion — so they neither set nor honour
 	 * the transient.
 	 *
-	 * @since 1.0.0
+	 * `channel` and `visitor_id` are written from $data (empty when absent).
+	 * `custom` is built from a `custom` array in $data plus any configured
+	 * custom parameter passed flat (the incoming, collect and order paths
+	 * pass params that way) and stored as a JSON object; `meta` is a `meta`
+	 * array stored as JSON. Both columns are left NULL when there is nothing
+	 * to store.
+	 *
+	 * @since 1.0.0 Writes the channel, visitor_id, custom and meta columns.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
@@ -330,14 +518,46 @@ class Tracker {
 			'user_agent'    => $ua,
 			'referrer'      => substr( $ref, 0, 2083 ),
 			'clicked_at'    => current_time( 'mysql', true ),
+			'channel'       => substr( $data['channel'] ?? '', 0, 20 ),
+			'visitor_id'    => substr( $data['visitor_id'] ?? '', 0, 36 ),
 		);
 
-		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' );
+		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
 
 		// $wpdb->insert() cannot pass a typed NULL, so omit the column instead.
 		if ( isset( $data['order_total'] ) && is_numeric( $data['order_total'] ) ) {
 			$row['order_total'] = (float) $data['order_total'];
 			$formats[]          = '%f';
+		}
+
+		// Custom parameters: a `custom` array in $data, overridden by any
+		// configured name passed flat; only configured names are kept.
+		$given  = ( isset( $data['custom'] ) && is_array( $data['custom'] ) ) ? $data['custom'] : array();
+		$custom = array();
+		foreach ( self::custom_params() as $name ) {
+			$value = ( isset( $data[ $name ] ) && '' !== $data[ $name ] ) ? $data[ $name ] : ( $given[ $name ] ?? '' );
+			if ( ! is_scalar( $value ) ) {
+				continue;
+			}
+			$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+			if ( '' !== $value ) {
+				$custom[ $name ] = $value;
+			}
+		}
+		if ( array() !== $custom ) {
+			$json = wp_json_encode( $custom );
+			if ( false !== $json ) {
+				$row['custom'] = $json;
+				$formats[]     = '%s';
+			}
+		}
+
+		if ( isset( $data['meta'] ) && is_array( $data['meta'] ) && array() !== $data['meta'] ) {
+			$json = wp_json_encode( $data['meta'] );
+			if ( false !== $json ) {
+				$row['meta'] = $json;
+				$formats[]   = '%s';
+			}
 		}
 
 		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -382,13 +602,13 @@ class Tracker {
 	 * The key is the md5 of hashed IP + link_id + the key-sorted JSON of
 	 * the whitelisted UTM/click-ID values present in the event.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Subset built from param_whitelist() so custom parameter values distinguish events.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return string
 	 */
 	private static function dedup_key( array $data ): string {
 		$subset = array();
-		foreach ( self::PARAM_WHITELIST as $key ) {
+		foreach ( self::param_whitelist() as $key ) {
 			if ( isset( $data[ $key ] ) && '' !== $data[ $key ] ) {
 				$subset[ $key ] = (string) $data[ $key ];
 			}

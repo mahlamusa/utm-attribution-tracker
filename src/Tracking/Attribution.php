@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Attribution
+ *
+ * @since 1.0.0 Field and allow-lists derive from Tracker::param_whitelist() instead of the built-in constant.
  */
 class Attribution {
 
@@ -116,12 +118,12 @@ class Attribution {
 	/**
 	 * All recognised form-field names — last-touch and `_first` variants.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameters get field names too.
 	 * @return string[]
 	 */
 	public static function field_names(): array {
 		$names = array();
-		foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $param ) {
+		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
 			$name    = self::field_name( $param );
 			$names[] = $name;
 			$names[] = $name . '_first';
@@ -138,7 +140,7 @@ class Attribution {
 	 * them (Contact Form 7, Gravity Forms) esc_attr() at render; any caller
 	 * emitting markup itself must escape.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameter values are mapped too.
 	 * @return array<string, string>
 	 */
 	public static function field_map(): array {
@@ -149,7 +151,7 @@ class Attribution {
 		);
 
 		foreach ( $touches as $suffix => $touch ) {
-			foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $param ) {
+			foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
 				$value = isset( $touch[ $param ] ) ? (string) $touch[ $param ] : '';
 				if ( '' !== $value ) {
 					$map[ self::field_name( $param ) . $suffix ] = $value;
@@ -277,7 +279,7 @@ class Attribution {
 	 * through sanitize_text_field() and is capped at 255 chars (matching the
 	 * writers). `ts` is cast to int.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Allow-list built from Tracker::param_whitelist() so custom parameter keys survive the parse.
 	 * @param string $set Which set to extract: 'first' or 'last'.
 	 * @return array<string, string|int>
 	 */
@@ -288,7 +290,7 @@ class Attribution {
 			return array();
 		}
 
-		$allowed = array_merge( Tracker::PARAM_WHITELIST, array( 'lp', 'ts' ) );
+		$allowed = array_merge( Tracker::param_whitelist(), array( 'lp', 'ts' ) );
 		$clean   = array();
 
 		foreach ( $decoded[ $set ] as $key => $value ) {

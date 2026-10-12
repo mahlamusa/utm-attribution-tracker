@@ -30,6 +30,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Plugin — the singleton returned by Plugin::instance().
+ *
+ * @since 1.0.0 The beacon config now carries the parameter whitelist.
  */
 class Plugin {
 
@@ -139,7 +141,11 @@ class Plugin {
 	 * inspecting location.search. No nonce is passed: the collect endpoint
 	 * is public, and a nonce baked into cached HTML would go stale.
 	 *
-	 * @since 1.0.0
+	 * The full parameter whitelist (built-ins plus custom parameters) is
+	 * passed as `params` so the beacon no longer hard-codes the list; its
+	 * literal copy is only a fallback for cached HTML without config.
+	 *
+	 * @since 1.0.0 Added the params whitelist to the localized config.
 	 * @return void
 	 */
 	public static function enqueue_beacon(): void {
@@ -164,6 +170,7 @@ class Plugin {
 			'utmatBeacon',
 			array(
 				'endpoint'      => rest_url( 'utmat/v1/collect' ),
+				'params'        => Tracker::param_whitelist(),
 				'cookieDays'    => Attribution::cookie_days(),
 				'cookieEnabled' => Attribution::enabled(),
 				'secure'        => is_ssl(),

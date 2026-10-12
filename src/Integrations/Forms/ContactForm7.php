@@ -28,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  * ContactForm7
  *
  * @since 1.0.0
+ * @since 1.0.0 Hidden fields follow Tracker::param_whitelist().
  */
 class ContactForm7 {
 
@@ -54,18 +55,19 @@ class ContactForm7 {
 	/**
 	 * Append the last-touch attribution hidden fields to every CF7 form.
 	 *
-	 * All eleven field names are always appended — with the server-side value
-	 * when the attribution cookie is readable, empty otherwise — so page
-	 * caches serve HTML that still contains the fields and the front-end
-	 * beacon can fill them client-side (it only fills empty fields, so a
-	 * server-rendered value always wins). First-touch `_first` fields are not
+	 * Every last-touch field name (built-ins and custom parameters) is
+	 * always appended — with the server-side value when the attribution
+	 * cookie is readable, empty otherwise — so page caches serve HTML that
+	 * still contains the fields and the front-end beacon can fill them
+	 * client-side (it only fills empty fields, so a server-rendered value
+	 * always wins). First-touch `_first` fields are not
 	 * auto-added; the beacon fills them when a form author adds one manually.
 	 *
 	 * CF7 core esc_attr()s every hidden field name and value at render
 	 * (WPCF7_ContactForm::form_hidden_fields()), so the input-sanitized
 	 * values are passed raw here — escaping them too would double-encode.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Loops Tracker::param_whitelist() so custom parameters get hidden fields too.
 	 *
 	 * @param array<string, string> $fields Hidden fields registered so far.
 	 *
@@ -78,7 +80,7 @@ class ContactForm7 {
 
 		$map = Attribution::field_map();
 
-		foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $param ) {
+		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
 			$name = Attribution::field_name( $param );
 			if ( ! isset( $fields[ $name ] ) ) {
 				$fields[ $name ] = $map[ $name ] ?? '';

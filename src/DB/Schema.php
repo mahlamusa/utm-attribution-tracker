@@ -2,6 +2,8 @@
 /**
  * DB Schema — creates and upgrades the utmat_events table.
  *
+ * @since 1.0.0 Version 5 adds the channel, visitor_id, custom and meta columns.
+ *
  * @package UTMAT\DB
  */
 
@@ -11,11 +13,13 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Schema
+ *
+ * @since 1.0.0 Bumped to version 5 for the channel, visitor_id, custom and meta columns.
  */
 class Schema {
 
 	private const DB_VERSION_OPTION = 'utmat_db_version';
-	private const DB_VERSION        = '4';
+	private const DB_VERSION        = '5';
 
 	/**
 	 * Create / upgrade the events table on activation.
@@ -55,7 +59,13 @@ class Schema {
 	/**
 	 * Run dbDelta to create or update the table.
 	 *
-	 * @since 1.0.0
+	 * Running dbDelta against a version-4 table only adds what is missing: it
+	 * appends the four newer columns and their keys without touching
+	 * existing rows. The `custom` and `meta` TEXT columns carry no DEFAULT
+	 * clause on purpose: TEXT columns cannot have one on older MySQL, and
+	 * dbDelta would otherwise try to re-alter them on every run.
+	 *
+	 * @since 1.0.0 Added channel, visitor_id, custom and meta plus the visitor_id and channel keys.
 	 * @return void
 	 */
 	private static function run_dbdelta(): void {
@@ -90,11 +100,17 @@ class Schema {
   user_agent VARCHAR(500) NOT NULL DEFAULT '',
   referrer VARCHAR(2083) NOT NULL DEFAULT '',
   clicked_at DATETIME NULL DEFAULT NULL,
+  channel VARCHAR(20) NOT NULL DEFAULT '',
+  visitor_id VARCHAR(36) NOT NULL DEFAULT '',
+  custom TEXT NULL,
+  meta TEXT NULL,
   PRIMARY KEY  (id),
   KEY link_id (link_id(64)),
   KEY utm_campaign (utm_campaign(100)),
   KEY clicked_at (clicked_at),
-  KEY conv_time (is_conversion, clicked_at)
+  KEY conv_time (is_conversion, clicked_at),
+  KEY visitor_id (visitor_id),
+  KEY channel (channel)
 ) {$charset_collate};";
 
 		dbDelta( $sql );

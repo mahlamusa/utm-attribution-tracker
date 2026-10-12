@@ -7,8 +7,9 @@
  * whitelisted UTM parameter or ad click ID. Matching params are POSTed to
  * the public collect endpoint via navigator.sendBeacon() (fetch keepalive
  * fallback), so tracking works even when a page cache/CDN serves the HTML
- * without running PHP. Keep the whitelist in sync with
- * Tracker::PARAM_WHITELIST.
+ * without running PHP. The whitelist comes from utmatBeacon.params
+ * (Tracker::param_whitelist(): built-ins plus custom parameters); the
+ * literal list below is only a fallback for cached HTML without config.
  *
  * The beacon is also the primary writer of the first-party attribution
  * cookie (first/last touch, see Attribution.php) — the cookie is written
@@ -27,7 +28,10 @@
 ( function () {
 	'use strict';
 
-	var WHITELIST = [
+	// Resolved once at module scope: addTouch(), fieldSelector() and
+	// trackVisit() all read it.
+	var config = window.utmatBeacon || {};
+	var WHITELIST = ( config.params && config.params.length ) ? config.params : [
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term',
 		'utm_content', 'gclid', 'fbclid', 'msclkid', 'ttclid',
 		'li_fat_id', 'twclid',

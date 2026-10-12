@@ -15,6 +15,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
  * Remove the events table, options, transients, and cron hook for the current site.
  *
  * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+ * @since 1.0.0 Also deletes the custom parameters option.
  * @return void
  */
 function utmat_uninstall_site(): void {
@@ -32,6 +33,7 @@ function utmat_uninstall_site(): void {
 	delete_option( 'utmat_retention_days' );
 	delete_option( 'utmat_weekly_email' );
 	delete_option( 'utmat_cookie_days' );
+	delete_option( 'utmat_custom_params' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

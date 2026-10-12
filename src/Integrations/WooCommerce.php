@@ -29,6 +29,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * WooCommerce
+ *
+ * @since 1.0.0 Order events carry custom parameter values.
  */
 class WooCommerce {
 
@@ -222,6 +224,7 @@ class WooCommerce {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Also records the conversion for the recent-leads dashboard widget.
+	 * @since 1.0.0 Copies every Tracker::param_whitelist() value into the order event so custom parameters reach the custom column.
 	 * @param WC_Order $order The order to attach attribution to.
 	 * @param bool     $save  Whether to call save() (true for the Store API path, where the order is already persisted).
 	 * @return void
@@ -259,7 +262,7 @@ class WooCommerce {
 			'order_total'   => (float) $order->get_total(),
 			'destination'   => $destination,
 		);
-		foreach ( Tracker::PARAM_WHITELIST as $key ) {
+		foreach ( Tracker::param_whitelist() as $key ) {
 			$event[ $key ] = isset( $last[ $key ] ) ? (string) $last[ $key ] : '';
 		}
 
