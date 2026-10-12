@@ -81,7 +81,7 @@
 	 * @return {string}
 	 */
 	function fieldName( param ) {
-		return param.indexOf( 'utm_' ) === 0 ? 'utmat_' + param.slice( 4 ) : 'utmat_' + param;
+		return 'utmat_' + ( param.indexOf( 'utm_' ) === 0 ? param.slice( 4 ) : param );
 	}
 
 	/**

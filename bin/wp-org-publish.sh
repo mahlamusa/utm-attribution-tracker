@@ -6,7 +6,7 @@
 # Run via: npm run wporg:publish        (uses Stable tag from readme.txt)
 #          npm run wporg:publish -- 1.1.0    (explicit version override)
 #
-# Unlike the companion SMTP plugin's equivalent script, there is no Composer vendor/ to
+# There is no Composer vendor/ to
 # build and no npm/vite dist/ to compile — this plugin ships plain PHP/CSS/JS
 # as written, with Chart.js vendored directly in assets/js/vendor/. The only
 # build artifact is the translations .pot, regenerated fresh and overlaid
@@ -14,7 +14,7 @@
 # up the latest strings). Since .gitattributes already keeps every dev-only
 # path (bin/, package.json, .claude/, etc.) out of `git archive` entirely,
 # trunk/ and tags/<version>/ end up identical — no separate tag-slimming pass
-# is needed the way the companion SMTP plugin strips its Vue sources from tags only.
+# is needed.
 #
 # Pipeline:
 #   1. Resolve + validate version, assets, working tree.
@@ -187,8 +187,8 @@ if [[ -n "$MISSING" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Create tags/<version> as a working-copy copy of trunk. Unlike the companion SMTP plugin
-#    SMTP, there's nothing left to strip — .gitattributes already kept every
+# 9. Create tags/<version> as a working-copy copy of trunk. There is
+#    nothing left to strip — .gitattributes already kept every
 #    dev-only path out of trunk itself, so the tag ships identical content.
 # ---------------------------------------------------------------------------
 echo "==> Creating tags/$VERSION as a copy of trunk/..."

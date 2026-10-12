@@ -2,10 +2,6 @@
 /**
  * Dashboard — registers the admin menu page and enqueues assets.
  *
- * If the companion SMTP plugin is active, registers as a submenu via the
- * `companion_smtp_admin_menu` action it provides for add-ons.
- * Otherwise registers as a standalone top-level menu.
- *
  * @package UTMAT\Admin
  */
 
@@ -25,7 +21,7 @@ class Dashboard {
 	private const PAGE_SLUG = 'utm-attribution-tracker';
 
 	/**
-	 * The hook suffix returned by add_menu_page / add_submenu_page.
+	 * The hook suffix returned by add_menu_page.
 	 * Used to target asset enqueuing precisely.
 	 *
 	 * @var string
@@ -33,8 +29,7 @@ class Dashboard {
 	private static string $hook_suffix = '';
 
 	/**
-	 * Register as a standalone top-level menu page.
-	 * Called when the companion SMTP plugin is not installed.
+	 * Register the top-level menu page.
 	 *
 	 * @since 1.0.0
 	 * @return void
@@ -52,44 +47,7 @@ class Dashboard {
 	}
 
 	/**
-	 * Register as a submenu under the companion SMTP plugin.
-	 * Called via the `companion_smtp_admin_menu` action when the companion SMTP plugin is active.
-	 *
-	 * the companion SMTP plugin fires this action as the last step of its own menu
-	 * registration, after its "Settings" submenu — so the default
-	 * (position-less) `add_submenu_page()` call would always append UTM &
-	 * Attribution below Settings. Insert it just above the last registered
-	 * item instead, so it appears above Settings regardless of which of
-	 * the companion plugin's optional submenus (Email Logs, Queue) are enabled.
-	 *
-	 * @since 1.0.0
-	 * @param string $parent_slug The the companion SMTP plugin parent menu slug ('companion-smtp').
-	 * @return void
-	 */
-	public static function register_as_submenu( string $parent_slug ): void {
-		global $submenu;
-
-		$position = null;
-		if ( isset( $submenu[ $parent_slug ] ) && is_array( $submenu[ $parent_slug ] ) ) {
-			$position = max( 0, count( $submenu[ $parent_slug ] ) - 1 );
-		}
-
-		self::$hook_suffix = (string) add_submenu_page(
-			$parent_slug,
-			__( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ),
-			__( 'UTM & Attribution', 'utm-attribution-tracker' ),
-			'manage_options',
-			self::PAGE_SLUG,
-			array( self::class, 'render_page' ),
-			$position
-		);
-	}
-
-	/**
 	 * Enqueue Chart.js and dashboard assets on this page only.
-	 *
-	 * Compares against the stored hook suffix so the check works regardless
-	 * of whether the page is a top-level menu or a submenu.
 	 *
 	 * @since 1.0.0
 	 * @param string $hook Current admin page hook suffix.
@@ -241,7 +199,7 @@ class Dashboard {
 	 *
 	 * The link always points to `admin.php?page=utm-attribution-tracker` — the
 	 * page URL is the same whether the plugin registered as a standalone
-	 * top-level menu or as a the companion SMTP plugin submenu, since WP builds submenu
+	 * top-level menu or as a submenu, since WP builds submenu
 	 * URLs from the page slug, not the parent slug.
 	 *
 	 * @since 1.0.0

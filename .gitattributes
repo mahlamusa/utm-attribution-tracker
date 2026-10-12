@@ -1,7 +1,7 @@
 # Distribution archive excludes (git archive — used by bin/release.sh and
 # bin/wp-org-publish.sh to stage the shipped plugin).
 #
-# Unlike the companion SMTP plugin, this plugin has no build step (no Composer, no
+# This plugin has no build step (no Composer, no
 # npm/vite build) — assets/js and assets/css ship as written, so there is no
 # source-transparency reason to keep package.json or bin/ in the distributed
 # copy. Everything below is developer-only tooling.

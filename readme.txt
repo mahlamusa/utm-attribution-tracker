@@ -34,13 +34,12 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 * **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, traffic source (Direct/Organic-Referral/Paid/Google Ads/Tagged), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign.
 * **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn.
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows). Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
-* **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active. Pairs well with the companion SMTP plugin for reliable delivery.
+* **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active.
 * **Tracking Doctor diagnostics** — a "Run diagnostics" panel on the settings card runs five rule-based local checks (caching, consent, cookies, per-form attribution coverage, WooCommerce order attribution) and reports pass/warn/fail/skip with a plain-language explanation for each. No AI, no external calls — every check inspects local plugin/site state only.
 
 **Forms & integrations:**
 
 * **Form attribution capture** — add a hidden field named `utmat_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms, plus Ninja Forms and Elementor Pro Forms.
-* **the companion SMTP plugin integration** — when the companion SMTP plugin is active, the tracker appears as a submenu item within the the companion SMTP plugin admin panel.
 
 **Privacy & housekeeping:**
 
@@ -53,7 +52,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 1. Upload the `utm-attribution-tracker` folder to `/wp-content/plugins/`.
 2. Activate the plugin via **Plugins > Installed Plugins**.
-3. Go to **UTM & Attribution** in the admin sidebar (or under **the companion SMTP plugin** if that plugin is active).
+3. Go to **UTM & Attribution** in the admin sidebar.
 
 == Frequently Asked Questions ==
 
@@ -111,7 +110,7 @@ Click **Export CSV** on the dashboard to download the raw events for the selecte
 
 = How do I get a weekly report by email? =
 
-Enable "Send a weekly campaign summary email" on the dashboard settings card (it is off by default — no unsolicited mail). Once a week the site admin email receives an HTML summary with total clicks, the top 5 campaigns and sources, and revenue by campaign when WooCommerce is active. Change the recipient with the `utmat_report_recipient` filter. If the companion SMTP plugin is installed, delivery transparently goes through your configured SMTP server.
+Enable "Send a weekly campaign summary email" on the dashboard settings card (it is off by default — no unsolicited mail). Once a week the site admin email receives an HTML summary with total clicks, the top 5 campaigns and sources, and revenue by campaign when WooCommerce is active. Change the recipient with the `utmat_report_recipient` filter. Delivery goes through wp_mail(), so any SMTP plugin you use applies.
 
 = My site is behind a reverse proxy or CDN — anything to configure? =
 

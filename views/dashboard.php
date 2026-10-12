@@ -5,8 +5,8 @@
  * All dynamic data is passed via wp_localize_script as `utmatData`.
  * This file only outputs the static HTML shell; JS handles all data fetching.
  *
- * Follows the house design language: light, WP-admin-native with polish,
- * primary blue for primary actions, neutral WP grays everywhere else.
+ * Light, WP-admin-native styling with polish,
+ * a single primary blue for actions, neutral WP grays everywhere else.
  *
  * @package UTMAT
  */

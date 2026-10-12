@@ -17,7 +17,7 @@
 	const i18nEl = document.getElementById( 'utmat-i18n' );
 	const i18n   = i18nEl ? JSON.parse( i18nEl.textContent ) : {};
 
-	// ── Palette — primary blue as the primary series, neutral accents after ──
+	// ── Palette — primary blue as the first series, neutral accents after ──
 	const COLORS = [
 		'#0d5ea3', '#2e8540', '#b32d2e', '#996800',
 		'#5b3ea3', '#0a7c8c', '#8a4b08', '#646970',

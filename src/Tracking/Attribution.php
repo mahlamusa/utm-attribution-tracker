@@ -113,7 +113,7 @@ class Attribution {
 		if ( 'lp' === $param ) {
 			$param = 'landing';
 		}
-		return ( 0 === strpos( $param, 'utm_' ) ) ? 'utmat_' . substr( $param, 4 ) : 'utmat_' . $param;
+		return 'utmat_' . ( ( 0 === strpos( $param, 'utm_' ) ) ? substr( $param, 4 ) : $param );
 	}
 
 	/**

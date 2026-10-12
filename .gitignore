@@ -4,3 +4,4 @@ releases/
 .claude/
 .DS_Store
 specs/
+.spec-status

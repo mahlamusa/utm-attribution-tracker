@@ -117,20 +117,7 @@ class Plugin {
 
 		// Admin dashboard.
 		if ( is_admin() ) {
-			/*
-			 * Menu registration:
-			 *
-			 * If the companion SMTP plugin is installed and active (detected by its constant),
-			 * hook into the `companion_smtp_admin_menu` action it fires after registering
-			 * its own pages — this is the intended extension point for add-ons.
-			 *
-			 * Otherwise fall back to a standalone top-level menu entry.
-			 */
-			if ( defined( 'COMPANION_SMTP_VERSION' ) ) {
-				add_action( 'companion_smtp_admin_menu', array( Dashboard::class, 'register_as_submenu' ) );
-			} else {
-				add_action( 'admin_menu', array( Dashboard::class, 'register_menu' ) );
-			}
+			add_action( 'admin_menu', array( Dashboard::class, 'register_menu' ) );
 
 			add_action( 'admin_enqueue_scripts', array( Dashboard::class, 'enqueue_assets' ) );
 
