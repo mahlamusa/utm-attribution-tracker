@@ -2,10 +2,15 @@
 /**
  * UTM & Attribution Tracker — Dashboard JS
  *
- * Fetches stats from the REST API and renders Chart.js charts, manages the
- * tracked-links table (list, add, edit, delete, QR), the CSV export, and the
- * settings card. All user-visible strings come from the utmat-i18n JSON
- * block so they pass through WordPress i18n on the PHP side.
+ * Drives the tabbed dashboard: the Overview tab (stat tiles, Chart.js line
+ * and revenue charts, breakdown bar lists, first-run empty state), the Links
+ * tab (tracked-links table with row actions, QR codes, bulk delete and the
+ * add/edit drawer), the Settings tab (save bar, test email and webhook) and
+ * the Diagnostics tab. Also handles the CSV export. All user-visible strings
+ * come from the utmat-i18n JSON block so they pass through WordPress i18n on
+ * the PHP side.
+ *
+ * @since 1.0.0
  */
 ( function () {
 	'use strict';
@@ -32,9 +37,26 @@
 	let editingId      = null;
 	let allLinks       = [];
 	let linksFilter    = '';
+	let linksCampaign  = ''; // Client-side campaign filter of the links table.
 	let clicksSortDir  = ''; // '' (server order), 'asc', or 'desc'.
 	const selectedLinks = new Set(); // Link IDs checked for bulk delete.
 	let allPresets      = [];
+	let drawerReturnFocus = null;
+	let settingsBaseline  = null;
+
+	const TAB_NAMES = [ 'overview', 'links', 'settings', 'diagnostics' ];
+	const LINK_COLS = 7; // Checkbox, Label, Campaign, Source / medium, Clicks, Short link, Destination.
+
+	// Column names for core's mobile list-table view (data-colname). The
+	// checkbox header is a td, so index 0 is Label.
+	const LINK_COL_NAMES = Array.prototype.map.call(
+		document.querySelectorAll( '#utmat-links-table thead th' ),
+		function ( th ) { return th.textContent.trim(); }
+	);
+
+	const COPY_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+	const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea, summary, [tabindex]:not([tabindex="-1"])';
 
 	// ── DOM refs ──────────────────────────────────────────────────────────────
 	const elLoading      = document.getElementById( 'utmat-loading' );
@@ -63,6 +85,44 @@
 	const elSelectAll    = document.getElementById( 'utmat-select-all' );
 	const elBulkDeleteBtn = document.getElementById( 'utmat-bulk-delete-btn' );
 
+	const elAddLinkBtn      = document.getElementById( 'utmat-add-link-btn' );
+	const elLive            = document.getElementById( 'utmat-live' );
+	const elFilters         = document.getElementById( 'utmat-filters' );
+	const elCompareCaption  = document.getElementById( 'utmat-compare-caption' );
+	const elPlaceholder     = document.getElementById( 'utmat-charts-placeholder' );
+	const elLinksCampaign   = document.getElementById( 'utmat-links-campaign' );
+	const elLinksCount      = document.getElementById( 'utmat-links-count' );
+	const elLinksMsg        = document.getElementById( 'utmat-links-msg' );
+	let linksMsgTimer       = null;
+
+	// Success text in the Links toolbar clears itself so it never outlives the
+	// action it confirms.
+	function flashLinksMsg( text ) {
+		if ( ! elLinksMsg ) return;
+		window.clearTimeout( linksMsgTimer );
+		elLinksMsg.textContent = text;
+		elLinksMsg.className   = 'utmat-add-form__msg is-success';
+		linksMsgTimer = window.setTimeout( function () {
+			elLinksMsg.textContent = '';
+			elLinksMsg.className   = 'utmat-add-form__msg';
+		}, 5000 );
+	}
+	const elDrawer          = document.getElementById( 'utmat-drawer' );
+	const elDrawerBackdrop  = document.getElementById( 'utmat-drawer-backdrop' );
+	const elDrawerTitle     = document.getElementById( 'utmat-drawer-title' );
+	const elDrawerClose     = document.getElementById( 'utmat-drawer-close' );
+	const elDrawerShortlink = document.getElementById( 'utmat-drawer-shortlink' );
+	const elDrawerPreview   = document.getElementById( 'utmat-drawer-preview' );
+	const elDrawerShortcode = document.getElementById( 'utmat-drawer-shortcode' );
+	const elUnsaved         = document.getElementById( 'utmat-unsaved-count' );
+	const elSavebar         = document.getElementById( 'utmat-savebar' );
+	const elDiscard         = document.getElementById( 'utmat-settings-discard' );
+	const elTestEmailMsg    = document.getElementById( 'utmat-test-email-msg' );
+	const elTestWebhookMsg  = document.getElementById( 'utmat-test-webhook-msg' );
+	const elSecretCopy      = document.getElementById( 'utmat-webhook-secret-copy' );
+	const elDiagLast        = document.getElementById( 'utmat-diagnostics-last' );
+	const elDiagSummary     = document.getElementById( 'utmat-diag-summary' );
+
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
 	Chart.defaults.borderColor = '#dcdcde';
@@ -73,11 +133,166 @@
 	function show( el ) { el.hidden = false; }
 	function hide( el ) { el.hidden = true; }
 
+	/**
+	 * Fill a translated string's placeholders.
+	 *
+	 * Handles numbered (%1$s, %2$s) and sequential (%s) placeholders in a
+	 * single pass, so a substituted value is never scanned again.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param {string} str Translated string with placeholders.
+	 * @return {string} The filled string, or '' for a non-string.
+	 */
+	function fmt( str ) {
+		if ( 'string' !== typeof str ) {
+			return '';
+		}
+		const args = Array.prototype.slice.call( arguments, 1 );
+		let next   = 0;
+		return str.replace( /%(?:(\d+)\$)?s/g, function ( match, pos ) {
+			const value = pos ? args[ parseInt( pos, 10 ) - 1 ] : args[ next++ ];
+			return undefined === value || null === value ? '' : String( value );
+		} );
+	}
+
+	function formatNumber( n ) {
+		return ( Number( n ) || 0 ).toLocaleString();
+	}
+
+	// Announce a short message to screen readers through the live region.
+	function announce( msg ) {
+		if ( ! elLive ) return;
+		elLive.textContent = '';
+		window.requestAnimationFrame( function () {
+			elLive.textContent = msg;
+		} );
+	}
+
+	// Fallback for non-secure (http) admins where navigator.clipboard is undefined.
+	function legacyCopyText( text ) {
+		return new Promise( function ( resolve, reject ) {
+			const active = document.activeElement;
+			const ta     = document.createElement( 'textarea' );
+			ta.value = text;
+			ta.setAttribute( 'readonly', '' );
+			ta.style.position = 'fixed';
+			ta.style.top      = '0';
+			ta.style.left     = '0';
+			ta.style.opacity  = '0';
+			document.body.appendChild( ta );
+			ta.select();
+			let ok = false;
+			try {
+				ok = document.execCommand( 'copy' );
+			} catch ( e ) {
+				ok = false;
+			}
+			document.body.removeChild( ta );
+			if ( active && active.focus ) {
+				active.focus();
+			}
+			if ( ok ) {
+				resolve();
+			} else {
+				reject( new Error( 'clipboard' ) );
+			}
+		} );
+	}
+
+	function copyText( text ) {
+		if ( navigator.clipboard ) {
+			return navigator.clipboard.writeText( text ).catch( function () {
+				return legacyCopyText( text );
+			} );
+		}
+		return legacyCopyText( text );
+	}
+
+	// Copy, then swap a text button's label to "Copied!" for two seconds.
+	function copyWithTextFeedback( btn, text ) {
+		copyText( text ).then( function () {
+			if ( ! btn.dataset.label ) {
+				btn.dataset.label = btn.textContent;
+			}
+			btn.textContent = i18n.copied || 'Copied!';
+			announce( i18n.copied || 'Copied!' );
+			setTimeout( function () {
+				btn.textContent = btn.dataset.label;
+				delete btn.dataset.label;
+			}, 2000 );
+		} ).catch( function () {
+			if ( ! btn.dataset.label ) {
+				btn.dataset.label = btn.textContent;
+			}
+			btn.textContent = i18n.copyFailed || 'Copy failed';
+			announce( i18n.copyFailed || 'Copy failed' );
+			setTimeout( function () {
+				btn.textContent = btn.dataset.label;
+				delete btn.dataset.label;
+			}, 2000 );
+		} );
+	}
+
+	// Compact icon-only copy button; the label lives in a screen-reader span.
+	function makeCopyIconButton( text, label ) {
+		const btn = document.createElement( 'button' );
+		btn.type      = 'button';
+		btn.className = 'utmat-icon-btn utmat-copy-btn';
+		btn.title     = label;
+		btn.innerHTML = COPY_ICON;
+		const sr = document.createElement( 'span' );
+		sr.className   = 'screen-reader-text';
+		sr.textContent = label;
+		btn.appendChild( sr );
+		btn.addEventListener( 'click', function () {
+			copyText( text ).then( function () {
+				btn.classList.add( 'copied' );
+				btn.title = i18n.copied || 'Copied!';
+				announce( i18n.copied || 'Copied!' );
+				setTimeout( function () {
+					btn.classList.remove( 'copied' );
+					btn.title = label;
+				}, 2000 );
+			} ).catch( function () {
+				btn.classList.add( 'failed' );
+				btn.title = i18n.copyFailed || 'Copy failed';
+				announce( i18n.copyFailed || 'Copy failed' );
+				setTimeout( function () {
+					btn.classList.remove( 'failed' );
+					btn.title = label;
+				}, 2000 );
+			} );
+		} );
+		return btn;
+	}
+
+	// One core-style row action: span.<key> > button.button-link + separator.
+	function makeRowAction( key, className, label, onClick, isLast ) {
+		const wrap = document.createElement( 'span' );
+		wrap.className = key;
+		const button = document.createElement( 'button' );
+		button.type        = 'button';
+		button.className   = 'button-link ' + className;
+		button.textContent = label;
+		if ( onClick ) {
+			button.addEventListener( 'click', onClick );
+		}
+		wrap.appendChild( button );
+		if ( ! isLast ) {
+			const sep = document.createElement( 'span' );
+			sep.className   = 'utmat-row-actions__sep';
+			sep.textContent = ' | ';
+			sep.setAttribute( 'aria-hidden', 'true' );
+			wrap.appendChild( sep );
+		}
+		return { wrap: wrap, button: button };
+	}
+
 	function setLoading( on ) {
 		if ( on ) {
 			show( elLoading );
 			hide( elCharts );
-			hide( elLinksSection );
 			hide( elError );
 		} else {
 			hide( elLoading );
@@ -105,8 +320,8 @@
 		} );
 	}
 
-	// Toggle between a chart canvas and its permanent "no data" sibling.
-	// Never removes nodes, so the canvas survives empty periods (R1).
+	// Toggle between a chart canvas (or bar list) and its permanent "no data"
+	// sibling. Never removes nodes, so the canvas survives empty periods.
 	function toggleNoData( canvasId, hasData ) {
 		const canvas = document.getElementById( canvasId );
 		if ( ! canvas ) return;
@@ -117,7 +332,115 @@
 		}
 	}
 
+	// ── Tabs ──────────────────────────────────────────────────────────────────
+	function tabFromHash() {
+		const h = window.location.hash.replace( '#', '' );
+		return TAB_NAMES.indexOf( h ) !== -1 ? h : 'overview';
+	}
+
+	// Charts drawn while their panel was hidden start at zero size.
+	function resizeCharts() {
+		window.requestAnimationFrame( function () {
+			Object.keys( charts ).forEach( function ( id ) {
+				charts[ id ].resize();
+			} );
+		} );
+	}
+
+	function activateTab( name, opts ) {
+		opts = opts || {};
+		if ( ! document.getElementById( 'utmat-tab-overview' ) ) return;
+		if ( TAB_NAMES.indexOf( name ) === -1 ) {
+			name = 'overview';
+		}
+
+		TAB_NAMES.forEach( function ( tabName ) {
+			const tab   = document.getElementById( 'utmat-tab-' + tabName );
+			const panel = document.getElementById( 'utmat-panel-' + tabName );
+			const isOn  = tabName === name;
+			if ( tab ) {
+				tab.classList.toggle( 'nav-tab-active', isOn );
+				tab.setAttribute( 'aria-selected', isOn ? 'true' : 'false' );
+				tab.tabIndex = isOn ? 0 : -1;
+			}
+			if ( panel ) {
+				panel.hidden = ! isOn;
+			}
+		} );
+
+		if ( opts.updateHash && window.location.hash !== '#' + name ) {
+			window.history.replaceState( null, '', '#' + name );
+		}
+		if ( opts.focus ) {
+			document.getElementById( 'utmat-tab-' + name ).focus();
+		}
+		if ( 'overview' === name ) {
+			resizeCharts();
+		}
+	}
+
+	function initTabs() {
+		TAB_NAMES.forEach( function ( tabName ) {
+			const tab = document.getElementById( 'utmat-tab-' + tabName );
+			if ( ! tab ) return;
+			tab.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+				activateTab( tabName, { updateHash: true } );
+			} );
+		} );
+
+		const tablist = document.querySelector( '.utmat-tabs' );
+		if ( tablist ) {
+			tablist.addEventListener( 'keydown', function ( e ) {
+				const current = TAB_NAMES.indexOf( ( e.target.id || '' ).replace( 'utmat-tab-', '' ) );
+				if ( -1 === current ) return;
+				const last = TAB_NAMES.length - 1;
+				let next   = null;
+				if ( 'ArrowRight' === e.key ) {
+					next = current === last ? 0 : current + 1;
+				} else if ( 'ArrowLeft' === e.key ) {
+					next = 0 === current ? last : current - 1;
+				} else if ( 'Home' === e.key ) {
+					next = 0;
+				} else if ( 'End' === e.key ) {
+					next = last;
+				} else if ( ' ' === e.key ) {
+					e.preventDefault();
+					activateTab( TAB_NAMES[ current ], { updateHash: true } );
+					return;
+				}
+				if ( null !== next ) {
+					e.preventDefault();
+					activateTab( TAB_NAMES[ next ], { updateHash: true, focus: true } );
+				}
+			} );
+		}
+
+		// Only tab hashes switch tabs; other in-page anchors (for example the
+		// wp-admin skip link to #wpbody-content) leave the current tab alone.
+		// When the focused link sat in the panel that just closed, move focus
+		// to the new panel so it does not fall back to the document body.
+		window.addEventListener( 'hashchange', function () {
+			const h = window.location.hash.replace( '#', '' );
+			if ( '' === h || TAB_NAMES.indexOf( h ) !== -1 ) {
+				const prev      = document.activeElement;
+				const prevPanel = prev && prev.closest ? prev.closest( '.utmat-panel' ) : null;
+				const name      = tabFromHash();
+				activateTab( name );
+				if ( prevPanel && prevPanel.hidden ) {
+					document.getElementById( 'utmat-panel-' + name ).focus();
+				}
+			}
+		} );
+
+		activateTab( tabFromHash() );
+	}
+
 	// ── Chart factories ───────────────────────────────────────────────────────
+	// Chart.js animates on its own, so it is told to stop when the user asks for
+	// reduced motion; the CSS transitions already honour the same preference.
+	const REDUCED_MOTION = !! ( window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches );
+
 	function makeLineChart( canvasId, labels, values, conversions, previous ) {
 		const ctx = document.getElementById( canvasId );
 		if ( ! ctx ) return;
@@ -184,7 +507,8 @@
 			},
 			options: {
 				responsive:          true,
-				maintainAspectRatio: true,
+				maintainAspectRatio: false,
+				animation:           REDUCED_MOTION ? false : undefined,
 				interaction:         { mode: 'index', intersect: false },
 				plugins: {
 					legend: { display: hasConversions || hasPrevious, position: 'bottom', labels: { boxWidth: 10 } },
@@ -198,87 +522,6 @@
 						beginAtZero: true,
 						ticks:      { precision: 0 },
 					},
-				},
-			},
-		} );
-	}
-
-	function makeDoughnutChart( canvasId, data ) {
-		const ctx = document.getElementById( canvasId );
-		if ( ! ctx ) return;
-		if ( charts[ canvasId ] ) {
-			charts[ canvasId ].destroy();
-			delete charts[ canvasId ];
-		}
-
-		toggleNoData( canvasId, data.length > 0 );
-		if ( ! data.length ) {
-			return;
-		}
-
-		charts[ canvasId ] = new Chart( ctx, {
-			type: 'doughnut',
-			data: {
-				labels:   data.map( function ( d ) { return d.label; } ),
-				datasets: [ {
-					data:            data.map( function ( d ) { return d.count; } ),
-					backgroundColor: COLORS.slice( 0, data.length ),
-					borderColor:     '#fff',
-					borderWidth:     2,
-					hoverOffset:     6,
-				} ],
-			},
-			options: {
-				responsive:          true,
-				maintainAspectRatio: true,
-				cutout:              '65%',
-				plugins: {
-					legend: {
-						position: 'bottom',
-						labels:   { boxWidth: 10, padding: 14 },
-					},
-				},
-			},
-		} );
-	}
-
-	function makeBarChart( canvasId, data ) {
-		const ctx = document.getElementById( canvasId );
-		if ( ! ctx ) return;
-		if ( charts[ canvasId ] ) {
-			charts[ canvasId ].destroy();
-			delete charts[ canvasId ];
-		}
-
-		toggleNoData( canvasId, data.length > 0 );
-		if ( ! data.length ) {
-			return;
-		}
-
-		charts[ canvasId ] = new Chart( ctx, {
-			type: 'bar',
-			data: {
-				labels:   data.map( function ( d ) { return d.label; } ),
-				datasets: [ {
-					label:           i18n.clicksLabel || 'Clicks',
-					data:            data.map( function ( d ) { return d.count; } ),
-					backgroundColor: COLORS.slice( 0, data.length ),
-					borderRadius:    2,
-				} ],
-			},
-			options: {
-				indexAxis:           'y',
-				responsive:          true,
-				maintainAspectRatio: true,
-				plugins: {
-					legend: { display: false },
-				},
-				scales: {
-					x: {
-						beginAtZero: true,
-						ticks:      { precision: 0 },
-					},
-					y: { grid: { display: false } },
 				},
 			},
 		} );
@@ -301,7 +544,7 @@
 		twitter:   i18n.platformTwitter || 'X / Twitter Ads',
 	};
 
-	// Shorten a landing URL for chart labels: same-host URLs show their path,
+	// Shorten a URL for compact labels: same-host URLs show their path,
 	// other hosts keep host + path. Unparseable values pass through untouched.
 	function shortenUrl( url ) {
 		try {
@@ -337,14 +580,16 @@
 				datasets: [ {
 					label:           i18n.revenueLabel || 'Revenue',
 					data:            data.map( function ( d ) { return d.revenue; } ),
-					backgroundColor: COLORS.slice( 0, data.length ),
+					backgroundColor: COLORS[ 0 ],
+					maxBarThickness: 28,
 					borderRadius:    2,
 				} ],
 			},
 			options: {
 				indexAxis:           'y',
 				responsive:          true,
-				maintainAspectRatio: true,
+				maintainAspectRatio: false,
+				animation:           REDUCED_MOTION ? false : undefined,
 				plugins: {
 					legend: { display: false },
 					tooltip: {
@@ -370,29 +615,112 @@
 		} );
 	}
 
-	// ── Conversions in the totals row ─────────────────────────────────────────
-	// Shown only when the period has conversion rows (WooCommerce orders);
-	// the rate is conversions over clicks for the same period.
-	function renderConversions( clicks, conversions ) {
-		const el = document.getElementById( 'utmat-conv' );
-		if ( ! el ) return;
+	// Orders and average order value next to the revenue chart.
+	function renderRevenueSummary( rows ) {
+		const elOrders = document.getElementById( 'utmat-revenue-orders' );
+		const elAov    = document.getElementById( 'utmat-revenue-aov' );
+		let orders  = 0;
+		let revenue = 0;
+		( rows || [] ).forEach( function ( r ) {
+			orders  += Number( r.orders ) || 0;
+			revenue += Number( r.revenue ) || 0;
+		} );
+		if ( elOrders ) {
+			elOrders.textContent = formatNumber( orders );
+		}
+		if ( elAov ) {
+			elAov.textContent = orders ? formatCurrency( Math.round( revenue / orders * 100 ) / 100 ) : '—';
+		}
+	}
+
+	// ── Breakdown bar lists ───────────────────────────────────────────────────
+	// Every row the payload returns (the server caps lists at 10), sorted by
+	// count. Bars are relative to the largest row; opts.share shows each
+	// value as a percentage of the list total instead of a count.
+	function renderBarList( listId, rows, opts ) {
+		const list = document.getElementById( listId );
+		if ( ! list ) return;
+		opts = opts || {};
+		list.innerHTML = '';
+
+		const items = ( rows || [] ).map( function ( d ) {
+			const label = String( opts.label ? opts.label( d ) : d.label );
+			return {
+				label: label,
+				title: String( opts.title ? opts.title( d ) : label ),
+				count: Number( d.count ) || 0,
+			};
+		} ).sort( function ( a, b ) { return b.count - a.count; } );
+
+		toggleNoData( listId, items.length > 0 );
+		if ( ! items.length ) {
+			return;
+		}
+
+		const max = Math.max.apply( null, items.map( function ( i ) { return i.count; } ) ) || 1;
+		const sum = items.reduce( function ( acc, i ) { return acc + i.count; }, 0 ) || 1;
+
+		items.forEach( function ( item ) {
+			const li = document.createElement( 'li' );
+			li.className = 'utmat-bars__item';
+
+			const label = document.createElement( 'span' );
+			label.className   = 'utmat-bars__label';
+			label.textContent = item.label;
+			label.title       = item.title;
+
+			const value = document.createElement( 'span' );
+			value.className   = 'utmat-bars__value';
+			value.textContent = opts.share
+				? Math.round( item.count / sum * 100 ) + '%'
+				: formatNumber( item.count );
+
+			const track = document.createElement( 'span' );
+			track.className = 'utmat-bars__track';
+			track.setAttribute( 'aria-hidden', 'true' );
+			const fill = document.createElement( 'span' );
+			fill.className   = 'utmat-bars__fill';
+			fill.style.width = Math.max( 2, Math.round( item.count / max * 100 ) ) + '%';
+			track.appendChild( fill );
+
+			li.appendChild( label );
+			li.appendChild( value );
+			li.appendChild( track );
+			list.appendChild( li );
+		} );
+	}
+
+	// ── Stat tiles ────────────────────────────────────────────────────────────
+	// Conversions only come from WooCommerce orders, so the tile shows when
+	// WooCommerce is active or the period has conversions anyway.
+	function renderConversions( clicks, conversions, isEmpty ) {
+		const tile  = document.getElementById( 'utmat-tile-conversions' );
+		const count = document.getElementById( 'utmat-conv-count' );
+		const meta  = document.getElementById( 'utmat-conv' );
 
 		clicks      = Number( clicks ) || 0;
 		conversions = Number( conversions ) || 0;
 
-		if ( ! conversions ) {
-			el.hidden = true;
-			return;
+		if ( tile ) {
+			tile.hidden = ! ( wooActive || conversions > 0 );
 		}
-
-		const rate = clicks > 0 ? ' (' + ( ( conversions / clicks ) * 100 ).toFixed( 1 ) + '%)' : '';
-		el.textContent = '· ' + conversions + ' ' + ( i18n.conversionsLabel || 'conversions' ) + rate;
-		el.hidden = false;
+		if ( count ) {
+			count.textContent = isEmpty ? '—' : formatNumber( conversions );
+		}
+		if ( meta ) {
+			if ( isEmpty ) {
+				meta.textContent = i18n.tileWooHint || 'Appears with WooCommerce orders';
+			} else {
+				meta.textContent = clicks > 0
+					? fmt( i18n.convRate || '%s of clicks', ( conversions / clicks * 100 ).toFixed( 1 ) + '%' )
+					: '';
+			}
+		}
 	}
 
 	// ── Trend indicator ───────────────────────────────────────────────────────
 	// Shows the change vs the same-length window immediately before the
-	// selected period, next to the total.
+	// selected period, under the total.
 	function renderTrend( current, previous ) {
 		const el = document.getElementById( 'utmat-trend' );
 		if ( ! el ) return;
@@ -418,9 +746,123 @@
 			cls  = 'flat';
 		}
 
-		el.textContent = text + ' ' + ( i18n.vsPrevious || 'vs previous period' );
+		el.textContent = '';
+		const delta = document.createElement( 'span' );
+		delta.className   = 'utmat-trend__delta';
+		delta.textContent = text;
+		el.appendChild( delta );
+		el.appendChild( document.createTextNode( ' ' + ( i18n.vsPrevious || 'vs previous period' ) ) );
 		el.className   = 'utmat-trend utmat-trend--' + cls;
 		el.hidden      = false;
+	}
+
+	// Top source / top campaign tile. Picks the highest count itself rather
+	// than trusting the payload order.
+	function renderTopTile( key, rows, total, isEmpty ) {
+		const value = document.getElementById( 'utmat-top-' + key );
+		const meta  = document.getElementById( 'utmat-top-' + key + '-meta' );
+		if ( ! value || ! meta ) return;
+
+		let top = null;
+		if ( ! isEmpty ) {
+			( rows || [] ).forEach( function ( r ) {
+				if ( ! top || ( Number( r.count ) || 0 ) > ( Number( top.count ) || 0 ) ) {
+					top = r;
+				}
+			} );
+		}
+
+		if ( ! top ) {
+			value.textContent = '—';
+			value.removeAttribute( 'title' );
+			meta.textContent = isEmpty
+				? ( i18n.tileWaiting || 'Waiting for data' )
+				: ( i18n.tileNoData || 'No tagged clicks in this period' );
+			return;
+		}
+
+		const count = Number( top.count ) || 0;
+		total       = Number( total ) || 0;
+		const pct   = total > 0 ? Math.round( count / total * 100 ) : 0;
+
+		value.textContent = top.label;
+		value.title       = top.label;
+		meta.textContent  = fmt( i18n.topShare || '%1$s clicks · %2$s of total', formatNumber( count ), pct + '%' );
+	}
+
+	// Attributed revenue tile: the sum over tagged campaigns (top 10).
+	function renderRevenueTile( rows, isEmpty ) {
+		const tile  = document.getElementById( 'utmat-tile-revenue' );
+		const value = document.getElementById( 'utmat-revenue-total' );
+		const meta  = document.getElementById( 'utmat-revenue-meta' );
+		if ( tile ) {
+			tile.hidden = ! wooActive;
+		}
+		if ( ! wooActive || ! value || ! meta ) return;
+
+		if ( isEmpty ) {
+			value.textContent = '—';
+			meta.textContent  = i18n.tileWooHint || 'Appears with WooCommerce orders';
+			return;
+		}
+
+		let revenue = 0;
+		let orders  = 0;
+		( rows || [] ).forEach( function ( r ) {
+			revenue += Number( r.revenue ) || 0;
+			orders  += Number( r.orders ) || 0;
+		} );
+		value.textContent = formatCurrency( Math.round( revenue * 100 ) / 100 );
+		meta.textContent  = fmt( i18n.revenueMeta || 'From %s orders on tagged campaigns', formatNumber( orders ) );
+	}
+
+	function renderTiles( stats, isEmpty ) {
+		const clicksMeta = document.getElementById( 'utmat-clicks-meta' );
+
+		elTotal.textContent = isEmpty ? '—' : formatNumber( stats.total );
+		if ( isEmpty ) {
+			const trend = document.getElementById( 'utmat-trend' );
+			if ( trend ) {
+				trend.hidden = true;
+			}
+			if ( clicksMeta ) {
+				clicksMeta.textContent = i18n.tileNoClicks || 'No clicks yet';
+			}
+		} else {
+			renderTrend( stats.total, stats.previous_total );
+			if ( clicksMeta ) {
+				clicksMeta.textContent = '';
+			}
+		}
+
+		renderConversions( stats.total, stats.conversions, isEmpty );
+		renderRevenueTile( stats.revenue_by_campaign || [], isEmpty );
+		renderTopTile( 'source', stats.by_source || [], stats.total, isEmpty );
+		renderTopTile( 'campaign', stats.by_campaign || [], stats.total, isEmpty );
+	}
+
+	function renderCompareCaption() {
+		if ( ! elCompareCaption ) return;
+		elCompareCaption.textContent = ( activeSince && activeUntil )
+			? ( i18n.compareRange || 'Compared with the previous period of the same length' )
+			: fmt( i18n.compareDays || 'Compared with the previous %s days', activePeriod );
+	}
+
+	// First run (nothing ever recorded): onboarding and a placeholder replace
+	// the filters and charts, and there is nothing to export yet.
+	function renderEmptyState( isEmpty ) {
+		const onboarding = document.getElementById( 'utmat-onboarding' );
+		if ( onboarding ) {
+			onboarding.hidden = ! isEmpty;
+		}
+		if ( elPlaceholder ) {
+			elPlaceholder.hidden = ! isEmpty;
+		}
+		if ( elFilters ) {
+			elFilters.hidden = isEmpty;
+		}
+		elCharts.hidden      = isEmpty;
+		elExportBtn.disabled = isEmpty;
 	}
 
 	// ── Populate campaigns dropdown ────────────────────────────────────────────
@@ -488,7 +930,7 @@
 		const tr = document.createElement( 'tr' );
 		tr.className = 'utmat-qr-row';
 		const td = document.createElement( 'td' );
-		td.colSpan = 7;
+		td.colSpan = LINK_COLS;
 
 		const box = document.createElement( 'div' );
 		box.className = 'utmat-qr-box';
@@ -502,9 +944,16 @@
 		const meta = document.createElement( 'div' );
 		meta.className = 'utmat-qr-meta';
 
+		const title = document.createElement( 'strong' );
+		title.className   = 'utmat-qr-title';
+		title.textContent = fmt( i18n.qrFor || 'QR code for %s', link.label );
+
 		const urlSpan = document.createElement( 'span' );
 		urlSpan.className   = 'utmat-url-text';
 		urlSpan.textContent = link.redirect_url;
+
+		const actions = document.createElement( 'div' );
+		actions.className = 'utmat-qr-actions';
 
 		const download = document.createElement( 'a' );
 		download.className   = 'button button-small';
@@ -512,8 +961,20 @@
 		download.href        = canvas.toDataURL( 'image/png' );
 		download.download    = 'utmat-' + link.id + '-qr.png';
 
+		const close = document.createElement( 'button' );
+		close.type        = 'button';
+		close.className   = 'button button-small utmat-qr-close';
+		close.textContent = i18n.close || 'Close';
+		close.addEventListener( 'click', function () {
+			closeQrRows();
+			btn.focus();
+		} );
+
+		actions.appendChild( download );
+		actions.appendChild( close );
+		meta.appendChild( title );
 		meta.appendChild( urlSpan );
-		meta.appendChild( download );
+		meta.appendChild( actions );
 		box.appendChild( canvas );
 		box.appendChild( meta );
 		td.appendChild( box );
@@ -523,11 +984,15 @@
 		btn.setAttribute( 'aria-expanded', 'true' );
 	}
 
-	// ── Search + sort over the already-fetched links list ─────────────────────
-	// Both operate client-side on the full list held in `allLinks` — no extra
+	// ── Search + filter + sort over the already-fetched links list ────────────
+	// All operate client-side on the full list held in `allLinks` — no extra
 	// request, since the whole list is already in memory for the table.
 	function visibleLinks() {
 		let list = allLinks;
+
+		if ( linksCampaign ) {
+			list = list.filter( function ( link ) { return link.utm_campaign === linksCampaign; } );
+		}
 
 		const needle = linksFilter.trim().toLowerCase();
 		if ( needle ) {
@@ -548,6 +1013,43 @@
 
 	function refreshLinksTable() {
 		renderLinksTable( visibleLinks() );
+	}
+
+	// Fill the toolbar campaign filter from the campaigns the links use.
+	function populateLinksCampaigns() {
+		if ( ! elLinksCampaign ) return;
+		const campaigns = [];
+		allLinks.forEach( function ( link ) {
+			if ( link.utm_campaign && campaigns.indexOf( link.utm_campaign ) === -1 ) {
+				campaigns.push( link.utm_campaign );
+			}
+		} );
+		campaigns.sort();
+
+		while ( elLinksCampaign.options.length > 1 ) {
+			elLinksCampaign.remove( 1 );
+		}
+		campaigns.forEach( function ( c ) {
+			const opt = document.createElement( 'option' );
+			opt.value       = c;
+			opt.textContent = c;
+			elLinksCampaign.appendChild( opt );
+		} );
+
+		if ( campaigns.indexOf( linksCampaign ) === -1 ) {
+			linksCampaign = '';
+		}
+		elLinksCampaign.value = linksCampaign;
+	}
+
+	function renderLinksCount( links ) {
+		if ( ! elLinksCount ) return;
+		const clicks = links.reduce( function ( acc, l ) { return acc + ( Number( l.clicks ) || 0 ); }, 0 );
+		elLinksCount.textContent = fmt(
+			i18n.linksCount || 'Links: %1$s · Clicks (all time): %2$s',
+			formatNumber( links.length ),
+			formatNumber( clicks )
+		);
 	}
 
 	// ── Bulk select + delete ──────────────────────────────────────────────────
@@ -612,23 +1114,48 @@
 				} );
 				elBulkDeleteBtn.disabled = false;
 				refreshLinksTable();
+				// The button hides once nothing is selected; keep focus on the table.
+				if ( elBulkDeleteBtn.hidden ) {
+					( elSelectAll && visibleLinks().length ? elSelectAll : elAddLinkBtn ).focus();
+				}
 			} );
 		} );
 	}
 
 	// ── Populate links table ───────────────────────────────────────────────────
+	// Cell order must match the thead. Label is the core "primary" column, so
+	// on phones core list-table CSS collapses the row to checkbox + label and
+	// the toggle-row button expands the other cells (labelled by data-colname).
+	// Every short link shares the site host, so the table shows the path only;
+	// the full URL stays in the title attribute and on the copy button.
+	function shortLinkPath( url ) {
+		try {
+			const u = new URL( url );
+			return u.pathname + u.search;
+		} catch ( e ) {
+			return shortenUrl( url );
+		}
+	}
+
 	function renderLinksTable( links ) {
+		show( elLinksSection );
+		renderLinksCount( links );
 		elLinksTbody.innerHTML = '';
 
 		if ( elSortClicks ) {
 			elSortClicks.querySelector( '.utmat-sort-arrow' ).textContent =
 				clicksSortDir === 'asc' ? '▲' : ( clicksSortDir === 'desc' ? '▼' : '' );
+			elSortClicks.closest( 'th' ).setAttribute(
+				'aria-sort',
+				clicksSortDir === 'asc' ? 'ascending' : ( clicksSortDir === 'desc' ? 'descending' : 'none' )
+			);
 		}
 
 		if ( ! links.length ) {
 			const row = elLinksTbody.insertRow();
+			row.className = 'no-items';
 			const cell = row.insertCell();
-			cell.colSpan = 7;
+			cell.colSpan = LINK_COLS;
 			cell.className = 'description';
 			cell.textContent = allLinks.length
 				? ( i18n.noLinksMatch || 'No tracked links match your search.' )
@@ -648,6 +1175,7 @@
 			cb.type    = 'checkbox';
 			cb.className = 'utmat-row-select';
 			cb.checked = selectedLinks.has( link.id );
+			cb.setAttribute( 'aria-label', fmt( i18n.selectLink || 'Select %s', link.label ) );
 			cb.addEventListener( 'change', function () {
 				if ( cb.checked ) {
 					selectedLinks.add( link.id );
@@ -658,87 +1186,47 @@
 			} );
 			cbCell.appendChild( cb );
 
-			// Label.
-			row.insertCell().textContent = link.label;
+			// Label + row actions.
+			const labelCell = row.insertCell();
+			labelCell.className = 'utmat-col-label column-primary';
+			const strong = document.createElement( 'strong' );
+			strong.className   = 'utmat-link-label';
+			strong.textContent = link.label;
+			strong.title       = link.label;
+			labelCell.appendChild( strong );
 
-			// Campaign.
-			row.insertCell().textContent = link.utm_campaign || '—';
+			const actions = document.createElement( 'div' );
+			actions.className = 'row-actions';
 
-			// Clicks badge.
-			const clicksCell  = row.insertCell();
-			const clicksBadge = document.createElement( 'span' );
-			clicksBadge.className   = 'utmat-clicks-badge';
-			clicksBadge.textContent = String( link.clicks );
-			clicksCell.appendChild( clicksBadge );
-
-			// Redirect URL + copy button.
-			const redirectCell = row.insertCell();
-			const wrapper = document.createElement( 'div' );
-			wrapper.className = 'utmat-url-cell';
-			const urlSpan = document.createElement( 'span' );
-			urlSpan.className   = 'utmat-url-text';
-			urlSpan.textContent = link.redirect_url;
-			urlSpan.title       = link.redirect_url;
-			const copyBtn = document.createElement( 'button' );
-			copyBtn.className   = 'button button-small utmat-copy-btn';
-			copyBtn.textContent = i18n.copy || 'Copy';
-			copyBtn.type        = 'button';
-			copyBtn.addEventListener( 'click', function () {
-				navigator.clipboard.writeText( link.redirect_url ).then( function () {
-					copyBtn.textContent = i18n.copied || 'Copied!';
-					copyBtn.classList.add( 'copied' );
-					setTimeout( function () {
-						copyBtn.textContent = i18n.copy || 'Copy';
-						copyBtn.classList.remove( 'copied' );
-					}, 2000 );
-				} );
+			const edit = makeRowAction( 'edit', 'utmat-edit-btn', i18n.edit || 'Edit', null, false );
+			edit.button.setAttribute( 'aria-label', fmt( i18n.editLink || 'Edit %s', link.label ) );
+			edit.button.addEventListener( 'click', function () {
+				enterEditMode( link, edit.button );
 			} );
-			wrapper.appendChild( urlSpan );
-			wrapper.appendChild( copyBtn );
-			redirectCell.appendChild( wrapper );
 
-			// Destination.
-			const destCell = row.insertCell();
-			destCell.className = 'utmat-url-text';
-			destCell.textContent = link.destination;
-			destCell.title       = link.destination;
-
-			// QR / Edit / Delete.
-			const actionsCell = row.insertCell();
-
-			const qrBtn = document.createElement( 'button' );
-			qrBtn.type      = 'button';
-			qrBtn.className = 'button button-small utmat-qr-btn';
-			qrBtn.textContent = i18n.qr || 'QR';
-			qrBtn.setAttribute( 'aria-expanded', 'false' );
-			qrBtn.addEventListener( 'click', function () {
-				toggleQrRow( link, row, qrBtn );
+			const dup = makeRowAction( 'duplicate', 'utmat-duplicate-btn', i18n.duplicate || 'Duplicate', null, false );
+			dup.button.setAttribute( 'aria-label', fmt( i18n.duplicateLink || 'Duplicate %s', link.label ) );
+			dup.button.title = i18n.duplicateHint || 'Pre-fill the add-link form with this link’s values to create a variant.';
+			dup.button.addEventListener( 'click', function () {
+				enterDuplicateMode( link, dup.button );
 			} );
-			actionsCell.appendChild( qrBtn );
 
-			const editBtn = document.createElement( 'button' );
-			editBtn.type      = 'button';
-			editBtn.className = 'button button-small utmat-edit-btn';
-			editBtn.textContent = i18n.edit || 'Edit';
-			editBtn.addEventListener( 'click', function () {
-				enterEditMode( link );
+			const qr = makeRowAction( 'qr', 'utmat-qr-btn', i18n.qrCode || 'QR code', null, false );
+			qr.button.setAttribute( 'aria-expanded', 'false' );
+			qr.button.setAttribute( 'aria-label', fmt( i18n.qrFor || 'QR code for %s', link.label ) );
+			qr.button.addEventListener( 'click', function () {
+				toggleQrRow( link, row, qr.button );
 			} );
-			actionsCell.appendChild( editBtn );
 
-			const dupBtn = document.createElement( 'button' );
-			dupBtn.type      = 'button';
-			dupBtn.className = 'button button-small utmat-duplicate-btn';
-			dupBtn.textContent = i18n.duplicate || 'Duplicate';
-			dupBtn.title      = i18n.duplicateHint || 'Pre-fill the add-link form with this link’s values to create a variant.';
-			dupBtn.addEventListener( 'click', function () {
-				enterDuplicateMode( link );
+			const copy = makeRowAction( 'copy', 'utmat-copy-link-btn', i18n.copyLink || 'Copy link', null, false );
+			copy.button.setAttribute( 'aria-label', fmt( i18n.copyLinkFor || 'Copy short link for %s', link.label ) );
+			copy.button.addEventListener( 'click', function () {
+				copyWithTextFeedback( copy.button, link.redirect_url );
 			} );
-			actionsCell.appendChild( dupBtn );
 
-			const deleteBtn = document.createElement( 'button' );
-			deleteBtn.type      = 'button';
-			deleteBtn.className = 'button button-small button-link-delete utmat-delete-btn';
-			deleteBtn.textContent = i18n.delete || 'Delete';
+			const del = makeRowAction( 'delete', 'button-link-delete utmat-delete-btn', i18n.delete || 'Delete', null, true );
+			const deleteBtn = del.button;
+			deleteBtn.setAttribute( 'aria-label', fmt( i18n.deleteLink || 'Delete %s', link.label ) );
 			deleteBtn.addEventListener( 'click', function () {
 				if ( deleteBtn.dataset.confirming ) {
 					deleteLink( link.id, row );
@@ -751,19 +1239,108 @@
 					deleteBtn.textContent = i18n.delete || 'Delete';
 				}, 3000 );
 			} );
-			actionsCell.appendChild( deleteBtn );
+
+			[ edit, dup, qr, copy, del ].forEach( function ( a ) {
+				actions.appendChild( a.wrap );
+			} );
+			labelCell.appendChild( actions );
+
+			const toggle = document.createElement( 'button' );
+			toggle.type      = 'button';
+			toggle.className = 'toggle-row';
+			const toggleText = document.createElement( 'span' );
+			toggleText.className   = 'screen-reader-text';
+			toggleText.textContent = i18n.showDetails || 'Show more details';
+			toggle.appendChild( toggleText );
+			labelCell.appendChild( toggle );
+
+			// Campaign.
+			const campaignCell = row.insertCell();
+			campaignCell.className = 'utmat-col-campaign';
+			campaignCell.dataset.colname = LINK_COL_NAMES[ 1 ] || '';
+			if ( link.utm_campaign ) {
+				const chip = document.createElement( 'span' );
+				chip.className   = 'utmat-chip';
+				chip.textContent = link.utm_campaign;
+				chip.title       = link.utm_campaign;
+				campaignCell.appendChild( chip );
+			} else {
+				campaignCell.textContent = '—';
+			}
+
+			// Source / medium.
+			const sourceCell = row.insertCell();
+			sourceCell.className = 'utmat-col-source';
+			sourceCell.dataset.colname = LINK_COL_NAMES[ 2 ] || '';
+			sourceCell.textContent = ( link.utm_source || link.utm_medium )
+				? ( link.utm_source || '—' ) + ' / ' + ( link.utm_medium || '—' )
+				: '—';
+			sourceCell.title = sourceCell.textContent;
+
+			// Clicks.
+			const clicksCell  = row.insertCell();
+			clicksCell.className = 'utmat-col-clicks';
+			clicksCell.dataset.colname = LINK_COL_NAMES[ 3 ] || '';
+			const clicksBadge = document.createElement( 'span' );
+			clicksBadge.className   = 'utmat-clicks-badge';
+			clicksBadge.textContent = formatNumber( link.clicks );
+			clicksCell.appendChild( clicksBadge );
+
+			// Short link + copy icon.
+			const redirectCell = row.insertCell();
+			redirectCell.className = 'utmat-col-url';
+			redirectCell.dataset.colname = LINK_COL_NAMES[ 4 ] || '';
+			const redirectWrap = document.createElement( 'div' );
+			redirectWrap.className = 'utmat-url-cell';
+			const redirectText = document.createElement( 'span' );
+			redirectText.className   = 'utmat-url-text';
+			redirectText.textContent = shortLinkPath( link.redirect_url );
+			redirectText.title       = link.redirect_url;
+			redirectWrap.appendChild( redirectText );
+			redirectWrap.appendChild( makeCopyIconButton( link.redirect_url, i18n.copyShortLink || 'Copy short link' ) );
+			redirectCell.appendChild( redirectWrap );
+
+			// Destination + copy icon.
+			const destCell = row.insertCell();
+			destCell.className = 'utmat-col-url';
+			destCell.dataset.colname = LINK_COL_NAMES[ 5 ] || '';
+			const destWrap = document.createElement( 'div' );
+			destWrap.className = 'utmat-url-cell';
+			const destText = document.createElement( 'span' );
+			destText.className   = 'utmat-url-text';
+			destText.textContent = String( link.destination || '' ).replace( /^https?:\/\//, '' );
+			destText.title       = link.destination;
+			destWrap.appendChild( destText );
+			destWrap.appendChild( makeCopyIconButton( link.destination, i18n.copyDestination || 'Copy destination URL' ) );
+			destCell.appendChild( destWrap );
 		} );
 
 		updateBulkDeleteButton();
-		show( elLinksSection );
 	}
 
 	// ── Delete a link ─────────────────────────────────────────────────────────
+	// The checkbox of the nearest remaining link row (skipping QR rows), or
+	// the Add tracked link button when no other link row is left.
+	function focusTargetAfterRemoving( row ) {
+		let sib = row.nextElementSibling;
+		while ( sib && ! sib.dataset.linkId ) {
+			sib = sib.nextElementSibling;
+		}
+		if ( ! sib ) {
+			sib = row.previousElementSibling;
+			while ( sib && ! sib.dataset.linkId ) {
+				sib = sib.previousElementSibling;
+			}
+		}
+		return ( sib && sib.querySelector( '.utmat-row-select' ) ) || elAddLinkBtn;
+	}
+
 	function deleteLink( id, row ) {
 		apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
 			.then( function () {
 				allLinks = allLinks.filter( function ( link ) { return link.id !== id; } );
 				selectedLinks.delete( id );
+				const focusTarget = row.contains( document.activeElement ) ? focusTargetAfterRemoving( row ) : null;
 				const next = row.nextElementSibling;
 				if ( next && next.classList.contains( 'utmat-qr-row' ) ) {
 					next.remove();
@@ -771,7 +1348,13 @@
 				row.remove();
 				if ( ! elLinksTbody.rows.length ) {
 					refreshLinksTable();
+				} else {
+					renderLinksCount( visibleLinks() );
 				}
+				if ( focusTarget ) {
+					focusTarget.focus();
+				}
+				flashLinksMsg( i18n.deleted || 'Link deleted.' );
 			} )
 			.catch( function ( err ) {
 				window.alert( err.message || 'Unknown error.' ); // eslint-disable-line no-alert
@@ -859,6 +1442,20 @@
 	const elPresetName       = document.getElementById( 'utmat-preset-name' );
 	const elPresetNameOk     = document.getElementById( 'utmat-preset-name-confirm' );
 	const elPresetNameCancel = document.getElementById( 'utmat-preset-name-cancel' );
+
+	// The drawer is reused for add, edit and duplicate, so an open preset-name
+	// row or a Delete preset button must not carry over between openings.
+	function resetPresetUi() {
+		if ( elPresetSelect ) {
+			elPresetSelect.value = '';
+		}
+		if ( elPresetDelete ) {
+			elPresetDelete.hidden = true;
+		}
+		if ( elPresetNameRow ) {
+			hide( elPresetNameRow );
+		}
+	}
 
 	function populatePresets( presets ) {
 		allPresets = presets || [];
@@ -976,11 +1573,142 @@
 		} );
 	}
 
-	// ── Add / edit link form ──────────────────────────────────────────────────
+	// ── Add / edit drawer ─────────────────────────────────────────────────────
+	// A modal side panel holding the add/edit form. Every close path (Cancel,
+	// the X button, Esc, a backdrop click) goes through the Cancel handler,
+	// so closing always discards the unsaved input.
+	function openDrawer( mode, trigger ) {
+		drawerReturnFocus = trigger || document.activeElement;
+		if ( elDrawerTitle ) {
+			elDrawerTitle.textContent = 'edit' === mode
+				? ( i18n.drawerEditTitle || 'Edit tracked link' )
+				: ( i18n.drawerAddTitle || 'Add tracked link' );
+		}
+		if ( elLinksMsg ) {
+			elLinksMsg.textContent = '';
+			elLinksMsg.className   = 'utmat-add-form__msg';
+		}
+		activateTab( 'links', { updateHash: true } );
+		if ( elDrawerBackdrop ) {
+			show( elDrawerBackdrop );
+		}
+		show( elDrawer );
+		document.body.classList.add( 'utmat-drawer-open' );
+	}
+
+	function closeDrawer() {
+		if ( ! elDrawer || elDrawer.hidden ) return;
+		hide( elDrawer );
+		if ( elDrawerBackdrop ) {
+			hide( elDrawerBackdrop );
+		}
+		document.body.classList.remove( 'utmat-drawer-open' );
+
+		// The trigger may be gone (rows are rebuilt after a save) or sit in a
+		// hidden panel (the empty-state button); fall back to the header button.
+		let target = drawerReturnFocus;
+		if ( ! target || ! document.body.contains( target ) || null === target.offsetParent ) {
+			target = elAddLinkBtn;
+		}
+		drawerReturnFocus = null;
+		if ( target ) {
+			target.focus();
+		}
+	}
+
+	function trapDrawerFocus( e ) {
+		if ( 'Tab' !== e.key ) return;
+		const items = Array.prototype.filter.call( elDrawer.querySelectorAll( FOCUSABLE ), function ( el ) {
+			return null !== el.offsetParent;
+		} );
+		if ( ! items.length ) return;
+		const first = items[ 0 ];
+		const last  = items[ items.length - 1 ];
+		if ( e.shiftKey && ( document.activeElement === first || document.activeElement === elDrawer ) ) {
+			e.preventDefault();
+			last.focus();
+		} else if ( ! e.shiftKey && document.activeElement === last ) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	// Short link and shortcode exist only once the link is saved.
+	function updateDrawerMeta( link ) {
+		if ( elDrawerShortlink ) {
+			elDrawerShortlink.classList.toggle( 'utmat-readonly--pending', ! link );
+			elDrawerShortlink.textContent = link
+				? link.redirect_url
+				: ( i18n.shortlinkPending || 'Created from the label when you save.' );
+		}
+		if ( elDrawerShortcode ) {
+			elDrawerShortcode.textContent = link
+				? fmt( i18n.shortcodeFor || 'Shortcode: [utmat_link id="%s"]', link.id )
+				: ( i18n.shortcodeAfterSave || 'After saving, embed it with the [utmat_link] shortcode.' );
+		}
+	}
+
+	// Client-side mirror of LinkManager::build_url(): same parameter order,
+	// empty values skipped, values normalized like the server does, an
+	// existing query string and fragment respected. Preview only.
+	function buildDestinationPreview() {
+		const base = elAddForm.elements.destination.value.trim();
+		if ( ! base ) {
+			return '';
+		}
+		const params = new URLSearchParams();
+		UTM_FIELDS.forEach( function ( key ) {
+			const input = elAddForm.elements[ key ];
+			const value = normalizeUtm( ( input && input.value ) || '' );
+			if ( value ) {
+				params.append( key, value );
+			}
+		} );
+		const qs = params.toString();
+		if ( ! qs ) {
+			return base;
+		}
+		let head   = base;
+		let frag   = '';
+		const hash = base.indexOf( '#' );
+		if ( -1 !== hash ) {
+			frag = base.slice( hash );
+			head = base.slice( 0, hash );
+		}
+		return head + ( -1 !== head.indexOf( '?' ) ? '&' : '?' ) + qs + frag;
+	}
+
+	function updateDrawerPreview() {
+		if ( ! elDrawerPreview ) return;
+		elDrawerPreview.textContent = buildDestinationPreview() ||
+			( i18n.previewEmpty || 'Enter a destination URL to see the final link.' );
+	}
+
+	function openAddDrawer( trigger ) {
+		editingId = null;
+		elAddForm.reset();
+		const advanced = elAddForm.querySelector( '.utmat-add-form__advanced' );
+		if ( advanced ) {
+			advanced.open = false;
+		}
+		elSubmitBtn.textContent = i18n.addLink || 'Add link';
+		elAddMsg.textContent = '';
+		elAddMsg.className   = 'utmat-add-form__msg';
+		hide( elNormNotice );
+		resetPresetUi();
+		openDrawer( 'add', trigger );
+		updateDrawerMeta( null );
+		updateDrawerPreview();
+		elAddForm.elements.label.focus();
+	}
+
 	// Editing reuses the add form: fields are pre-filled from the link, the
 	// submit button becomes "Save changes", and the slug is locked (it is not
 	// a form field — the PUT request targets the stored slug directly).
-	function enterEditMode( link ) {
+	function enterEditMode( link, trigger ) {
+		openDrawer( 'edit', trigger );
+		hide( elNormNotice );
+		resetPresetUi();
 		editingId = link.id;
 
 		elAddForm.elements.label.value        = link.label;
@@ -998,10 +1726,11 @@
 		}
 
 		elSubmitBtn.textContent = i18n.saveChanges || 'Save changes';
-		show( elCancelBtn );
 		elAddMsg.textContent = '';
 		elAddMsg.className = 'utmat-add-form__msg';
-		elAddForm.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+		updateDrawerMeta( link );
+		updateDrawerPreview();
+		elAddForm.elements.label.focus();
 	}
 
 	/**
@@ -1011,8 +1740,17 @@
 	 * always POSTs a new link (a fresh slug derived from the label). The
 	 * label gets a " (copy)" suffix so the create-time slug never collides
 	 * with the original.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param {Object}      link    Link object from the /links payload.
+	 * @param {HTMLElement} trigger Element that opened the drawer.
+	 * @return {void}
 	 */
-	function enterDuplicateMode( link ) {
+	function enterDuplicateMode( link, trigger ) {
+		openDrawer( 'add', trigger );
+		hide( elNormNotice );
+		resetPresetUi();
 		editingId = null;
 
 		elAddForm.elements.label.value        = ( link.label || '' ) + ' ' + ( i18n.copySuffix || '(copy)' );
@@ -1030,10 +1768,10 @@
 		}
 
 		elSubmitBtn.textContent = i18n.addLink || 'Add link';
-		hide( elCancelBtn );
 		elAddMsg.textContent = '';
 		elAddMsg.className = 'utmat-add-form__msg';
-		elAddForm.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+		updateDrawerMeta( null );
+		updateDrawerPreview();
 		elAddForm.elements.label.focus();
 		elAddForm.elements.label.select();
 	}
@@ -1042,7 +1780,8 @@
 		editingId = null;
 		elAddForm.reset();
 		elSubmitBtn.textContent = i18n.addLink || 'Add link';
-		hide( elCancelBtn );
+		hide( elNormNotice );
+		closeDrawer();
 	}
 
 	elCancelBtn.addEventListener( 'click', function () {
@@ -1050,6 +1789,52 @@
 		elAddMsg.textContent = '';
 		elAddMsg.className = 'utmat-add-form__msg';
 	} );
+
+	if ( elDrawerClose ) {
+		elDrawerClose.addEventListener( 'click', function () {
+			elCancelBtn.click();
+		} );
+	}
+
+	if ( elDrawerBackdrop ) {
+		elDrawerBackdrop.addEventListener( 'click', function () {
+			elCancelBtn.click();
+		} );
+	}
+
+	if ( elDrawer ) {
+		elDrawer.addEventListener( 'keydown', trapDrawerFocus );
+		document.addEventListener( 'keydown', function ( e ) {
+			if ( 'Escape' === e.key && ! elDrawer.hidden ) {
+				e.preventDefault();
+				elCancelBtn.click();
+			}
+		} );
+	}
+
+	elAddForm.addEventListener( 'input', updateDrawerPreview );
+	elAddForm.addEventListener( 'change', updateDrawerPreview );
+
+	if ( elAddLinkBtn ) {
+		elAddLinkBtn.addEventListener( 'click', function () {
+			openAddDrawer( elAddLinkBtn );
+		} );
+	}
+
+	const elOnboardingAdd = document.getElementById( 'utmat-onboarding-add' );
+	if ( elOnboardingAdd ) {
+		elOnboardingAdd.addEventListener( 'click', function () {
+			openAddDrawer( elOnboardingAdd );
+		} );
+	}
+
+	const elOnboardingCopy = document.getElementById( 'utmat-onboarding-copy' );
+	const elOnboardingUrl  = document.getElementById( 'utmat-onboarding-url' );
+	if ( elOnboardingCopy && elOnboardingUrl ) {
+		elOnboardingCopy.addEventListener( 'click', function () {
+			copyWithTextFeedback( elOnboardingCopy, elOnboardingUrl.textContent.trim() );
+		} );
+	}
 
 	elAddForm.addEventListener( 'submit', function ( e ) {
 		e.preventDefault();
@@ -1075,9 +1860,11 @@
 			headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
 			body:    JSON.stringify( payload ),
 		} ).then( function () {
+			// The reload rebuilds the rows, so the row button that opened the
+			// drawer is gone; return focus to the header button instead.
+			drawerReturnFocus = elAddLinkBtn;
 			exitEditMode();
-			elAddMsg.textContent = isEdit ? ( i18n.updated || 'Link updated.' ) : ( i18n.added || 'Link added.' );
-			elAddMsg.className = 'utmat-add-form__msg is-success';
+			flashLinksMsg( isEdit ? ( i18n.updated || 'Link updated.' ) : ( i18n.added || 'Link added.' ) );
 			loadDashboard();
 		} ).catch( function ( err ) {
 			elAddMsg.textContent = err.message || 'Unknown error.';
@@ -1146,7 +1933,7 @@
 
 	elExportBtn.addEventListener( 'click', exportCsv );
 
-	// ── Settings card ─────────────────────────────────────────────────────────
+	// ── Settings ──────────────────────────────────────────────────────────────
 	const elWebhookUrl      = document.getElementById( 'utmat-webhook-url' );
 	const elWebhookSecret   = document.getElementById( 'utmat-webhook-secret' );
 	const elWebhookSecretRow = document.getElementById( 'utmat-webhook-secret-row' );
@@ -1155,6 +1942,55 @@
 	function toggleWebhookExtras( hasUrl ) {
 		if ( elWebhookSecretRow ) elWebhookSecretRow.hidden = ! hasUrl;
 		if ( elTestWebhook ) elTestWebhook.hidden = ! hasUrl;
+	}
+
+	// Current form values as strings, for the unsaved-changes comparison.
+	function readSettingsForm() {
+		return {
+			retention: String( elRetention.value ),
+			cookie:    String( elCookieDays.value ),
+			weekly:    String( !! elWeekly.checked ),
+			webhook:   elWebhookUrl ? String( elWebhookUrl.value ) : '',
+		};
+	}
+
+	function applySettings( s ) {
+		if ( ! s ) return;
+		elRetention.value  = s.retention;
+		elCookieDays.value = s.cookie;
+		elWeekly.checked   = 'true' === s.weekly;
+		if ( elWebhookUrl ) {
+			elWebhookUrl.value = s.webhook;
+			toggleWebhookExtras( !! s.webhook );
+		}
+	}
+
+	function countSettingsChanges() {
+		if ( ! settingsBaseline ) return 0;
+		const now = readSettingsForm();
+		return Object.keys( settingsBaseline ).filter( function ( key ) {
+			return settingsBaseline[ key ] !== now[ key ];
+		} ).length;
+	}
+
+	function updateUnsavedCount() {
+		const n = countSettingsChanges();
+		if ( elUnsaved ) {
+			elUnsaved.textContent = n
+				? fmt( i18n.unsavedCount || 'Unsaved changes: %s', n )
+				: ( i18n.unsavedNone || 'No unsaved changes' );
+		}
+		if ( elDiscard ) {
+			elDiscard.disabled = 0 === n;
+		}
+		if ( elSavebar ) {
+			elSavebar.classList.toggle( 'is-dirty', n > 0 );
+		}
+	}
+
+	function snapshotSettings() {
+		settingsBaseline = readSettingsForm();
+		updateUnsavedCount();
 	}
 
 	if ( settings ) {
@@ -1166,27 +2002,57 @@
 			toggleWebhookExtras( !! settings.webhookUrl );
 		}
 	}
+	snapshotSettings();
+
 	if ( elWebhookSecret ) {
 		elWebhookSecret.value = utmatData.webhookSecret || '';
+		elWebhookSecret.addEventListener( 'focus', function () {
+			elWebhookSecret.select();
+		} );
+		elWebhookSecret.addEventListener( 'click', function () {
+			elWebhookSecret.select();
+		} );
 	}
 	const elWebhookLast = document.getElementById( 'utmat-webhook-last' );
 	if ( elWebhookLast && utmatData.webhookLast ) {
 		const last = utmatData.webhookLast;
 		const when = new Date( last.time * 1000 ).toLocaleString();
-		elWebhookLast.textContent = ( last.ok
-			? ( i18n.webhookLastOk || 'Last delivery: %s succeeded (%s)' )
-			: ( i18n.webhookLastFailed || 'Last delivery: %s failed (%s)' )
-		).replace( '%s', when ).replace( '%s', last.detail || '' );
+		elWebhookLast.textContent = fmt(
+			last.ok
+				? ( i18n.webhookLastOk || 'Last delivery: %1$s succeeded (%2$s)' )
+				: ( i18n.webhookLastFailed || 'Last delivery: %1$s failed (%2$s)' ),
+			when,
+			last.detail || ''
+		);
 	}
 
 	// Reassure the admin that a detected full-page cache doesn't break
 	// tracking — the front-end beacon already handles it.
 	const elCacheNotice = document.getElementById( 'utmat-cache-notice' );
 	if ( elCacheNotice && cachePlugin ) {
-		elCacheNotice.querySelector( 'p' ).textContent =
-			( i18n.cacheDetected || 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.' )
-				.replace( '%s', cachePlugin );
+		elCacheNotice.querySelector( 'p' ).textContent = fmt(
+			i18n.cacheDetected || 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.',
+			cachePlugin
+		);
 		show( elCacheNotice );
+	}
+
+	elSettingsForm.addEventListener( 'input', updateUnsavedCount );
+	elSettingsForm.addEventListener( 'change', updateUnsavedCount );
+
+	if ( elDiscard ) {
+		elDiscard.addEventListener( 'click', function () {
+			applySettings( settingsBaseline );
+			updateUnsavedCount();
+			elSettingsMsg.textContent = '';
+			elSettingsMsg.className   = 'utmat-add-form__msg';
+		} );
+	}
+
+	if ( elSecretCopy && elWebhookSecret ) {
+		elSecretCopy.addEventListener( 'click', function () {
+			copyWithTextFeedback( elSecretCopy, elWebhookSecret.value );
+		} );
 	}
 
 	elSettingsForm.addEventListener( 'submit', function ( e ) {
@@ -1212,6 +2078,7 @@
 				elWebhookUrl.value = body.webhook_url || '';
 				toggleWebhookExtras( !! body.webhook_url );
 			}
+			snapshotSettings();
 			elSettingsMsg.textContent = i18n.settingsSaved || 'Settings saved.';
 			elSettingsMsg.className   = 'utmat-add-form__msg is-success';
 		} ).catch( function ( err ) {
@@ -1222,20 +2089,21 @@
 
 	// ── Test email ────────────────────────────────────────────────────────────
 	const elTestEmail = document.getElementById( 'utmat-test-email' );
+	const elEmailMsg  = elTestEmailMsg || elSettingsMsg;
 
 	elTestEmail.addEventListener( 'click', function () {
-		elTestEmail.disabled      = true;
-		elSettingsMsg.textContent = i18n.testEmailSending || 'Sending…';
-		elSettingsMsg.className   = 'utmat-add-form__msg';
+		elTestEmail.disabled   = true;
+		elEmailMsg.textContent = i18n.testEmailSending || 'Sending…';
+		elEmailMsg.className   = 'utmat-add-form__msg';
 
 		apiFetch( '/test-email', { method: 'POST' } ).then( function ( body ) {
-			elSettingsMsg.textContent = body.sent
+			elEmailMsg.textContent = body.sent
 				? ( i18n.testEmailSent || 'Test email sent.' )
 				: ( i18n.testEmailFailed || 'Sending failed.' );
-			elSettingsMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
+			elEmailMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
 		} ).catch( function ( err ) {
-			elSettingsMsg.textContent = err.message || 'Unknown error.';
-			elSettingsMsg.className   = 'utmat-add-form__msg is-error';
+			elEmailMsg.textContent = err.message || 'Unknown error.';
+			elEmailMsg.className   = 'utmat-add-form__msg is-error';
 		} ).then( function () {
 			elTestEmail.disabled = false;
 		} );
@@ -1243,19 +2111,20 @@
 
 	// ── Test webhook ──────────────────────────────────────────────────────────
 	if ( elTestWebhook ) {
+		const elWebhookMsg = elTestWebhookMsg || elSettingsMsg;
 		elTestWebhook.addEventListener( 'click', function () {
-			elTestWebhook.disabled    = true;
-			elSettingsMsg.textContent = i18n.testWebhookSending || 'Sending…';
-			elSettingsMsg.className   = 'utmat-add-form__msg';
+			elTestWebhook.disabled   = true;
+			elWebhookMsg.textContent = i18n.testWebhookSending || 'Sending…';
+			elWebhookMsg.className   = 'utmat-add-form__msg';
 
 			apiFetch( '/test-webhook', { method: 'POST' } ).then( function ( body ) {
-				elSettingsMsg.textContent = body.sent
+				elWebhookMsg.textContent = body.sent
 					? ( i18n.testWebhookSent || 'Test webhook sent.' )
 					: ( i18n.testWebhookFailed || 'Delivery failed — check the URL and your receiver.' );
-				elSettingsMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
+				elWebhookMsg.className = 'utmat-add-form__msg ' + ( body.sent ? 'is-success' : 'is-error' );
 			} ).catch( function ( err ) {
-				elSettingsMsg.textContent = err.message || 'Unknown error.';
-				elSettingsMsg.className   = 'utmat-add-form__msg is-error';
+				elWebhookMsg.textContent = err.message || 'Unknown error.';
+				elWebhookMsg.className   = 'utmat-add-form__msg is-error';
 			} ).then( function () {
 				elTestWebhook.disabled = false;
 			} );
@@ -1271,16 +2140,16 @@
 	const elDiagnosticsUnsupported = document.getElementById( 'utmat-diagnostics-unsupported' );
 
 	const DIAG_STATUS_LABELS = {
-		pass: i18n.diagStatusPass || 'Pass',
-		warn: i18n.diagStatusWarn || 'Warn',
-		fail: i18n.diagStatusFail || 'Fail',
-		skip: i18n.diagStatusSkip || 'Skip',
+		pass: i18n.diagStatusPass || 'Passed',
+		warn: i18n.diagStatusWarn || 'Warning',
+		fail: i18n.diagStatusFail || 'Failed',
+		skip: i18n.diagStatusSkip || 'Skipped',
 	};
 
 	const FORM_STATUS_LABELS = {
-		complete: i18n.diagFormComplete || 'Complete',
+		complete: i18n.diagFormComplete || 'Covered',
 		partial:  i18n.diagFormPartial || 'Partial',
-		none:     i18n.diagFormNone || 'None',
+		none:     i18n.diagFormNone || 'No fields',
 	};
 
 	// The forms-matrix badge reuses the check badge's pass/warn/fail palette.
@@ -1324,7 +2193,27 @@
 		show( elDiagnosticsForms );
 	}
 
+	// Pass / warning / fail / skip counts above the checks list.
+	function renderDiagnosticsSummary( checks ) {
+		if ( ! elDiagSummary ) return;
+		const counts = { pass: 0, warn: 0, fail: 0, skip: 0 };
+		checks.forEach( function ( check ) {
+			if ( Object.prototype.hasOwnProperty.call( counts, check.status ) ) {
+				counts[ check.status ]++;
+			}
+		} );
+		Object.keys( counts ).forEach( function ( status ) {
+			const el = document.getElementById( 'utmat-diag-count-' + status );
+			if ( el ) {
+				el.textContent = String( counts[ status ] );
+			}
+		} );
+		show( elDiagSummary );
+	}
+
 	function renderDiagnostics( checks ) {
+		const elDiagPlaceholder = document.getElementById( 'utmat-diagnostics-placeholder' );
+		if ( elDiagPlaceholder ) hide( elDiagPlaceholder );
 		elDiagnosticsList.innerHTML = '';
 		hide( elDiagnosticsForms );
 
@@ -1336,12 +2225,16 @@
 			badge.className   = 'utmat-diagnostic-badge is-' + check.status;
 			badge.textContent = DIAG_STATUS_LABELS[ check.status ] || check.status;
 
-			const body = document.createElement( 'span' );
+			const body = document.createElement( 'div' );
 			body.className = 'utmat-diagnostic-body';
-			const strong = document.createElement( 'strong' );
-			strong.textContent = check.label + ': ';
-			body.appendChild( strong );
-			body.appendChild( document.createTextNode( check.message ) );
+			const title = document.createElement( 'h3' );
+			title.className   = 'utmat-diagnostic-title';
+			title.textContent = check.label;
+			const message = document.createElement( 'p' );
+			message.className   = 'utmat-diagnostic-message';
+			message.textContent = check.message;
+			body.appendChild( title );
+			body.appendChild( message );
 
 			li.appendChild( badge );
 			li.appendChild( body );
@@ -1353,6 +2246,7 @@
 		} );
 
 		show( elDiagnosticsList );
+		renderDiagnosticsSummary( checks );
 	}
 
 	if ( elRunDiagnostics ) {
@@ -1364,6 +2258,9 @@
 			apiFetch( '/diagnostics' ).then( function ( body ) {
 				renderDiagnostics( body.checks || [] );
 				elDiagnosticsMsg.textContent = '';
+				if ( elDiagLast ) {
+					elDiagLast.textContent = fmt( i18n.diagLastRun || 'Last run at %s', new Date().toLocaleTimeString() );
+				}
 			} ).catch( function ( err ) {
 				elDiagnosticsMsg.textContent = err.message || ( i18n.diagnosticsFailed || 'Could not run diagnostics.' );
 				elDiagnosticsMsg.className   = 'utmat-add-form__msg is-error';
@@ -1371,6 +2268,20 @@
 				elRunDiagnostics.disabled = false;
 			} );
 		} );
+
+		// The hash still changes natively (history entry kept); the tab is
+		// activated here so the run starts with the panel visible.
+		const elWrap = document.querySelector( '.utmat-wrap' );
+		if ( elWrap ) {
+			elWrap.addEventListener( 'click', function ( e ) {
+				if ( ! e.target.closest( '[data-utmat-run-diagnostics]' ) ) return;
+				activateTab( 'diagnostics' );
+				document.getElementById( 'utmat-panel-diagnostics' ).focus();
+				if ( ! elRunDiagnostics.disabled ) {
+					elRunDiagnostics.click();
+				}
+			} );
+		}
 	}
 
 	// ── Date range query string ───────────────────────────────────────────────
@@ -1402,18 +2313,12 @@
 			const linksRes = results[ 1 ] || {};
 
 			setLoading( false );
-			show( elCharts );
 
-			// First-run onboarding — visible only while nothing was ever recorded.
-			const onboarding = document.getElementById( 'utmat-onboarding' );
-			if ( onboarding ) {
-				onboarding.hidden = ( Number( stats.all_time_total ) || 0 ) > 0;
-			}
-
-			// Total count, conversions, and trend vs the previous period.
-			elTotal.textContent = stats.total;
-			renderConversions( stats.total, stats.conversions );
-			renderTrend( stats.total, stats.previous_total );
+			// First run — nothing was ever recorded.
+			const isEmpty = 0 === ( Number( stats.all_time_total ) || 0 );
+			renderEmptyState( isEmpty );
+			renderTiles( stats, isEmpty );
+			renderCompareCaption();
 
 			// Populate campaign filter.
 			populateCampaigns( stats.campaigns || [] );
@@ -1426,44 +2331,38 @@
 			const prev   = stats.previous_clicks_by_day || [];
 			makeLineChart( 'utmat-chart-line', days, counts, convs, prev );
 
-			// Doughnut — by source.
-			makeDoughnutChart( 'utmat-chart-source', stats.by_source || [] );
+			// Breakdown bar lists.
+			renderBarList( 'utmat-bars-source', stats.by_source || [] );
+			renderBarList( 'utmat-bars-campaign', stats.by_campaign || [] );
+			renderBarList( 'utmat-bars-medium', stats.by_medium || [] );
+			renderBarList( 'utmat-bars-device', stats.by_device || [], {
+				share: true,
+				label: function ( d ) { return DEVICE_NAMES[ d.label ] || d.label; },
+			} );
+			// Traffic type (Direct / Organic-Referral / Paid / Google Ads / Tagged).
+			renderBarList( 'utmat-bars-traffic-source', stats.by_traffic_source || [] );
+			// Top landing pages, labels shortened to the URL path.
+			renderBarList( 'utmat-bars-landing', stats.by_landing || [], {
+				label: function ( d ) { return shortenUrl( d.label ); },
+				title: function ( d ) { return d.label; },
+			} );
+			// Top referrers (external hosts only).
+			renderBarList( 'utmat-bars-referrer', stats.by_referrer || [] );
+			// Ad platforms, derived from click IDs.
+			renderBarList( 'utmat-bars-platform', stats.by_platform || [], {
+				label: function ( d ) { return PLATFORM_NAMES[ d.label ] || d.label; },
+			} );
 
-			// Bar — by campaign.
-			makeBarChart( 'utmat-chart-campaign', stats.by_campaign || [] );
-
-			// Bar — by medium.
-			makeBarChart( 'utmat-chart-medium', stats.by_medium || [] );
-
-			// Doughnut — by device type.
-			makeDoughnutChart( 'utmat-chart-device', ( stats.by_device || [] ).map( function ( d ) {
-				return { label: DEVICE_NAMES[ d.label ] || d.label, count: d.count };
-			} ) );
-
-			// Doughnut — traffic source (Direct/Organic-Referral/Paid/Google Ads/Tagged).
-			makeDoughnutChart( 'utmat-chart-traffic-source', stats.by_traffic_source || [] );
-
-			// Bar — top landing pages (labels shortened to the URL path).
-			makeBarChart( 'utmat-chart-landing', ( stats.by_landing || [] ).map( function ( d ) {
-				return { label: shortenUrl( d.label ), count: d.count };
-			} ) );
-
-			// Bar — top referrers (external hosts only).
-			makeBarChart( 'utmat-chart-referrer', stats.by_referrer || [] );
-
-			// Doughnut — ad platforms, derived from click IDs.
-			makeDoughnutChart( 'utmat-chart-platform', ( stats.by_platform || [] ).map( function ( d ) {
-				return { label: PLATFORM_NAMES[ d.label ] || d.label, count: d.count };
-			} ) );
-
-			// Bar — revenue by campaign (WooCommerce only).
+			// Revenue by campaign (WooCommerce only).
 			if ( wooActive && elRevenueCard ) {
 				show( elRevenueCard );
 				makeRevenueChart( 'utmat-chart-revenue', stats.revenue_by_campaign || [] );
+				renderRevenueSummary( stats.revenue_by_campaign || [] );
 			}
 
-			// Links table + suggestion datalists.
+			// Links table, toolbar filter, suggestion datalists and presets.
 			allLinks = linksRes.links || [];
+			populateLinksCampaigns();
 			refreshLinksTable();
 			populateDatalists( linksRes.suggestions || {} );
 			populatePresets( linksRes.presets || [] );
@@ -1547,20 +2446,22 @@
 		} );
 	}
 
+	if ( elLinksCampaign ) {
+		elLinksCampaign.addEventListener( 'change', function () {
+			linksCampaign = elLinksCampaign.value;
+			refreshLinksTable();
+		} );
+	}
+
 	if ( elSortClicks ) {
 		const toggleClicksSort = function () {
 			clicksSortDir = clicksSortDir === 'desc' ? 'asc' : 'desc';
 			refreshLinksTable();
 		};
 		elSortClicks.addEventListener( 'click', toggleClicksSort );
-		elSortClicks.addEventListener( 'keydown', function ( e ) {
-			if ( 'Enter' === e.key || ' ' === e.key ) {
-				e.preventDefault();
-				toggleClicksSort();
-			}
-		} );
 	}
 
 	// ── Boot ──────────────────────────────────────────────────────────────────
+	initTabs();
 	loadDashboard();
 } )();
