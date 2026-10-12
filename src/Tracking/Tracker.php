@@ -11,6 +11,7 @@
  * administrator clicks are recorded.
  *
  * @since 1.0.0 Added the custom-parameter accessors and the channel, visitor_id, custom and meta row fields.
+ * @since 1.0.0 The cookie writer preserves a beacon-stored first-touch channel.
  *
  * @package UTMAT\Tracking
  */
@@ -27,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0 Added param_whitelist() and the custom-parameter validation helpers.
  * @since 1.0.0 Cookie writes and, when opted in, passive event records honour the visitor's consent verdict.
+ * @since 1.0.0 maybe_set_attribution_cookie() preserves a beacon-stored first-touch channel.
  */
 class Tracker {
 

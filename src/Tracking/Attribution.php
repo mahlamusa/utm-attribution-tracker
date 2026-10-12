@@ -15,6 +15,7 @@
  *
  * @since 1.0.0 Added the consent category setting, the server-side consent verdict and the Consent API cookie registration.
  * @since 1.0.0 Touches carry a channel and a referrer host; touch_keys() is the canonical key set.
+ * @since 1.0.0 Added stored_first_channel() for the PHP cookie writer.
  *
  * @package UTMAT\Tracking
  */
@@ -29,6 +30,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.0.0 Field and allow-lists derive from Tracker::param_whitelist() instead of the built-in constant.
  * @since 1.0.0 enabled() is the master switch only; per-visitor consent moved to consented().
  * @since 1.0.0 Added touch_keys(); the channel and referrer host are form fields and the channel is recomputed on read.
+ * @since 1.0.0 Added stored_first_channel(), the raw first-touch channel for the PHP cookie writer.
  */
 class Attribution {
 

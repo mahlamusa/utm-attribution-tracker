@@ -18,6 +18,7 @@
  * (written before the column existed) through the legacy rule set.
  *
  * @since 1.0.0 Added the channel taxonomy, the classifier and the referrer host lists.
+ * @since 1.0.0 The source first-label shortcut ignores subdomain entries.
  *
  * @package UTMAT\Tracking
  */
@@ -31,6 +32,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0
  * @since 1.0.0 Added the channel taxonomy, channel(), channel_labels(), sql_channel_expression() and the host lists.
+ * @since 1.0.0 source_in_list() applies the first-label shortcut to brand entries only.
  */
 class TrafficSource {
 
