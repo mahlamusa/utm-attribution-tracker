@@ -8,6 +8,13 @@
  * cookie defensively — every value sanitized, unknown keys dropped, malformed
  * JSON tolerated — so later specs can attach attribution to conversions.
  *
+ * It also owns the consent rules both writers share: the master switch
+ * (enabled()), the per-visitor server-side verdict for the configured
+ * WP Consent API category (consented()), the event-gating filter and the
+ * cookie registration with the Consent API.
+ *
+ * @since 1.0.0 Added the consent category setting, the server-side consent verdict and the Consent API cookie registration.
+ *
  * @package UTMAT\Tracking
  */
 
@@ -19,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
  * Attribution
  *
  * @since 1.0.0 Field and allow-lists derive from Tracker::param_whitelist() instead of the built-in constant.
+ * @since 1.0.0 enabled() is the master switch only; per-visitor consent moved to consented().
  */
 class Attribution {
 
@@ -34,6 +42,27 @@ class Attribution {
 	 * @var string
 	 */
 	public const COOKIE_NAME = 'utmat_attr';
+
+	/**
+	 * Option holding the WP Consent API category that gates the cookie.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const OPTION_CONSENT_CATEGORY = 'utmat_consent_category';
+
+	/**
+	 * Accepted values of the consent category setting.
+	 *
+	 * `marketing` and `statistics` gate on that single category; `either`
+	 * accepts whichever of the two the visitor granted.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string[]
+	 */
+	public const CONSENT_CATEGORIES = array( 'marketing', 'statistics', 'either' );
 
 	/**
 	 * Memoized decode of the raw cookie for the current request.
@@ -189,36 +218,135 @@ class Attribution {
 	/**
 	 * Whether the attribution cookie is enabled at all.
 	 *
-	 * Master switch for both the JS and PHP writers. Sites that must gate
-	 * non-essential cookies behind a consent manager should return false
-	 * here until consent is given.
+	 * Master switch only. It carries no per-visitor consent verdict, so its
+	 * value is safe to bake into cached page HTML; the visitor's consent is
+	 * decided separately by consented() on the server and by the beacon in
+	 * the browser. A site that must never write the cookie returns false
+	 * from the filter.
+	 *
+	 * @since 1.0.0 No longer folds the WP Consent API verdict in; that moved to consented().
+	 * @return bool
+	 */
+	public static function enabled(): bool {
+		/**
+		 * Filter whether the attribution cookie may be written at all.
+		 *
+		 * Site-wide master switch; consent is evaluated separately.
+		 *
+		 * @var bool $enabled
+		 */
+		return (bool) apply_filters( 'utmat_enable_cookie', true );
+	}
+
+	/**
+	 * The WP Consent API category that gates the attribution cookie.
+	 *
+	 * Reads the `utmat_consent_category` option and falls back to
+	 * `marketing` for any value outside CONSENT_CATEGORIES: the cookie
+	 * carries advertising click IDs, which every consent manager files under
+	 * marketing, so the strictest single category is the safe default.
+	 *
+	 * @since 1.0.0
+	 * @return string One of 'marketing', 'statistics' or 'either'.
+	 */
+	public static function consent_category(): string {
+		$category = get_option( self::OPTION_CONSENT_CATEGORY, 'marketing' );
+		if ( ! is_string( $category ) || ! in_array( $category, self::CONSENT_CATEGORIES, true ) ) {
+			return 'marketing';
+		}
+		return $category;
+	}
+
+	/**
+	 * Translated label of a consent category, for hints and diagnostics.
+	 *
+	 * @since 1.0.0
+	 * @param string $category One of CONSENT_CATEGORIES.
+	 * @return string
+	 */
+	public static function consent_category_label( string $category ): string {
+		switch ( $category ) {
+			case 'statistics':
+				return __( 'statistics', 'utm-attribution-tracker' );
+			case 'either':
+				return __( 'marketing or statistics', 'utm-attribution-tracker' );
+			default:
+				return __( 'marketing', 'utm-attribution-tracker' );
+		}
+	}
+
+	/**
+	 * Server-side consent verdict for the configured category.
+	 *
+	 * True when no WP Consent API is installed (nothing to gate on). With
+	 * the API present the verdict is per request, read from the visitor's
+	 * consent cookies, so it is only meaningful on uncached requests: the
+	 * PHP cookie writer is the no-JS fallback, the beacon decides in the
+	 * browser for everyone else.
 	 *
 	 * @since 1.0.0
 	 * @return bool
 	 */
-	public static function enabled(): bool {
-		$enabled = true;
-
-		// Auto-detect the WP Consent API (github.com/rlankhorst/wp-consent-level-api),
-		// the de-facto standard several consent-management plugins (Complianz,
-		// Real Cookie Banner, Borlabs Cookie, Cookiebot's WP integration)
-		// implement. When present, the visitor must have granted "marketing"
-		// or "statistics" consent before the cookie is written; when absent,
-		// the plugin falls back to its previous always-on behaviour (consent
-		// integration remains the site owner's responsibility per the readme).
-		if ( function_exists( 'wp_has_consent' ) ) {
-			$enabled = wp_has_consent( 'marketing' ) || wp_has_consent( 'statistics' );
+	public static function consented(): bool {
+		if ( ! function_exists( 'wp_has_consent' ) ) {
+			return true;
 		}
 
+		$category = self::consent_category();
+		if ( 'either' === $category ) {
+			return wp_has_consent( 'marketing', UTM_ATTRIBUTION_TRACKER_BASENAME )
+				|| wp_has_consent( 'statistics', UTM_ATTRIBUTION_TRACKER_BASENAME );
+		}
+
+		return wp_has_consent( $category, UTM_ATTRIBUTION_TRACKER_BASENAME );
+	}
+
+	/**
+	 * Whether tagged-visit event recording is gated on consent too.
+	 *
+	 * Events carry no cookie and only a salted IP hash, so they are recorded
+	 * regardless of consent by default. Sites under a strict reading of
+	 * ePrivacy can return true to withhold the beacon's collect request and
+	 * the passive PHP record until the visitor consents.
+	 *
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public static function gate_events(): bool {
 		/**
-		 * Filter whether the attribution cookie may be written.
+		 * Filter whether tagged-visit events are recorded only with consent.
 		 *
-		 * Runs after the WP Consent API auto-detection above, so a filter can
-		 * still force the decision either way.
-		 *
-		 * @var bool $enabled
+		 * @var bool $gate
 		 */
-		return (bool) apply_filters( 'utmat_enable_cookie', $enabled );
+		return (bool) apply_filters( 'utmat_consent_gate_events', false );
+	}
+
+	/**
+	 * Describe the attribution cookie to the WP Consent API.
+	 *
+	 * Hooked on `init`; a no-op without the API. Consent-management plugins
+	 * read this registry to list the cookie in their banners. `either` is
+	 * reported as marketing, the stricter of its two categories.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public static function register_cookie_info(): void {
+		if ( ! function_exists( 'wp_add_cookie_info' ) ) {
+			return;
+		}
+
+		$category = self::consent_category();
+		$days     = self::cookie_days();
+
+		wp_add_cookie_info(
+			self::COOKIE_NAME,
+			'UTM & Attribution Tracker',
+			'either' === $category ? 'marketing' : $category,
+			/* translators: %d: number of days the attribution cookie lives. */
+			sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days ),
+			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utm-attribution-tracker' )
+		);
 	}
 
 	/**

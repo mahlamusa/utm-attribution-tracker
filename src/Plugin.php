@@ -32,6 +32,7 @@ defined( 'ABSPATH' ) || exit;
  * Plugin — the singleton returned by Plugin::instance().
  *
  * @since 1.0.0 The beacon config now carries the parameter whitelist.
+ * @since 1.0.0 The beacon config carries the consent gating keys and the plugin registers with the WP Consent API.
  */
 class Plugin {
 
@@ -69,6 +70,7 @@ class Plugin {
 	 * @since 1.0.0 Added the Ninja Forms adapter to the form-plugin wiring.
 	 * @since 1.0.0 Added the recent-leads Dashboard widget.
 	 * @since 1.0.0 Dropped the manual text-domain load; WordPress.org loads translations for the plugin slug automatically.
+	 * @since 1.0.0 Registers the plugin and its cookie with the WP Consent API.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -95,6 +97,11 @@ class Plugin {
 
 		// Suggested privacy policy text.
 		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );
+
+		// WP Consent API: declare compliance (the filter is inert without the
+		// API) and describe the attribution cookie so consent banners can list it.
+		add_filter( 'wp_consent_api_registered_' . UTM_ATTRIBUTION_TRACKER_BASENAME, '__return_true' );
+		add_action( 'init', array( Attribution::class, 'register_cookie_info' ) );
 
 		// REST API.
 		add_action( 'rest_api_init', array( RestController::class, 'register_routes' ) );
@@ -145,17 +152,26 @@ class Plugin {
 	 * passed as `params` so the beacon no longer hard-codes the list; its
 	 * literal copy is only a fallback for cached HTML without config.
 	 *
+	 * Consent is decided in the browser: when the WP Consent API is active
+	 * the beacon is made to depend on its script so the API always prints
+	 * (and, under defer-all optimisers that keep print order, runs) first.
+	 * The dependency is conditional because WordPress drops a script whose
+	 * dependency is never registered. The localized `cookieEnabled` is the
+	 * master switch only; the visitor's verdict is never baked into HTML.
+	 *
 	 * @since 1.0.0 Added the params whitelist to the localized config.
+	 * @since 1.0.0 Added the conditional wp-consent-api dependency and the consentApi, consentCategory and gateEvents keys.
 	 * @return void
 	 */
 	public static function enqueue_beacon(): void {
 		// Version off the file's own mtime so edits always bust browser caches.
-		$js_path = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/beacon.js';
+		$js_path     = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/beacon.js';
+		$consent_api = function_exists( 'wp_has_consent' );
 
 		wp_enqueue_script(
 			'utmat-beacon',
 			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/beacon.js',
-			array(),
+			$consent_api ? array( 'wp-consent-api' ) : array(),
 			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTM_ATTRIBUTION_TRACKER_VERSION,
 			array(
 				'in_footer' => true,
@@ -169,11 +185,14 @@ class Plugin {
 			'utmat-beacon',
 			'utmatBeacon',
 			array(
-				'endpoint'      => rest_url( 'utmat/v1/collect' ),
-				'params'        => Tracker::param_whitelist(),
-				'cookieDays'    => Attribution::cookie_days(),
-				'cookieEnabled' => Attribution::enabled(),
-				'secure'        => is_ssl(),
+				'endpoint'        => rest_url( 'utmat/v1/collect' ),
+				'params'          => Tracker::param_whitelist(),
+				'cookieDays'      => Attribution::cookie_days(),
+				'cookieEnabled'   => Attribution::enabled(),
+				'consentApi'      => $consent_api,
+				'consentCategory' => Attribution::consent_category(),
+				'gateEvents'      => Attribution::gate_events(),
+				'secure'          => is_ssl(),
 			)
 		);
 	}

@@ -25,6 +25,7 @@ use UTMAT\DB\Schema;
 use UTMAT\Diagnostics\Checks;
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
+use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Tracking\TrafficSource;
 use WP_REST_Request;
@@ -34,6 +35,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * RestController
+ *
+ * @since 1.0.0 The settings route accepts the consent category.
  */
 class RestController {
 
@@ -41,6 +44,7 @@ class RestController {
 	 * Register REST routes.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Added the consent_category argument to the settings route.
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -197,21 +201,25 @@ class RestController {
 				'callback'            => array( self::class, 'save_settings' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
-					'retention_days' => array(
+					'retention_days'   => array(
 						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
-					'weekly_email'   => array(
+					'weekly_email'     => array(
 						'default'           => false,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
-					'cookie_days'    => array(
+					'cookie_days'      => array(
 						'default'           => 90,
 						'sanitize_callback' => 'absint',
 					),
-					'webhook_url'    => array(
+					'webhook_url'      => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'consent_category' => array(
+						'default'           => 'marketing',
+						'sanitize_callback' => 'sanitize_key',
 					),
 				),
 			)
@@ -799,11 +807,14 @@ class RestController {
 	 * POST utmat/v1/settings
 	 *
 	 * Saves the retention window (0 = keep forever), the weekly email
-	 * toggle, and the conversion webhook URL (empty disables it). The
-	 * weekly report cron is scheduled or unscheduled here, at save time, so
-	 * no scheduling work happens on normal page loads.
+	 * toggle, the conversion webhook URL (empty disables it) and the
+	 * consent category that gates the attribution cookie (allow-listed,
+	 * anything else falls back to marketing). The weekly report cron is
+	 * scheduled or unscheduled here, at save time, so no scheduling work
+	 * happens on normal page loads.
 	 *
 	 * @since 1.0.0 Added the webhook_url setting.
+	 * @since 1.0.0 Added the consent_category setting.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -813,11 +824,16 @@ class RestController {
 		$cookie    = absint( $request->get_param( 'cookie_days' ) );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
 		$webhook   = esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) );
+		$consent   = self::param_string( $request, 'consent_category' );
+		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
+			$consent = 'marketing';
+		}
 
 		update_option( 'utmat_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
 		update_option( 'utmat_cookie_days', $cookie );
 		update_option( ConversionWebhook::OPTION_URL, $webhook );
+		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -827,10 +843,11 @@ class RestController {
 
 		return new WP_REST_Response(
 			array(
-				'retention_days' => $retention,
-				'weekly_email'   => $weekly,
-				'cookie_days'    => $cookie,
-				'webhook_url'    => $webhook,
+				'retention_days'   => $retention,
+				'weekly_email'     => $weekly,
+				'cookie_days'      => $cookie,
+				'webhook_url'      => $webhook,
+				'consent_category' => $consent,
 			),
 			200
 		);

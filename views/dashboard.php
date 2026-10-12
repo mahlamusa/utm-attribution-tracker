@@ -7,9 +7,12 @@
  * through the utmat/v1 REST routes.
  *
  * @since 1.0.0
+ * @since 1.0.0 Added the Consent group with its server-rendered WP Consent API status hint.
  *
  * @package UTMAT\Admin
  */
+
+use UTMAT\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -415,6 +418,47 @@ $utmat_kses = array(
 								<span><?php esc_html_e( 'days', 'utm-attribution-tracker' ); ?></span>
 							</div>
 							<p class="utmat-field__hint"><?php esc_html_e( 'How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors.', 'utm-attribution-tracker' ); ?></p>
+						</div>
+					</div>
+					<div class="utmat-settings-card__group">
+						<h3 class="utmat-card__title"><?php esc_html_e( 'Consent', 'utm-attribution-tracker' ); ?></h3>
+						<div class="utmat-field">
+							<label class="utmat-field__label" for="utmat-consent-category"><?php esc_html_e( 'Consent category', 'utm-attribution-tracker' ); ?></label>
+							<div class="utmat-field__control">
+								<select id="utmat-consent-category" name="consent_category">
+									<option value="marketing"><?php esc_html_e( 'Marketing (recommended)', 'utm-attribution-tracker' ); ?></option>
+									<option value="statistics"><?php esc_html_e( 'Statistics', 'utm-attribution-tracker' ); ?></option>
+									<option value="either"><?php esc_html_e( 'Marketing or statistics', 'utm-attribution-tracker' ); ?></option>
+								</select>
+								<p class="utmat-field__hint"><?php esc_html_e( 'The attribution cookie is written only after the visitor grants this consent category. Applies when a plugin implementing the WP Consent API is active.', 'utm-attribution-tracker' ); ?></p>
+								<p class="utmat-field__hint" id="utmat-consent-status">
+									<?php
+									// Server-rendered state of the WP Consent API; the two
+									// "missing" states reuse the Tracking Doctor wording.
+									if ( ! function_exists( 'wp_has_consent' ) ) {
+										echo esc_html(
+											sprintf(
+												/* translators: %s: consent category label (marketing, statistics, or marketing or statistics). */
+												__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
+												Attribution::consent_category_label( Attribution::consent_category() )
+											)
+										);
+									} elseif ( '' === wp_get_consent_type() ) {
+										esc_html_e( 'WP Consent API is active but no consent-management plugin has declared a consent type, so the API reports every category as granted and the cookie is written for every visitor.', 'utm-attribution-tracker' );
+									} else {
+										echo esc_html(
+											sprintf(
+												/* translators: %s: consent type declared by the consent plugin (optin or optout). */
+												__( 'WP Consent API detected (%s).', 'utm-attribution-tracker' ),
+												wp_get_consent_type()
+											)
+										);
+									}
+									echo ' ';
+									esc_html_e( 'On sites with a full-page cache, a change to this setting reaches visitors after the cache is purged.', 'utm-attribution-tracker' );
+									?>
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>

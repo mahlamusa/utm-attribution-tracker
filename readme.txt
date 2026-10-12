@@ -44,6 +44,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 **Privacy & housekeeping:**
 
 * **Privacy-safe by design** — IP addresses are stored only as salted SHA-256 hashes; the salt is unique per site.
+* **WP Consent API integration** — the attribution cookie is gated in the visitor's browser on a configurable consent category, deleted on withdrawal, and declared to the API so consent banners can list it.
 * **Data retention** — events are pruned automatically after a configurable retention window (180 days by default, 0 = keep forever) from the dashboard settings card.
 * **Suggested privacy policy text** — provided under Settings → Privacy → Policy Guide.
 * **No external dependencies** — no Composer, no npm build step, no CDN calls. Chart.js and the QR library ship bundled with the plugin.
@@ -78,9 +79,23 @@ When a visitor arrives with a UTM parameter or ad click ID, the plugin sets a fi
 
 The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites). Change the lifetime with `utmat_cookie_days` or disable the cookie entirely with `utmat_enable_cookie` (see the filter reference below).
 
-**Consent note:** the plugin does not ship a consent banner. If a plugin implementing the [WP Consent API](https://github.com/rlankhorst/wp-consent-level-api) is active (Complianz, Real Cookie Banner, Borlabs Cookie, and others implement it), the cookie is only written once the visitor has granted marketing or statistics consent — no configuration needed. Without a Consent API plugin, the cookie is written by default; gate it yourself by returning `false` from `utmat_enable_cookie` until consent is given.
+= How does the plugin handle cookie consent? =
 
-**Caching caveat:** the consent decision is read server-side and baked into the page at render time, including into the front-end beacon's cached HTML. On a full-page cache, the consent state served to every visitor is whatever it was when that page was cached, until the cache entry regenerates. If your consent banner can change a visitor's stored consent without a full page reload, exclude logged-out page loads from the cache for a short window after consent changes, or configure your cache plugin to vary by your consent cookie, so the served consent state stays current.
+The plugin does not ship a consent banner. If a plugin implementing the [WP Consent API](https://github.com/rlankhorst/wp-consent-level-api) is active (Complianz, Real Cookie Banner, Borlabs Cookie, and others implement it), the attribution cookie is gated on the visitor's consent:
+
+* **The decision is made in the browser.** The front-end beacon asks the Consent API's JavaScript whether the visitor granted the configured category before it writes the cookie, so gating is correct even on pages served from a full-page cache. The PHP fallback writer (for visitors without JavaScript) applies the same rule per request.
+* **Consent category.** Choose which category gates the cookie under Settings → Data and privacy → Consent: *Marketing* (the default — the cookie carries advertising click IDs), *Statistics*, or *Marketing or statistics*.
+* **Withdrawal deletes the cookie.** When the visitor withdraws consent, the beacon deletes the attribution cookie immediately.
+* **While the banner is undecided** nothing is placed on the visitor's device. The landing visit's campaign data is kept in page memory only and written to the cookie the moment consent is granted on that page; forms are not pre-filled from an existing cookie until the visitor decides. A visitor who navigates away before deciding and grants consent on a later page is attributed from their next tagged visit. The beacon's per-tab duplicate guard for the collect request (the `utmat_sent` marker, which holds the URL's own query string for the life of the tab) is unaffected by consent.
+* **Events are recorded regardless of consent** by default: a tagged-visit event carries no cookie and only a salted IP hash. Return `true` from the `utmat_consent_gate_events` filter to withhold events as well until the visitor consents.
+* The plugin declares itself to the Consent API and describes the cookie (name, category, lifetime, purpose) so consent banners can list it.
+
+Without a Consent API plugin the cookie is written on every tagged visit; gate it yourself by returning `false` from `utmat_enable_cookie`, or install a consent plugin that implements the API.
+
+Two notes for sites with a full-page cache:
+
+* On sites with a full-page cache, a change to the consent category reaches visitors after the cache is purged.
+* After deactivating a Consent API plugin, purge the page cache: cached HTML that still advertises the API makes the beacon hold the touch until the visitor's next uncached load.
 
 = How does WooCommerce order attribution work? =
 
@@ -132,7 +147,8 @@ All filters shipped by the plugin:
 * **`utmat_rate_limit`** *(int, requests/minute/IP, default 15)* — the collect endpoint's rate limit. Raise it when many visitors share one IP (see the reverse proxy FAQ above).
 * **`utmat_retention_days`** *(int, days, default from the settings card / 180)* — the event retention window. `0` keeps events forever.
 * **`utmat_cookie_days`** *(int, days, default 90)* — the attribution cookie lifetime. Defaults to the Attribution window setting on the dashboard; the filter overrides it.
-* **`utmat_enable_cookie`** *(bool, default `true`)* — master switch for the attribution cookie; return `false` to never set it (e.g. until consent is given).
+* **`utmat_enable_cookie`** *(bool, receives `true`)* — site-wide master switch for the attribution cookie; return `false` to never set it. Per-visitor consent is handled separately through the WP Consent API (see the consent FAQ).
+* **`utmat_consent_gate_events`** *(bool, default `false`)* — return `true` to also withhold tagged-visit event recording (the collect request and the PHP fallback) until the visitor grants the configured consent category.
 * **`utmat_report_recipient`** *(string, default the admin email)* — the recipient address of the weekly summary email.
 
 == Changelog ==

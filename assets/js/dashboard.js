@@ -79,6 +79,7 @@
 	const elRetention    = document.getElementById( 'utmat-retention-days' );
 	const elWeekly       = document.getElementById( 'utmat-weekly-email' );
 	const elCookieDays   = document.getElementById( 'utmat-cookie-days' );
+	const elConsentCategory = document.getElementById( 'utmat-consent-category' );
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 	const elLinksFilter  = document.getElementById( 'utmat-links-filter' );
 	const elSortClicks   = document.getElementById( 'utmat-sort-clicks' );
@@ -1951,6 +1952,7 @@
 			cookie:    String( elCookieDays.value ),
 			weekly:    String( !! elWeekly.checked ),
 			webhook:   elWebhookUrl ? String( elWebhookUrl.value ) : '',
+			consent:   elConsentCategory ? String( elConsentCategory.value ) : '',
 		};
 	}
 
@@ -1959,6 +1961,9 @@
 		elRetention.value  = s.retention;
 		elCookieDays.value = s.cookie;
 		elWeekly.checked   = 'true' === s.weekly;
+		if ( elConsentCategory ) {
+			elConsentCategory.value = s.consent || 'marketing';
+		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = s.webhook;
 			toggleWebhookExtras( !! s.webhook );
@@ -1997,6 +2002,9 @@
 		elRetention.value  = settings.retentionDays;
 		elWeekly.checked   = !! settings.weeklyEmail;
 		elCookieDays.value = settings.cookieDays || 90;
+		if ( elConsentCategory ) {
+			elConsentCategory.value = settings.consentCategory || 'marketing';
+		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = settings.webhookUrl || '';
 			toggleWebhookExtras( !! settings.webhookUrl );
@@ -2069,11 +2077,15 @@
 				weekly_email:   elWeekly.checked,
 				cookie_days:    parseInt( elCookieDays.value, 10 ) || 90,
 				webhook_url:    elWebhookUrl ? elWebhookUrl.value.trim() : '',
+				consent_category: elConsentCategory ? elConsentCategory.value : 'marketing',
 			} ),
 		} ).then( function ( body ) {
 			elRetention.value  = body.retention_days;
 			elWeekly.checked   = !! body.weekly_email;
 			elCookieDays.value = body.cookie_days || 90;
+			if ( elConsentCategory ) {
+				elConsentCategory.value = body.consent_category || 'marketing';
+			}
 			if ( elWebhookUrl ) {
 				elWebhookUrl.value = body.webhook_url || '';
 				toggleWebhookExtras( !! body.webhook_url );

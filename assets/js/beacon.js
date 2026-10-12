@@ -17,11 +17,24 @@
  * the cookie write. Rules mirror the PHP fallback in Tracker.php: `first`
  * is preserved once set, `last` is overwritten, values capped at 255 chars.
  *
+ * Consent is decided here, in the browser, so it is correct on cached
+ * pages: consentState() returns `off` (the utmatBeacon cookieEnabled
+ * master switch is off), `allowed`, `undecided` or `denied`, using the WP
+ * Consent API JavaScript (window.wp_has_consent) when a consent plugin
+ * provides it and the raw consent cookies to tell "not yet chosen" from
+ * "refused". Every cookie write goes through recordTouch(), the single
+ * entry point: `allowed` writes, `undecided` holds the touch in page memory
+ * only (nothing is placed on the device before consent) and writes it once
+ * consent is granted on that page, `denied`/`off` drop it. A withdrawal
+ * deletes the attribution cookies on the spot.
+ *
  * Finally the beacon fills attribution form fields — named after the
  * standard parameters (`utm_source`, `gclid`, `landing_page`, plus `_first`
- * variants) — from the attribution cookie (fillFormFields below) so any form
- * can capture attribution. This runs on every page, after the cookie write,
- * and only fills empty fields.
+ * variants), or carrying a `data-utmat-field="<name>"` marker when a form
+ * plugin controls the name attribute — from the attribution cookie
+ * (fillFormFields below) so any form can capture attribution. This runs on
+ * every page, after the cookie write, only fills empty fields, and is
+ * skipped while consent is undecided.
  * Forms injected into the DOM after page load are not filled (documented
  * limitation — no MutationObserver).
  */
@@ -38,6 +51,11 @@
 	];
 
 	var COOKIE_NAME = 'utmat_attr';
+	var VID_COOKIE = 'utmat_vid';
+
+	// Touch held in page memory while consent is undecided; one slot, newest
+	// wins, dies with the page. Never persisted to storage or a cookie.
+	var pending = null;
 
 	/**
 	 * Read a cookie value (URL-decoded) by name, '' when absent/undecodable.
@@ -75,6 +93,74 @@
 		document.cookie = name + '=' + encodeURIComponent( value ) +
 			'; expires=' + new Date( Date.now() + ( days * 86400000 ) ).toUTCString() +
 			'; path=/; SameSite=Lax' + ( secure ? '; Secure' : '' );
+	}
+
+	/**
+	 * Expire a first-party cookie with the same attributes both writers use
+	 * (path=/, SameSite=Lax, optional Secure, no domain) so the delete matches.
+	 *
+	 * @param {string} name Cookie name.
+	 */
+	function deleteCookie( name ) {
+		document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT' +
+			'; path=/; SameSite=Lax' + ( config.secure ? '; Secure' : '' );
+	}
+
+	/**
+	 * The WP Consent API categories that gate the cookie, from config.
+	 *
+	 * @return {string[]}
+	 */
+	function consentCategories() {
+		if ( 'statistics' === config.consentCategory ) {
+			return [ 'statistics' ];
+		}
+		if ( 'either' === config.consentCategory ) {
+			return [ 'marketing', 'statistics' ];
+		}
+		return [ 'marketing' ];
+	}
+
+	/**
+	 * Current consent state: 'off', 'allowed', 'undecided' or 'denied'.
+	 *
+	 * 'off' is the master switch. Without the WP Consent API script the
+	 * state is 'allowed' unless the server advertised the API (consentApi),
+	 * in which case the script has not run yet and the touch is held. With
+	 * the script, wp_has_consent() decides 'allowed'; it cannot tell "not
+	 * yet chosen" from "refused", so the raw consent cookies distinguish
+	 * 'denied' (every gating category refused) from 'undecided'.
+	 *
+	 * @return {string}
+	 */
+	function consentState() {
+		var cats, prefix, i, denied;
+
+		if ( ! config.cookieEnabled ) {
+			return 'off';
+		}
+		if ( typeof window.wp_has_consent !== 'function' ) {
+			return config.consentApi ? 'undecided' : 'allowed';
+		}
+		if ( window.waitfor_consent_hook && typeof window.wp_consent_type === 'undefined' ) {
+			return 'undecided';
+		}
+
+		cats = consentCategories();
+		for ( i = 0; i < cats.length; i++ ) {
+			if ( window.wp_has_consent( cats[ i ] ) ) {
+				return 'allowed';
+			}
+		}
+
+		prefix = ( window.consent_api && window.consent_api.cookie_prefix ) || 'wp_consent';
+		denied = true;
+		for ( i = 0; i < cats.length; i++ ) {
+			if ( 'deny' !== readCookie( prefix + '_' + cats[ i ] ) ) {
+				denied = false;
+			}
+		}
+		return denied ? 'denied' : 'undecided';
 	}
 
 	/**
@@ -125,7 +211,7 @@
 	 */
 	function fieldSelector() {
 		var params = WHITELIST.concat( [ 'lp' ] );
-		var parts = [];
+		var parts = [ '[data-utmat-field]' ];
 		var i, name;
 		for ( i = 0; i < params.length; i++ ) {
 			name = fieldName( params[ i ] );
@@ -144,10 +230,11 @@
 	 *
 	 * Any input/textarea whose name is a tracked parameter (`utm_source` …
 	 * `twclid`) or `landing_page` receives the last-touch value; the
-	 * `_first`-suffixed names receive the first-touch value. Only empty
-	 * fields are filled — a user-entered or server-rendered value is never
-	 * overwritten. Values are assigned via the .value property (no HTML
-	 * parsing), so no escaping is needed here.
+	 * `_first`-suffixed names receive the first-touch value. A field whose
+	 * name the form plugin controls is matched by its `data-utmat-field`
+	 * marker instead. Only empty fields are filled — a user-entered or
+	 * server-rendered value is never overwritten. Values are assigned via
+	 * the .value property (no HTML parsing), so no escaping is needed here.
 	 */
 	function fillFormFields() {
 		var raw = readCookie( COOKIE_NAME );
@@ -170,7 +257,7 @@
 
 		nodes = document.querySelectorAll( fieldSelector() );
 		for ( i = 0; i < nodes.length; i++ ) {
-			value = map[ nodes[ i ].name ];
+			value = map[ nodes[ i ].getAttribute( 'data-utmat-field' ) || nodes[ i ].name ];
 			if ( value && '' === nodes[ i ].value ) {
 				nodes[ i ].value = value;
 			}
@@ -178,18 +265,106 @@
 	}
 
 	/**
-	 * Record the visit: write the attribution cookie, POST the collect beacon.
+	 * Write a touch into the attribution cookie as the new last touch.
 	 *
-	 * Self-gates on the presence of whitelisted params in location.search —
-	 * a no-op on untagged page loads.
+	 * Only ever reached from the `allowed` branch of recordTouch(): this is
+	 * the one place that writes the attribution cookies. `first` is
+	 * preserved once set; a cookie over 4000 bytes sheds the landing page,
+	 * and is skipped entirely if still oversized (the existing cookie stays).
+	 *
+	 * @param {Object} touch Touch to record (params plus `lp` and `ts`).
 	 */
-	function trackVisit() {
-		var config = window.utmatBeacon;
-		var search = window.location.search;
+	function writeTouch( touch ) {
+		var attr = null;
+		var value = readCookie( COOKIE_NAME );
+		var first, cookieVal;
 
-		if ( ! config || ! config.endpoint || search.length < 2 ) {
+		if ( value ) {
+			try {
+				attr = JSON.parse( value );
+			} catch ( e ) {
+				attr = null; // Malformed cookie — rebuild from scratch.
+			}
+		}
+		first = ( attr && typeof attr.first === 'object' && attr.first ) ? attr.first : touch;
+
+		// Total-cookie-size guard: shed the landing page if oversized, then
+		// skip the write entirely if still over the limit (existing cookie stays).
+		cookieVal = JSON.stringify( { first: first, last: touch } );
+		if ( cookieVal.length > 4000 ) {
+			delete first.lp;
+			delete touch.lp;
+			cookieVal = JSON.stringify( { first: first, last: touch } );
+		}
+		if ( cookieVal.length <= 4000 ) {
+			writeCookie(
+				COOKIE_NAME,
+				cookieVal,
+				parseInt( config.cookieDays, 10 ) || 90,
+				!! config.secure
+			);
+		}
+	}
+
+	/**
+	 * Single entry point for every cookie write, dispatching on consent.
+	 *
+	 * `allowed` writes now; `undecided` holds the touch in page memory until
+	 * consent is granted on this page (newest touch wins); `denied` and
+	 * `off` drop it.
+	 *
+	 * @param {Object} touch Touch to record.
+	 */
+	function recordTouch( touch ) {
+		var state = consentState();
+		if ( 'allowed' === state ) {
+			writeTouch( touch );
+		} else if ( 'undecided' === state ) {
+			pending = touch;
+		}
+	}
+
+	/**
+	 * Write the held touch once consent is granted.
+	 *
+	 * The collect request is rebuilt from the touch only when events are
+	 * gated on consent; otherwise it already went out at landing.
+	 */
+	function flushPending() {
+		var touch = pending;
+		var fields = [];
+		var key;
+
+		if ( ! touch ) {
 			return;
 		}
+		pending = null;
+		recordTouch( touch );
+
+		if ( config.gateEvents ) {
+			for ( key in touch ) {
+				if ( Object.prototype.hasOwnProperty.call( touch, key ) && WHITELIST.indexOf( key ) > -1 ) {
+					fields.push( encodeURIComponent( key ) + '=' + encodeURIComponent( touch[ key ] ) );
+				}
+			}
+			fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
+			fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
+			sendCollect( fields, window.location.search );
+		}
+	}
+
+	/**
+	 * POST the collect beacon once per tagged URL per tab.
+	 *
+	 * The per-tab dedup marker (session-scoped `utmat_sent`) lives here so a
+	 * reload of a tagged URL still reaches recordTouch() while the collect
+	 * is sent only once; the marker is set at the moment a collect goes out.
+	 *
+	 * @param {string[]} fields Encoded key=value pairs.
+	 * @param {string}   search The query string the collect describes.
+	 */
+	function sendCollect( fields, search ) {
+		var body, sent;
 
 		// Fire once per page load — skip soft reloads and bfcache restores.
 		try {
@@ -200,73 +375,8 @@
 			// sessionStorage unavailable (privacy mode) — send anyway.
 		}
 
-		var pairs = search.substring( 1 ).split( '&' );
-		var fields = [];
-		var touch = {};
-		var found = false;
-		var i, eq, key, value, attr, first;
-
-		for ( i = 0; i < pairs.length; i++ ) {
-			eq = pairs[ i ].indexOf( '=' );
-			if ( eq < 1 ) {
-				continue;
-			}
-			try {
-				key = decodeURIComponent( pairs[ i ].substring( 0, eq ) );
-				value = decodeURIComponent( pairs[ i ].substring( eq + 1 ).replace( /\+/g, ' ' ) );
-			} catch ( e ) {
-				continue;
-			}
-			if ( value && WHITELIST.indexOf( key ) > -1 ) {
-				found = true;
-				fields.push( encodeURIComponent( key ) + '=' + encodeURIComponent( value ) );
-				touch[ key ] = value.slice( 0, 255 );
-			}
-		}
-
-		if ( ! found ) {
-			return;
-		}
-
-		// --- Attribution cookie: write BEFORE sending the beacon. ---
-		if ( config.cookieEnabled ) {
-			touch.lp = window.location.href.slice( 0, 255 );
-			touch.ts = Math.floor( Date.now() / 1000 );
-
-			attr = null;
-			value = readCookie( COOKIE_NAME );
-			if ( value ) {
-				try {
-					attr = JSON.parse( value );
-				} catch ( e ) {
-					attr = null; // Malformed cookie — rebuild from scratch.
-				}
-			}
-			first = ( attr && typeof attr.first === 'object' && attr.first ) ? attr.first : touch;
-
-			// Total-cookie-size guard: shed the landing page if oversized, then
-			// skip the write entirely if still over the limit (existing cookie stays).
-			var cookieVal = JSON.stringify( { first: first, last: touch } );
-			if ( cookieVal.length > 4000 ) {
-				delete first.lp;
-				delete touch.lp;
-				cookieVal = JSON.stringify( { first: first, last: touch } );
-			}
-			if ( cookieVal.length <= 4000 ) {
-				writeCookie(
-					COOKIE_NAME,
-					cookieVal,
-					parseInt( config.cookieDays, 10 ) || 90,
-					!! config.secure
-				);
-			}
-		}
-
-		fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
-		fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
-
-		var body = fields.join( '&' );
-		var sent = false;
+		body = fields.join( '&' );
+		sent = false;
 
 		if ( navigator.sendBeacon ) {
 			sent = navigator.sendBeacon(
@@ -291,13 +401,120 @@
 		}
 	}
 
-	// Track first so the cookie write lands before the form fill reads it.
-	trackVisit();
+	/**
+	 * Apply a consent state: a withdrawal deletes the attribution cookies
+	 * and drops the held touch; a grant writes the held touch.
+	 *
+	 * @param {string} state Result of consentState().
+	 */
+	function applyConsentState( state ) {
+		if ( 'denied' === state ) {
+			deleteCookie( COOKIE_NAME );
+			deleteCookie( VID_COOKIE );
+			pending = null;
+		} else if ( 'allowed' === state ) {
+			flushPending();
+		}
+	}
 
-	if ( 'loading' === document.readyState ) {
-		document.addEventListener( 'DOMContentLoaded', fillFormFields );
-	} else {
-		// Deferred scripts run with the DOM already parsed — fill immediately.
-		fillFormFields();
+	/**
+	 * Consent changed (or the API arrived late): recompute and apply, then
+	 * fill forms that were skipped or empty when the page first loaded.
+	 */
+	function onConsentEvent() {
+		var state = consentState();
+		applyConsentState( state );
+		if ( 'allowed' === state ) {
+			fillFormFields();
+		}
+	}
+
+	/**
+	 * Record the visit: record the attribution touch, POST the collect beacon.
+	 *
+	 * Self-gates on the presence of whitelisted params in location.search —
+	 * a no-op on untagged page loads. Always parses the params and hands
+	 * the touch to recordTouch(), so a reload while consent is undecided
+	 * still holds the touch; the collect is deduplicated per tab inside
+	 * sendCollect() and, only when events are gated on consent, deferred
+	 * with the touch until consent is granted.
+	 *
+	 * @param {string} state Result of consentState() at load.
+	 */
+	function trackVisit( state ) {
+		var config = window.utmatBeacon;
+		var search = window.location.search;
+
+		if ( ! config || ! config.endpoint || search.length < 2 ) {
+			return;
+		}
+
+		var pairs = search.substring( 1 ).split( '&' );
+		var fields = [];
+		var touch = {};
+		var found = false;
+		var i, eq, key, value;
+
+		for ( i = 0; i < pairs.length; i++ ) {
+			eq = pairs[ i ].indexOf( '=' );
+			if ( eq < 1 ) {
+				continue;
+			}
+			try {
+				key = decodeURIComponent( pairs[ i ].substring( 0, eq ) );
+				value = decodeURIComponent( pairs[ i ].substring( eq + 1 ).replace( /\+/g, ' ' ) );
+			} catch ( e ) {
+				continue;
+			}
+			if ( value && WHITELIST.indexOf( key ) > -1 ) {
+				found = true;
+				fields.push( encodeURIComponent( key ) + '=' + encodeURIComponent( value ) );
+				touch[ key ] = value.slice( 0, 255 );
+			}
+		}
+
+		if ( ! found ) {
+			return;
+		}
+
+		// --- Attribution cookie: record BEFORE sending the beacon. ---
+		touch.lp = window.location.href.slice( 0, 255 );
+		touch.ts = Math.floor( Date.now() / 1000 );
+		recordTouch( touch );
+
+		// Events carry no cookie, so the collect goes out regardless of
+		// consent unless the site gated events; then it waits with the touch.
+		if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
+			fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
+			fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
+			sendCollect( fields, search );
+		}
+	}
+
+	var state = consentState();
+
+	// Withdrawal cleanup first, then track so a cookie write lands before
+	// the form fill reads it.
+	applyConsentState( state );
+	trackVisit( state );
+
+	document.addEventListener( 'wp_listen_for_consent_change', onConsentEvent );
+	document.addEventListener( 'wp_consent_type_defined', onConsentEvent );
+	if ( 'undecided' === state && typeof window.wp_has_consent !== 'function' ) {
+		// The server advertised the Consent API but its script has not run
+		// yet (an optimiser deferred it behind us): re-check once at load.
+		window.addEventListener( 'load', onConsentEvent );
+	}
+
+	// Reading the cookie into a form is itself an operation that needs
+	// consent, so the fill waits while the decision is pending; the consent
+	// event handler fills the form once consent is granted.
+	if ( 'undecided' !== state ) {
+		if ( 'loading' === document.readyState ) {
+			document.addEventListener( 'DOMContentLoaded', fillFormFields );
+		} else {
+			// Deferred scripts run with the DOM already parsed — fill immediately.
+			fillFormFields();
+		}
 	}
 }() );

@@ -9,12 +9,15 @@ namespace UTMAT\Admin;
 
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
+use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\LinkManager;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Dashboard
+ *
+ * @since 1.0.0 Localizes the consent category setting.
  */
 class Dashboard {
 
@@ -50,6 +53,7 @@ class Dashboard {
 	 * Enqueue Chart.js and dashboard assets on this page only.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Localizes the consent category setting.
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -126,10 +130,11 @@ class Dashboard {
 					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
 					: '',
 				'settings'       => array(
-					'retentionDays' => (int) get_option( 'utmat_retention_days', 180 ),
-					'weeklyEmail'   => WeeklyEmail::enabled(),
-					'cookieDays'    => (int) get_option( 'utmat_cookie_days', 90 ),
-					'webhookUrl'    => ConversionWebhook::url(),
+					'retentionDays'   => (int) get_option( 'utmat_retention_days', 180 ),
+					'weeklyEmail'     => WeeklyEmail::enabled(),
+					'cookieDays'      => (int) get_option( 'utmat_cookie_days', 90 ),
+					'webhookUrl'      => ConversionWebhook::url(),
+					'consentCategory' => Attribution::consent_category(),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => ConversionWebhook::secret(),

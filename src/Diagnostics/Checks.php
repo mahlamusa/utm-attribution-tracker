@@ -26,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
  * Checks
  *
  * @since 1.0.0
+ * @since 1.0.0 The consent check describes the applicable gating rule instead of the admin's own consent state.
  */
 class Checks {
 
@@ -82,45 +83,91 @@ class Checks {
 	}
 
 	/**
-	 * Consent-gating state of the attribution cookie.
+	 * Consent-gating rule that applies to the attribution cookie.
 	 *
-	 * Reports the actual gating decision from Attribution::enabled() rather
-	 * than just whether a consent-management plugin is present, so the
-	 * verdict reflects whether the cookie is actually being written.
+	 * Describes the rule, never a verdict: wp_has_consent() is deliberately
+	 * not called, because from the admin's REST request it would report the
+	 * admin's own consent cookie as if it were a visitor's. The reads of
+	 * wp_get_consent_type() and consent_api_registered() are guarded by the
+	 * API's presence since both are defined by the WP Consent API plugin.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Rewritten to report the applicable rule (API presence, consent type, registration, category) instead of the admin's consent state; the pass message says whether events are gated too.
 	 * @return array{id: string, label: string, status: string, message: string, details: array}
 	 */
 	public static function consent(): array {
-		$label = __( 'Consent', 'utm-attribution-tracker' );
+		$label       = __( 'Consent', 'utm-attribution-tracker' );
+		$api_present = function_exists( 'wp_has_consent' );
+		$category    = Attribution::consent_category();
+		$details     = array(
+			'api_present'    => $api_present,
+			'consent_type'   => $api_present ? wp_get_consent_type() : '',
+			'registered'     => $api_present ? (bool) consent_api_registered( UTM_ATTRIBUTION_TRACKER_BASENAME ) : false,
+			'category'       => $category,
+			'master_enabled' => Attribution::enabled(),
+			'gate_events'    => Attribution::gate_events(),
+		);
 
-		if ( Attribution::enabled() ) {
-			return self::result(
-				'consent',
-				$label,
-				'pass',
-				__( 'Attribution cookie is active.', 'utm-attribution-tracker' ),
-				array()
-			);
-		}
-
-		if ( function_exists( 'wp_has_consent' ) ) {
+		if ( ! $details['master_enabled'] ) {
 			return self::result(
 				'consent',
 				$label,
 				'warn',
-				__( 'A consent plugin is present and marketing/statistics consent has not been granted — the attribution cookie will not be written until consent is given.', 'utm-attribution-tracker' ),
-				array()
+				__( 'The utmat_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed.', 'utm-attribution-tracker' ),
+				$details
 			);
 		}
 
-		return self::result(
-			'consent',
-			$label,
-			'pass',
-			__( 'No consent-management plugin detected; attribution cookie is unconditionally enabled.', 'utm-attribution-tracker' ),
-			array()
-		);
+		if ( ! $api_present ) {
+			return self::result(
+				'consent',
+				$label,
+				'pass',
+				sprintf(
+					/* translators: %s: consent category label (marketing, statistics, or marketing or statistics). */
+					__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
+					Attribution::consent_category_label( $category )
+				),
+				$details
+			);
+		}
+
+		if ( '' === $details['consent_type'] ) {
+			return self::result(
+				'consent',
+				$label,
+				'warn',
+				__( 'WP Consent API is active but no consent-management plugin has declared a consent type, so the API reports every category as granted and the cookie is written for every visitor.', 'utm-attribution-tracker' ),
+				$details
+			);
+		}
+
+		if ( ! $details['registered'] ) {
+			return self::result(
+				'consent',
+				$label,
+				'warn',
+				__( 'WP Consent API is active but this plugin is not registered with it — another plugin may be removing the registration filter.', 'utm-attribution-tracker' ),
+				$details
+			);
+		}
+
+		if ( $details['gate_events'] ) {
+			$message = sprintf(
+				/* translators: 1: consent type (optin or optout), 2: consent category label. */
+				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmat_consent_gate_events filter is enabled.', 'utm-attribution-tracker' ),
+				$details['consent_type'],
+				Attribution::consent_category_label( $category )
+			);
+		} else {
+			$message = sprintf(
+				/* translators: 1: consent type (optin or optout), 2: consent category label. */
+				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events, which carry no cookie and only a salted IP hash, are recorded regardless of consent.', 'utm-attribution-tracker' ),
+				$details['consent_type'],
+				Attribution::consent_category_label( $category )
+			);
+		}
+
+		return self::result( 'consent', $label, 'pass', $message, $details );
 	}
 
 	/**

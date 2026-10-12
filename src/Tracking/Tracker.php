@@ -26,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
  * Tracker
  *
  * @since 1.0.0 Added param_whitelist() and the custom-parameter validation helpers.
+ * @since 1.0.0 Cookie writes and, when opted in, passive event records honour the visitor's consent verdict.
  */
 class Tracker {
 
@@ -247,6 +248,7 @@ class Tracker {
 	 * Main entry-point hooked on `init` (priority 1).
 	 *
 	 * @since 1.0.0 Passive capture reads param_whitelist() so custom parameters count as tagged visits.
+	 * @since 1.0.0 The passive-incoming record honours the consent event gate; the redirect path never does.
 	 * @return void
 	 */
 	public static function handle_incoming_request(): void {
@@ -314,7 +316,9 @@ class Tracker {
 					'destination' => esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ) ),
 				)
 			);
-			if ( ! self::is_duplicate( $data ) ) {
+			// The event gate is off by default (an event carries no cookie);
+			// when a site opts in, the passive record waits for consent too.
+			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data ) ) {
 				self::record( $data );
 			}
 			// Cookie logic runs regardless of dedup — a deduplicated repeat
@@ -333,16 +337,19 @@ class Tracker {
 	 * characters. An oversized encoded cookie (> 4000 bytes) sheds the landing
 	 * page from both sets, and is skipped entirely if still over the limit so
 	 * the existing cookie is preserved. Runs only for non-bot traffic (enforced
-	 * at the call site), when headers are not yet sent, and when the
-	 * `utmat_enable_cookie` master switch allows it.
+	 * at the call site), when headers are not yet sent, when the
+	 * `utmat_enable_cookie` master switch allows it, and when the visitor has
+	 * granted the configured consent category (always true without a WP
+	 * Consent API). That pair of checks is the only permitted gate for a
+	 * server-side cookie write.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Bails unless the visitor's server-side consent verdict is granted.
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
 	 */
 	private static function maybe_set_attribution_cookie( array $params, string $landing ): void {
-		if ( headers_sent() || ! Attribution::enabled() ) {
+		if ( headers_sent() || ! Attribution::enabled() || ! Attribution::consented() ) {
 			return;
 		}
 
