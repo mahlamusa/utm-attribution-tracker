@@ -87,6 +87,7 @@ class Retention {
 	 * window is 0 (keep forever).
 	 *
 	 * @since 1.0.0 Also sweeps expired plugin transients.
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @return void
 	 */
 	public static function prune(): void {
@@ -99,10 +100,10 @@ class Retention {
 			return;
 		}
 
-		$table  = Schema::table();
+		$table  = esc_sql( Schema::table() );
 		$cutoff = gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching -- schema/maintenance statement
 		$wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE clicked_at < %s", $cutoff ) );
 	}
 
@@ -115,7 +116,7 @@ class Retention {
 	 * accumulate in wp_options on sites without a persistent object cache.
 	 * No-ops when an external object cache handles transients.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Widened the phpcs annotation to cover the no-caching sniff.
 	 * @return void
 	 */
 	private static function cleanup_expired_transients(): void {
@@ -128,7 +129,7 @@ class Retention {
 		// Deletes each expired _transient_timeout_utmat_* row together
 		// with its matching _transient_utmat_* value row (the timeout
 		// prefix is 19 characters, so the shared suffix starts at 20).
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE a, b FROM {$wpdb->options} a

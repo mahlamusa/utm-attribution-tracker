@@ -250,13 +250,13 @@ class RestController {
 	 * written by the WooCommerce integration) so a converting visit is not
 	 * double-counted as a click.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function get_stats( WP_REST_Request $request ): WP_REST_Response {
 		global $wpdb;
-		$table    = Schema::table();
+		$table    = esc_sql( Schema::table() );
 		$campaign = (string) $request->get_param( 'campaign' );
 
 		$timezone  = wp_timezone();
@@ -268,7 +268,7 @@ class RestController {
 		$click_where = $where . ' AND is_conversion = 0';
 
 		// Clicks by day, grouped on the site-local date.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table, no cache layer by design; WHERE clauses are built by build_where() through $wpdb->prepare()
 		$by_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
 			 FROM {$table}
@@ -280,7 +280,7 @@ class RestController {
 		// phpcs:enable
 
 		// Conversions by day (WooCommerce order rows), same local-date grouping.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$conv_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
 			 FROM {$table}
@@ -318,7 +318,7 @@ class RestController {
 		// $by_day (both oldest-to-newest, $period + 1 entries) rather than
 		// actual dates, since the two windows cover different calendar days.
 		$prev_day_where = self::build_previous_day_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$prev_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
 			 FROM {$table}
@@ -341,7 +341,7 @@ class RestController {
 		$previous_clicks_by_day = array_values( $prev_day );
 
 		// By source.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_source = $wpdb->get_results(
 			"SELECT utm_source AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -354,7 +354,7 @@ class RestController {
 		// phpcs:enable
 
 		// By campaign.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_campaign = $wpdb->get_results(
 			"SELECT utm_campaign AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -367,7 +367,7 @@ class RestController {
 		// phpcs:enable
 
 		// By medium.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_medium = $wpdb->get_results(
 			"SELECT utm_medium AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -381,7 +381,7 @@ class RestController {
 
 		// By device type — computed once at insert time (Tracker::device_type),
 		// so this is a plain GROUP BY like every other breakdown.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_device = $wpdb->get_results(
 			"SELECT device AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -399,7 +399,7 @@ class RestController {
 		// order (not count) so the chart legend reads consistently across
 		// periods.
 		$traffic_source_case = TrafficSource::sql_case_expression();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- CASE expression built only from class constants passed through esc_sql()
 		$by_traffic_source = $wpdb->get_results(
 			"SELECT {$traffic_source_case} AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -413,7 +413,7 @@ class RestController {
 		// Top landing pages — passive incoming visits only (redirect-link rows
 		// store the outbound destination, not a landing page). The query string
 		// is stripped so UTM variants of one URL group into a single row.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_landing = $wpdb->get_results(
 			"SELECT SUBSTRING_INDEX( destination, '?', 1 ) AS label, COUNT(*) AS count
 			 FROM {$table}
@@ -429,7 +429,7 @@ class RestController {
 		// referring site collapses into one row; self-referrals (internal
 		// navigation) are excluded.
 		$site_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_referrer = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT SUBSTRING_INDEX( SUBSTRING_INDEX( referrer, '/', 3 ), '//', -1 ) AS label, COUNT(*) AS count
@@ -448,7 +448,7 @@ class RestController {
 		// Ad-platform breakdown — derived from which ad click ID a click
 		// carried. Rows without any click ID (organic/UTM-only traffic) are
 		// excluded; the dashboard maps the keys to display names.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$by_platform = $wpdb->get_results(
 			"SELECT CASE
 				WHEN gclid != '' THEN 'google'
@@ -467,7 +467,7 @@ class RestController {
 		// phpcs:enable
 
 		// Revenue by campaign — conversion rows only (WooCommerce orders).
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$revenue_raw = $wpdb->get_results(
 			"SELECT utm_campaign AS label, COUNT(*) AS orders, SUM(order_total) AS revenue
 			 FROM {$table}
@@ -489,25 +489,25 @@ class RestController {
 		}
 
 		// Total.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$click_where}" );
 
 		// All-time event count — drives the dashboard's first-run onboarding.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$all_time_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
 
 		// Conversions in the period (WooCommerce order rows) for the totals row.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$conversions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where} AND is_conversion = 1" );
 
 		// Previous-period total — the same-length window immediately before
 		// this one, for the trend indicator next to the total.
 		$prev_where = self::build_previous_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$previous_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$prev_where}" );
 
 		// Distinct campaigns for filter dropdown.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$campaigns = $wpdb->get_col(
 			"SELECT DISTINCT utm_campaign FROM {$table} WHERE is_conversion = 0 AND utm_campaign != '' ORDER BY utm_campaign"
 		);
@@ -727,20 +727,20 @@ class RestController {
 	 * `user_agent` are never included. Capped at the newest 10,000 rows.
 	 * Conversion rows are included and flagged via the `is_conversion` column.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function export_events( WP_REST_Request $request ): WP_REST_Response {
 		global $wpdb;
-		$table    = Schema::table();
+		$table    = esc_sql( Schema::table() );
 		$campaign = (string) $request->get_param( 'campaign' );
 
 		$now_local = self::resolve_now_local( $request, wp_timezone() );
 		$period    = self::resolve_period( $request, $now_local );
 		$where     = self::build_where( $period, $campaign, $now_local );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			"SELECT clicked_at, link_id, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
 			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total
@@ -845,16 +845,17 @@ class RestController {
 	 * form datalists.
 	 *
 	 * @since 1.0.0 Response shape changed from a bare array to `{ links, suggestions }`.
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function get_links( WP_REST_Request $request ): WP_REST_Response {
 		global $wpdb;
-		$table  = Schema::table();
+		$table  = esc_sql( Schema::table() );
 		$links  = LinkManager::all();
 		$result = array();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$counts_raw = $wpdb->get_results(
 			"SELECT link_id, COUNT(*) AS count FROM {$table} WHERE link_id != '' GROUP BY link_id",
 			ARRAY_A
@@ -973,13 +974,13 @@ class RestController {
 	 * conversion) with the values stored on managed links, deduped and capped
 	 * at 20 per field.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @param array<string, array<string, string>> $links Managed links keyed by slug.
 	 * @return array<string, string[]> Keys `sources`, `mediums`, `campaigns`.
 	 */
 	private static function suggestions( array $links ): array {
 		global $wpdb;
-		$table = Schema::table();
+		$table = esc_sql( Schema::table() );
 
 		$columns = array(
 			'sources'   => 'utm_source',
@@ -990,7 +991,7 @@ class RestController {
 		$out = array();
 		foreach ( $columns as $key => $column ) {
 			// $column comes from the fixed map above, never from user input.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 			$values = (array) $wpdb->get_col(
 				"SELECT DISTINCT {$column} FROM {$table} WHERE {$column} != '' ORDER BY {$column} LIMIT 20"
 			);
@@ -1160,7 +1161,7 @@ class RestController {
 	 * link. The slug is immutable — renaming would orphan recorded events.
 	 * Returns 404 for an unknown slug and 400 for an invalid destination.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1186,8 +1187,8 @@ class RestController {
 
 		LinkManager::save( $id, $link );
 
-		$table = Schema::table();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$table = esc_sql( Schema::table() );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$clicks = (int) $wpdb->get_var(
 			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE link_id = %s", $id )
 		);

@@ -127,15 +127,15 @@ class WeeklyEmail {
 	/**
 	 * Build the inline-styled HTML body for the past 7 days.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @return string
 	 */
 	private static function build_html(): string {
 		global $wpdb;
-		$table = Schema::table();
+		$table = esc_sql( Schema::table() );
 		$since = gmdate( 'Y-m-d H:i:s', time() - 7 * DAY_IN_SECONDS );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching -- real-time analytics table, no cache layer by design
 		$total = (int) $wpdb->get_var(
 			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND is_conversion = 0", $since )
 		);

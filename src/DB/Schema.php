@@ -103,13 +103,13 @@ class Schema {
 	/**
 	 * Drop the events table.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
 	 * @return void
 	 */
 	public static function drop(): void {
 		global $wpdb;
-		$table = self::table();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$table = esc_sql( self::table() );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching -- schema/maintenance statement
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 		delete_option( self::DB_VERSION_OPTION );
 	}

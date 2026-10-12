@@ -14,15 +14,15 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 /**
  * Remove the events table, options, transients, and cron hook for the current site.
  *
- * @since 1.0.0
+ * @since 1.0.0 Table name passed through esc_sql() before interpolation.
  * @return void
  */
 function utmat_uninstall_site(): void {
 	global $wpdb;
 
 	// Drop the events table.
-	$table = $wpdb->prefix . 'utmat_events';
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$table = esc_sql( $wpdb->prefix . 'utmat_events' );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching -- schema/maintenance statement
 	$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 
 	// Delete all plugin options.
@@ -34,7 +34,7 @@ function utmat_uninstall_site(): void {
 	delete_option( 'utmat_cookie_days' );
 
 	// Delete any transients with the plugin prefix.
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->query(
 		$wpdb->prepare(
 			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",

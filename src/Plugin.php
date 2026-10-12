@@ -66,6 +66,7 @@ class Plugin {
 	 * @since 1.0.0
 	 * @since 1.0.0 Added the Ninja Forms adapter to the form-plugin wiring.
 	 * @since 1.0.0 Added the recent-leads Dashboard widget.
+	 * @since 1.0.0 Dropped the manual text-domain load; WordPress.org loads translations for the plugin slug automatically.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -83,9 +84,6 @@ class Plugin {
 		// into the redirect handler (the query var only exists post-init).
 		add_action( 'init', array( Rewrites::class, 'add_rules' ) );
 		add_action( 'parse_request', array( Rewrites::class, 'handle_pretty_request' ) );
-
-		// Translations.
-		add_action( 'init', array( self::class, 'load_textdomain' ) );
 
 		// Daily retention pruning.
 		add_action( Retention::HOOK, array( Retention::class, 'prune' ) );
@@ -171,16 +169,6 @@ class Plugin {
 				'secure'        => is_ssl(),
 			)
 		);
-	}
-
-	/**
-	 * Load the plugin text domain for translations.
-	 *
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public static function load_textdomain(): void {
-		load_plugin_textdomain( 'utm-attribution-tracker', false, dirname( UTM_ATTRIBUTION_TRACKER_BASENAME ) . '/languages' );
 	}
 
 	/**
