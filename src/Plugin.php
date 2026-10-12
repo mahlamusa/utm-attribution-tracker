@@ -13,6 +13,7 @@ use UTMAT\Privacy\PrivacyPolicy;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
+use UTMAT\Tracking\TrafficSource;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Tracking\Rewrites;
 use UTMAT\Admin\Dashboard;
@@ -33,6 +34,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0 The beacon config now carries the parameter whitelist.
  * @since 1.0.0 The beacon config carries the consent gating keys and the plugin registers with the WP Consent API.
+ * @since 1.0.0 The beacon config carries the visit-tracking switch and the referrer host lists.
  */
 class Plugin {
 
@@ -159,14 +161,27 @@ class Plugin {
 	 * dependency is never registered. The localized `cookieEnabled` is the
 	 * master switch only; the visitor's verdict is never baked into HTML.
 	 *
+	 * Untagged landing visits (`visitEnabled`) are reported only while the
+	 * setting is on and the viewer is not a logged-in administrator (unless
+	 * `utmat_track_logged_in_users` allows it), mirroring the passive PHP
+	 * path's exclusion; `hosts` carries the three filtered referrer host
+	 * lists the beacon classifies the landing with.
+	 *
 	 * @since 1.0.0 Added the params whitelist to the localized config.
 	 * @since 1.0.0 Added the conditional wp-consent-api dependency and the consentApi, consentCategory and gateEvents keys.
+	 * @since 1.0.0 Added the visitEnabled and hosts keys.
 	 * @return void
 	 */
 	public static function enqueue_beacon(): void {
 		// Version off the file's own mtime so edits always bust browser caches.
 		$js_path     = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/beacon.js';
 		$consent_api = function_exists( 'wp_has_consent' );
+
+		$visit_enabled = 1 === (int) get_option( 'utmat_track_visits', 1 );
+		if ( $visit_enabled && is_user_logged_in() && current_user_can( 'manage_options' ) ) {
+			/** This filter is documented in src/Tracking/Tracker.php */
+			$visit_enabled = (bool) apply_filters( 'utmat_track_logged_in_users', false );
+		}
 
 		wp_enqueue_script(
 			'utmat-beacon',
@@ -193,6 +208,12 @@ class Plugin {
 				'consentCategory' => Attribution::consent_category(),
 				'gateEvents'      => Attribution::gate_events(),
 				'secure'          => is_ssl(),
+				'visitEnabled'    => $visit_enabled,
+				'hosts'           => array(
+					'ai'     => array_values( TrafficSource::ai_assistant_hosts() ),
+					'search' => array_values( TrafficSource::search_engine_hosts() ),
+					'social' => array_values( TrafficSource::social_network_hosts() ),
+				),
 			)
 		);
 	}

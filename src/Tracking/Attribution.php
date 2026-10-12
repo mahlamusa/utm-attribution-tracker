@@ -14,6 +14,7 @@
  * cookie registration with the Consent API.
  *
  * @since 1.0.0 Added the consent category setting, the server-side consent verdict and the Consent API cookie registration.
+ * @since 1.0.0 Touches carry a channel and a referrer host; touch_keys() is the canonical key set.
  *
  * @package UTMAT\Tracking
  */
@@ -27,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0 Field and allow-lists derive from Tracker::param_whitelist() instead of the built-in constant.
  * @since 1.0.0 enabled() is the master switch only; per-visitor consent moved to consented().
+ * @since 1.0.0 Added touch_keys(); the channel and referrer host are form fields and the channel is recomputed on read.
  */
 class Attribution {
 
@@ -126,33 +128,56 @@ class Attribution {
 	}
 
 	/**
+	 * Every key a cookie touch may carry, apart from the timestamp.
+	 *
+	 * The tracked parameters plus the landing page (`lp`), the channel
+	 * (`ch`) and the referrer host (`rh`). This is the canonical key set for
+	 * every zero-config hidden-field injector and every tag list: the form
+	 * adapters iterate it so new touch keys reach every form automatically.
+	 *
+	 * @since 1.0.0
+	 * @return string[]
+	 */
+	public static function touch_keys(): array {
+		return array_merge( Tracker::param_whitelist(), array( 'lp', 'ch', 'rh' ) );
+	}
+
+	/**
 	 * Map an attribution param to its public form-field name.
 	 *
 	 * The convention (shared with the front-end beacon's fillFormFields) is
 	 * the industry-standard parameter name itself: `utm_source` →
-	 * `utm_source`, `gclid` → `gclid`. Only the landing page (`lp`) is
-	 * renamed, to `landing_page`. First-touch variants append `_first` to
-	 * the returned name (handled by callers).
+	 * `utm_source`, `gclid` → `gclid`. Only the touch-level keys are
+	 * renamed: `lp` → `landing_page`, `ch` → `channel`, `rh` →
+	 * `referrer_host`. First-touch variants append `_first` to the returned
+	 * name (handled by callers).
 	 *
 	 * @since 1.0.0 Field names switched from the prefixed `utmat_*` convention to the standard parameter names.
+	 * @since 1.0.0 Added the `ch` and `rh` entries.
 	 *
-	 * @param string $param Whitelisted param key, or 'lp' for the landing page.
+	 * @param string $param Whitelisted param key, or 'lp', 'ch' or 'rh'.
 	 *
 	 * @return string
 	 */
 	public static function field_name( string $param ): string {
-		return ( 'lp' === $param ) ? 'landing_page' : $param;
+		$map = array(
+			'lp' => 'landing_page',
+			'ch' => 'channel',
+			'rh' => 'referrer_host',
+		);
+		return $map[ $param ] ?? $param;
 	}
 
 	/**
 	 * All recognised form-field names — last-touch and `_first` variants.
 	 *
 	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameters get field names too.
+	 * @since 1.0.0 Built from touch_keys(), so channel and referrer_host are included.
 	 * @return string[]
 	 */
 	public static function field_names(): array {
 		$names = array();
-		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
+		foreach ( self::touch_keys() as $param ) {
 			$name    = self::field_name( $param );
 			$names[] = $name;
 			$names[] = $name . '_first';
@@ -170,6 +195,7 @@ class Attribution {
 	 * emitting markup itself must escape.
 	 *
 	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameter values are mapped too.
+	 * @since 1.0.0 Built from touch_keys(), so channel and referrer_host values are mapped too.
 	 * @return array<string, string>
 	 */
 	public static function field_map(): array {
@@ -180,7 +206,7 @@ class Attribution {
 		);
 
 		foreach ( $touches as $suffix => $touch ) {
-			foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
+			foreach ( self::touch_keys() as $param ) {
 				$value = isset( $touch[ $param ] ) ? (string) $touch[ $param ] : '';
 				if ( '' !== $value ) {
 					$map[ self::field_name( $param ) . $suffix ] = $value;
@@ -405,9 +431,17 @@ class Attribution {
 	 * Never throws and never trusts the JSON shape: non-array sets, unknown
 	 * keys, and non-scalar values are dropped; every kept value passes
 	 * through sanitize_text_field() and is capped at 255 chars (matching the
-	 * writers). `ts` is cast to int.
+	 * writers). `ts` is cast to int; `rh` is reduced to host characters.
+	 *
+	 * The channel (`ch`) is never taken from the cookie: the beacon's value
+	 * comes from host lists baked into possibly cached HTML and never saw
+	 * the `utmat_channel` filter, so it is recomputed here from the touch's
+	 * parameters and referrer host with the live rule set. Every written
+	 * touch carries parameters or a referrer host (direct visits never
+	 * write), so the recomputation always has its input.
 	 *
 	 * @since 1.0.0 Allow-list built from Tracker::param_whitelist() so custom parameter keys survive the parse.
+	 * @since 1.0.0 Allow-list is touch_keys() plus `ts`; `rh` is sanitised as a host and `ch` is always recomputed.
 	 * @param string $set Which set to extract: 'first' or 'last'.
 	 * @return array<string, string|int>
 	 */
@@ -418,18 +452,25 @@ class Attribution {
 			return array();
 		}
 
-		$allowed = array_merge( Tracker::param_whitelist(), array( 'lp', 'ts' ) );
+		$allowed = array_merge( self::touch_keys(), array( 'ts' ) );
 		$clean   = array();
 
 		foreach ( $decoded[ $set ] as $key => $value ) {
-			if ( ! is_string( $key ) || ! in_array( $key, $allowed, true ) || ! is_scalar( $value ) ) {
+			if ( ! is_string( $key ) || 'ch' === $key || ! in_array( $key, $allowed, true ) || ! is_scalar( $value ) ) {
 				continue;
 			}
 			$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+			if ( 'rh' === $key ) {
+				$value = (string) preg_replace( '/[^a-z0-9.-]/', '', strtolower( $value ) );
+			}
 			if ( '' === $value ) {
 				continue;
 			}
 			$clean[ $key ] = ( 'ts' === $key ) ? (int) $value : $value;
+		}
+
+		if ( array() !== $clean ) {
+			$clean['ch'] = TrafficSource::channel( $clean );
 		}
 
 		return $clean;

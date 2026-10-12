@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit;
  * Dashboard
  *
  * @since 1.0.0 Localizes the consent category setting.
+ * @since 1.0.0 Localizes the untagged-visit tracking setting.
  */
 class Dashboard {
 
@@ -54,6 +55,7 @@ class Dashboard {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Localizes the consent category setting.
+	 * @since 1.0.0 Localizes the untagged-visit tracking setting.
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -135,6 +137,7 @@ class Dashboard {
 					'cookieDays'      => (int) get_option( 'utmat_cookie_days', 90 ),
 					'webhookUrl'      => ConversionWebhook::url(),
 					'consentCategory' => Attribution::consent_category(),
+					'trackVisits'     => 1 === (int) get_option( 'utmat_track_visits', 1 ),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => ConversionWebhook::secret(),

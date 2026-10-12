@@ -13,6 +13,7 @@
  */
 
 use UTMAT\Tracking\Attribution;
+use UTMAT\Tracking\TrafficSource;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -249,17 +250,18 @@ $utmat_kses = array(
 			<section class="utmat-group" aria-labelledby="utmat-group-reach">
 				<div class="utmat-group__header">
 					<h2 class="utmat-group__title" id="utmat-group-reach"><?php esc_html_e( 'Reach', 'utm-attribution-tracker' ); ?></h2>
-					<p class="utmat-group__desc"><?php esc_html_e( 'Traffic type, landing pages, referrers and ad platforms', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmat-group__desc"><?php esc_html_e( 'Channels, landing pages, referrers and ad platforms', 'utm-attribution-tracker' ); ?></p>
 				</div>
 				<div class="utmat-group__grid utmat-group__grid--4">
 					<div class="utmat-card utmat-card--bars">
 						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-traffic-source"><?php esc_html_e( 'Traffic type', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
+							<h3 class="utmat-card__title" id="utmat-title-channel"><?php esc_html_e( 'Channels', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmat-card__caption"><?php esc_html_e( 'visits', 'utm-attribution-tracker' ); ?></span>
 						</div>
 						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-traffic-source" aria-labelledby="utmat-title-traffic-source"></ol>
+							<ol class="utmat-bars" id="utmat-bars-channel" aria-labelledby="utmat-title-channel"></ol>
 							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmat-field__hint" id="utmat-channel-hint" hidden><?php esc_html_e( 'Untagged visit tracking is off, so only tagged traffic is classified. Turn it on in Settings to see direct, organic, social, AI-assistant and referral visits.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
 					<div class="utmat-card utmat-card--bars">
@@ -393,6 +395,26 @@ $utmat_kses = array(
 		</div>
 
 		<form id="utmat-settings-form" class="utmat-settings-form">
+
+			<section class="utmat-settings-section" aria-labelledby="utmat-settings-tracking">
+				<div class="utmat-settings-section__intro">
+					<h2 id="utmat-settings-tracking"><?php esc_html_e( 'Tracking', 'utm-attribution-tracker' ); ?></h2>
+					<p><?php esc_html_e( 'What the beacon records on each visit.', 'utm-attribution-tracker' ); ?></p>
+				</div>
+				<div class="utmat-card utmat-settings-card">
+					<div class="utmat-field">
+						<span class="utmat-field__label"><?php esc_html_e( 'Untagged visits', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmat-field__control">
+							<label class="utmat-switch" for="utmat-track-visits">
+								<input type="checkbox" id="utmat-track-visits" name="track_visits" class="utmat-switch__input" />
+								<span class="utmat-switch__track" aria-hidden="true"></span>
+								<span class="utmat-switch__text"><?php esc_html_e( 'Track the first page of every visit', 'utm-attribution-tracker' ); ?></span>
+							</label>
+							<p class="utmat-field__hint"><?php esc_html_e( 'Records the landing page and referrer of visits that arrive without campaign parameters, so organic, social, AI-assistant and referral traffic appear in the Channels report. On by default; about one event per visit.', 'utm-attribution-tracker' ); ?></p>
+						</div>
+					</div>
+				</div>
+			</section>
 
 			<section class="utmat-settings-section" aria-labelledby="utmat-settings-privacy">
 				<div class="utmat-settings-section__intro">
@@ -853,6 +875,7 @@ $utmat_kses = array(
 			'deviceDesktop'        => __( 'Desktop', 'utm-attribution-tracker' ),
 			'deviceMobile'         => __( 'Mobile', 'utm-attribution-tracker' ),
 			'deviceTablet'         => __( 'Tablet', 'utm-attribution-tracker' ),
+			'channels'             => TrafficSource::channel_labels(),
 			'testEmailSending'     => __( 'Sending…', 'utm-attribution-tracker' ),
 			'testEmailSent'        => __( 'Test email sent.', 'utm-attribution-tracker' ),
 			'testEmailFailed'      => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),

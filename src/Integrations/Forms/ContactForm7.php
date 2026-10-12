@@ -19,7 +19,6 @@ namespace UTMAT\Integrations\Forms;
 
 use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
 use WPCF7_ContactForm;
 
 defined( 'ABSPATH' ) || exit;
@@ -68,6 +67,7 @@ class ContactForm7 {
 	 * values are passed raw here — escaping them too would double-encode.
 	 *
 	 * @since 1.0.0 Loops Tracker::param_whitelist() so custom parameters get hidden fields too.
+	 * @since 1.0.0 Loops Attribution::touch_keys(), so channel and referrer_host fields are appended too.
 	 *
 	 * @param array<string, string> $fields Hidden fields registered so far.
 	 *
@@ -80,7 +80,7 @@ class ContactForm7 {
 
 		$map = Attribution::field_map();
 
-		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
+		foreach ( Attribution::touch_keys() as $param ) {
 			$name = Attribution::field_name( $param );
 			if ( ! isset( $fields[ $name ] ) ) {
 				$fields[ $name ] = $map[ $name ] ?? '';
@@ -95,7 +95,8 @@ class ContactForm7 {
 	 *
 	 * Supports every recognised field name, including `_first` variants:
 	 * `[_utm_source]`, `[_utm_campaign_first]`, `[_gclid]`, `[_landing_page]`,
-	 * etc. CF7 special mail tags carry a leading underscore, which is stripped
+	 * `[_channel]`, `[_referrer_host]`, etc. CF7 special mail tags carry a
+	 * leading underscore, which is stripped
 	 * to find the field. Reads the value from the submitted POST fields (filled
 	 * server-side or by the beacon), so the mail body reflects exactly what the
 	 * form submitted. None of these names collide with CF7's own special tags

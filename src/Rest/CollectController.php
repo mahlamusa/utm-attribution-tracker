@@ -3,12 +3,15 @@
  * Collect Controller — public REST endpoint for the front-end beacon.
  *
  * Route:
- *   POST utmat/v1/collect — record an incoming UTM/click-ID page view.
+ *   POST utmat/v1/collect — record an incoming UTM/click-ID page view, or
+ *   an untagged landing visit (`visit=1`) when visit tracking is on.
  *
  * The route is public by design: the beacon fires from cached pages where a
  * nonce baked into the HTML would be stale, so no nonce is used. Instead the
  * endpoint carries its own defenses — strict param whitelist, same-origin
  * check, per-IP rate limiting, bot filtering, and deduplication.
+ *
+ * @since 1.0.0 Added the untagged landing visit path.
  *
  * @package UTMAT\Rest
  */
@@ -25,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  * CollectController
  *
  * @since 1.0.0 Route arguments and extraction follow Tracker::param_whitelist().
+ * @since 1.0.0 Added the `visit` argument and the landing-visit branch.
  */
 class CollectController {
 
@@ -41,6 +45,7 @@ class CollectController {
 	 * Register the collect REST route.
 	 *
 	 * @since 1.0.0 One argument per Tracker::param_whitelist() entry, so custom parameters are accepted.
+	 * @since 1.0.0 Added the boolean `visit` argument.
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -62,6 +67,11 @@ class CollectController {
 			'default'           => '',
 			'sanitize_callback' => 'esc_url_raw',
 		);
+		$args['visit']    = array(
+			'type'              => 'boolean',
+			'default'           => false,
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		);
 
 		register_rest_route(
 			'utmat/v1',
@@ -79,11 +89,14 @@ class CollectController {
 	 * POST utmat/v1/collect — record a beacon-reported page view.
 	 *
 	 * Rejects cross-origin requests (403), rate-limited IPs (429), and
-	 * requests with no UTM param or click ID (400). Bot user agents get a
-	 * 200 with `recorded: false` so they learn nothing; duplicates within
-	 * the dedup window respond the same way.
+	 * requests with no UTM param or click ID (400) unless they report an
+	 * untagged landing visit (`visit=1`) while visit tracking is on and the
+	 * referrer is external, which records a `visit` row. Bot user agents
+	 * get a 200 with `recorded: false` so they learn nothing; duplicates
+	 * within the dedup window respond the same way.
 	 *
 	 * @since 1.0.0 Extracts every Tracker::param_whitelist() entry, custom parameters included.
+	 * @since 1.0.0 Records untagged landing visits when the `visit` argument is set.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -114,21 +127,36 @@ class CollectController {
 			}
 		}
 
+		$referrer = (string) $request->get_param( 'referrer' );
+
 		if ( empty( $params ) ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'No UTM parameter or click ID present.', 'utm-attribution-tracker' ) ),
-				400
+			// An untagged landing visit. The option is checked here, not only
+			// in the beacon config, because cached HTML can still advertise
+			// visit tracking after the admin turned it off; a referrer on the
+			// site's own host is internal navigation, never a landing.
+			$referrer_host = strtolower( (string) wp_parse_url( $referrer, PHP_URL_HOST ) );
+			$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+			if ( ! $request->get_param( 'visit' ) || 1 !== (int) get_option( 'utmat_track_visits', 1 ) || $referrer_host === $site_host ) {
+				return new WP_REST_Response(
+					array( 'message' => __( 'No UTM parameter or click ID present.', 'utm-attribution-tracker' ) ),
+					400
+				);
+			}
+			$data = array(
+				'link_id'     => 'visit',
+				'destination' => (string) $request->get_param( 'page_url' ),
+				'referrer'    => $referrer,
+			);
+		} else {
+			$data = array_merge(
+				$params,
+				array(
+					'link_id'     => 'incoming',
+					'destination' => (string) $request->get_param( 'page_url' ),
+					'referrer'    => $referrer,
+				)
 			);
 		}
-
-		$data = array_merge(
-			$params,
-			array(
-				'link_id'     => 'incoming',
-				'destination' => (string) $request->get_param( 'page_url' ),
-				'referrer'    => (string) $request->get_param( 'referrer' ),
-			)
-		);
 
 		if ( Tracker::is_duplicate( $data ) ) {
 			return new WP_REST_Response( array( 'recorded' => false ), 200 );

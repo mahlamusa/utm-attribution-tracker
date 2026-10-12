@@ -32,7 +32,6 @@ namespace UTMAT\Integrations\Forms;
 
 use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -52,8 +51,14 @@ class NinjaForms {
 	 * `is_plugin_active()` is loaded on demand — it lives in an admin-only
 	 * file not autoloaded on front-end requests.
 	 *
+	 * Ninja Forms fires `ninja_forms_loaded` from its own `plugins_loaded`
+	 * callback at the default priority, which is before this method runs,
+	 * so the merge tags are registered directly when that action has
+	 * already fired and only deferred to it otherwise.
+	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Added the recent-leads recorder on `ninja_forms_after_submission`.
+	 * @since 1.0.0 Registers the merge tags immediately when `ninja_forms_loaded` has already fired.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -65,7 +70,11 @@ class NinjaForms {
 			return;
 		}
 
-		add_action( 'ninja_forms_loaded', array( self::class, 'register_merge_tags' ) );
+		if ( did_action( 'ninja_forms_loaded' ) ) {
+			self::register_merge_tags();
+		} else {
+			add_action( 'ninja_forms_loaded', array( self::class, 'register_merge_tags' ) );
+		}
 		add_action( 'ninja_forms_after_submission', array( self::class, 'record_lead' ) );
 	}
 
@@ -121,23 +130,26 @@ class NinjaForms {
 	 * Map every merge-tag param to its full attribution field name.
 	 *
 	 * Built from the same source of truth Attribution::field_name() uses
-	 * (Tracker::param_whitelist() plus the `lp` landing-page param, renamed
-	 * `landing`) so the merge-tag list always matches the recognised field
-	 * names — e.g. `utm_source` => `utm_source`, `gclid` => `gclid`,
-	 * `landing` => `landing_page`, plus a `_first`-suffixed variant of
-	 * each for first-touch values. The tag namespace (`{utmat:…}`) and tag
-	 * params are unchanged; only the field names they map to follow the
-	 * standard parameter names.
+	 * (Attribution::touch_keys()) so the merge-tag list always matches the
+	 * recognised field names — e.g. `utm_source` => `utm_source`, `gclid`
+	 * => `gclid`, `landing` => `landing_page`, `channel` => `channel`,
+	 * `referrer_host` => `referrer_host`, plus a `_first`-suffixed variant
+	 * of each for first-touch values. The tag namespace (`{utmat:…}`) and
+	 * tag params are unchanged; only the field names they map to follow the
+	 * standard parameter names. The landing page keeps its historical
+	 * `landing` tag param; the channel and referrer host use the field
+	 * name itself.
 	 *
 	 * @since 1.0.0 Mapped field names follow the standard parameter names; the list comes from Tracker::param_whitelist().
+	 * @since 1.0.0 Iterates Attribution::touch_keys(), adding the channel and referrer_host tags.
 	 * @return array<string, string> Merge-tag param => full attribution field name.
 	 */
 	public static function merge_tag_params(): array {
 		$params = array();
 
-		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $param ) {
-			$tag_param  = ( 'lp' === $param ) ? 'landing' : $param;
+		foreach ( Attribution::touch_keys() as $param ) {
 			$field_name = Attribution::field_name( $param );
+			$tag_param  = ( 'lp' === $param ) ? 'landing' : $field_name;
 
 			$params[ $tag_param ]            = $field_name;
 			$params[ $tag_param . '_first' ] = $field_name . '_first';

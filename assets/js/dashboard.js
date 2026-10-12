@@ -80,6 +80,8 @@
 	const elWeekly       = document.getElementById( 'utmat-weekly-email' );
 	const elCookieDays   = document.getElementById( 'utmat-cookie-days' );
 	const elConsentCategory = document.getElementById( 'utmat-consent-category' );
+	const elTrackVisits  = document.getElementById( 'utmat-track-visits' );
+	const elChannelHint  = document.getElementById( 'utmat-channel-hint' );
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 	const elLinksFilter  = document.getElementById( 'utmat-links-filter' );
 	const elSortClicks   = document.getElementById( 'utmat-sort-clicks' );
@@ -544,6 +546,10 @@
 		linkedin:  i18n.platformLinkedin || 'LinkedIn Ads',
 		twitter:   i18n.platformTwitter || 'X / Twitter Ads',
 	};
+
+	// Display labels for the channel slugs (TrafficSource::channel_labels()
+	// through the i18n block); an unknown slug falls back to itself.
+	const CHANNEL_NAMES = i18n.channels || {};
 
 	// Shorten a URL for compact labels: same-host URLs show their path,
 	// other hosts keep host + path. Unparseable values pass through untouched.
@@ -1879,7 +1885,7 @@
 	// are prefixed with ' so a crafted UTM value can never execute as a
 	// spreadsheet formula.
 	const EXPORT_COLUMNS = [
-		'clicked_at', 'link_id', 'utm_source', 'utm_medium', 'utm_campaign',
+		'clicked_at', 'link_id', 'channel', 'utm_source', 'utm_medium', 'utm_campaign',
 		'utm_id', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid',
 		'ttclid', 'li_fat_id', 'twclid', 'destination', 'referrer', 'is_conversion', 'order_total',
 	];
@@ -1953,6 +1959,7 @@
 			weekly:    String( !! elWeekly.checked ),
 			webhook:   elWebhookUrl ? String( elWebhookUrl.value ) : '',
 			consent:   elConsentCategory ? String( elConsentCategory.value ) : '',
+			visits:    elTrackVisits ? String( !! elTrackVisits.checked ) : '',
 		};
 	}
 
@@ -1963,6 +1970,9 @@
 		elWeekly.checked   = 'true' === s.weekly;
 		if ( elConsentCategory ) {
 			elConsentCategory.value = s.consent || 'marketing';
+		}
+		if ( elTrackVisits ) {
+			elTrackVisits.checked = 'true' === s.visits;
 		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = s.webhook;
@@ -2004,6 +2014,10 @@
 		elCookieDays.value = settings.cookieDays || 90;
 		if ( elConsentCategory ) {
 			elConsentCategory.value = settings.consentCategory || 'marketing';
+		}
+		if ( elTrackVisits ) {
+			// On unless the admin switched it off (the option defaults to on).
+			elTrackVisits.checked = undefined === settings.trackVisits || !! settings.trackVisits;
 		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = settings.webhookUrl || '';
@@ -2078,6 +2092,7 @@
 				cookie_days:    parseInt( elCookieDays.value, 10 ) || 90,
 				webhook_url:    elWebhookUrl ? elWebhookUrl.value.trim() : '',
 				consent_category: elConsentCategory ? elConsentCategory.value : 'marketing',
+				track_visits:   elTrackVisits ? elTrackVisits.checked : true,
 			} ),
 		} ).then( function ( body ) {
 			elRetention.value  = body.retention_days;
@@ -2085,6 +2100,17 @@
 			elCookieDays.value = body.cookie_days || 90;
 			if ( elConsentCategory ) {
 				elConsentCategory.value = body.consent_category || 'marketing';
+			}
+			if ( elTrackVisits ) {
+				elTrackVisits.checked = !! body.track_visits;
+				// loadDashboard() re-derives the hint from settings on every
+				// stats reload, so keep the localized value in step.
+				if ( settings ) {
+					settings.trackVisits = !! body.track_visits;
+				}
+				if ( elChannelHint ) {
+					elChannelHint.hidden = !! body.track_visits;
+				}
 			}
 			if ( elWebhookUrl ) {
 				elWebhookUrl.value = body.webhook_url || '';
@@ -2351,8 +2377,15 @@
 				share: true,
 				label: function ( d ) { return DEVICE_NAMES[ d.label ] || d.label; },
 			} );
-			// Traffic type (Direct / Organic-Referral / Paid / Google Ads / Tagged).
-			renderBarList( 'utmat-bars-traffic-source', stats.by_traffic_source || [] );
+			// Channels (direct, organic search, paid search, ...), the one
+			// breakdown that includes untagged landing visits. The hint shows
+			// only while the admin has switched visit tracking off.
+			renderBarList( 'utmat-bars-channel', stats.by_channel || [], {
+				label: function ( d ) { return CHANNEL_NAMES[ d.label ] || d.label; },
+			} );
+			if ( elChannelHint ) {
+				elChannelHint.hidden = !! ( settings && settings.trackVisits );
+			}
 			// Top landing pages, labels shortened to the URL path.
 			renderBarList( 'utmat-bars-landing', stats.by_landing || [], {
 				label: function ( d ) { return shortenUrl( d.label ); },

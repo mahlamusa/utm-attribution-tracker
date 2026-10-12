@@ -22,6 +22,9 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * WeeklyEmail
+ *
+ * @since 1.0.0
+ * @since 1.0.0 Click totals exclude untagged landing visits.
  */
 class WeeklyEmail {
 
@@ -127,7 +130,11 @@ class WeeklyEmail {
 	/**
 	 * Build the inline-styled HTML body for the past 7 days.
 	 *
+	 * Untagged landing visits (`link_id = 'visit'`) are not clicks and stay
+	 * out of the totals.
+	 *
 	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0 The click totals exclude untagged landing visits.
 	 * @return string
 	 */
 	private static function build_html(): string {
@@ -137,14 +144,14 @@ class WeeklyEmail {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching -- real-time analytics table, no cache layer by design
 		$total = (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND is_conversion = 0", $since )
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND is_conversion = 0 AND link_id != 'visit'", $since )
 		);
 
 		// The week before, for the week-over-week comparison line.
 		$prev_since = gmdate( 'Y-m-d H:i:s', time() - 14 * DAY_IN_SECONDS );
 		$prev_total = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND clicked_at < %s AND is_conversion = 0",
+				"SELECT COUNT(*) FROM {$table} WHERE clicked_at >= %s AND clicked_at < %s AND is_conversion = 0 AND link_id != 'visit'",
 				$prev_since,
 				$since
 			)

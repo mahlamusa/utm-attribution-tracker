@@ -14,6 +14,8 @@
  *
  * All routes require the `manage_options` capability.
  *
+ * @since 1.0.0 Stats report channels and exclude untagged landing visits; settings carry the visit-tracking switch.
+ *
  * @package UTMAT\Admin
  */
 
@@ -37,6 +39,7 @@ defined( 'ABSPATH' ) || exit;
  * RestController
  *
  * @since 1.0.0 The settings route accepts the consent category.
+ * @since 1.0.0 Added `by_channel`, the export `include_visits` and `channel` column, the `track_visits` setting and the reserved `visit` slug.
  */
 class RestController {
 
@@ -45,6 +48,7 @@ class RestController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Added the consent_category argument to the settings route.
+	 * @since 1.0.0 Added the track_visits settings argument and the export include_visits argument.
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -128,21 +132,25 @@ class RestController {
 				'callback'            => array( self::class, 'export_events' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
-					'period'   => array(
+					'period'         => array(
 						'default'           => 30,
 						'sanitize_callback' => 'absint',
 					),
-					'campaign' => array(
+					'campaign'       => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
-					'since'    => array(
+					'since'          => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
-					'until'    => array(
+					'until'          => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'include_visits' => array(
+						'default'           => false,
+						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 				),
 			)
@@ -221,6 +229,10 @@ class RestController {
 						'default'           => 'marketing',
 						'sanitize_callback' => 'sanitize_key',
 					),
+					'track_visits'     => array(
+						'default'           => true,
+						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
 				),
 			)
 		);
@@ -256,9 +268,11 @@ class RestController {
 	 *
 	 * Click-oriented queries exclude conversion rows (`is_conversion = 1`,
 	 * written by the WooCommerce integration) so a converting visit is not
-	 * double-counted as a click.
+	 * double-counted as a click, and untagged landing visits (`link_id =
+	 * 'visit'`), which only the `by_channel` breakdown reports.
 	 *
 	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0 Click metrics exclude untagged landing visits; `by_channel` replaces `by_traffic_source`.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -272,8 +286,10 @@ class RestController {
 		$period    = self::resolve_period( $request, $now_local );
 		$offset    = (int) $timezone->getOffset( $now_local );
 
-		$where       = self::build_where( $period, $campaign, $now_local );
-		$click_where = $where . ' AND is_conversion = 0';
+		$where = self::build_where( $period, $campaign, $now_local );
+		// Untagged landing visits are not clicks: every click metric
+		// excludes them; only the Channels breakdown below includes them.
+		$click_where = $where . " AND is_conversion = 0 AND link_id != 'visit'";
 
 		// Clicks by day, grouped on the site-local date.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table, no cache layer by design; WHERE clauses are built by build_where() through $wpdb->prepare()
@@ -325,7 +341,7 @@ class RestController {
 		// comparison rather than day-aligned buckets). Positions align with
 		// $by_day (both oldest-to-newest, $period + 1 entries) rather than
 		// actual dates, since the two windows cover different calendar days.
-		$prev_day_where = self::build_previous_day_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
+		$prev_day_where = self::build_previous_day_where( $period, $campaign, $now_local ) . " AND is_conversion = 0 AND link_id != 'visit'";
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$prev_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
@@ -400,20 +416,18 @@ class RestController {
 		);
 		// phpcs:enable
 
-		// By traffic source — Direct/Organic-Referral/Paid/Google-Ads/Tagged,
-		// classified per row by the shared rule set in TrafficSource so this
-		// aggregate breakdown and any per-lead classification elsewhere in
-		// the plugin cannot drift apart. Ordered by the rule set's priority
-		// order (not count) so the chart legend reads consistently across
-		// periods.
-		$traffic_source_case = TrafficSource::sql_case_expression();
+		// By channel — the stored write-time channel, with rows written before
+		// the column existed mapped through the legacy rule set. This is the
+		// one breakdown that includes untagged landing visits, so it uses the
+		// plain period WHERE rather than $click_where.
+		$channel_case = TrafficSource::sql_channel_expression();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- CASE expression built only from class constants passed through esc_sql()
-		$by_traffic_source = $wpdb->get_results(
-			"SELECT {$traffic_source_case} AS label, COUNT(*) AS count
+		$by_channel = $wpdb->get_results(
+			"SELECT {$channel_case} AS label, COUNT(*) AS count
 			 FROM {$table}
-			 WHERE {$click_where}
+			 WHERE {$where} AND is_conversion = 0
 			 GROUP BY label
-			 ORDER BY FIELD( label, 'Google Ads', 'Paid', 'Direct', 'Organic / Referral', 'Tagged' )",
+			 ORDER BY count DESC",
 			ARRAY_A
 		);
 		// phpcs:enable
@@ -510,7 +524,7 @@ class RestController {
 
 		// Previous-period total — the same-length window immediately before
 		// this one, for the trend indicator next to the total.
-		$prev_where = self::build_previous_where( $period, $campaign, $now_local ) . ' AND is_conversion = 0';
+		$prev_where = self::build_previous_where( $period, $campaign, $now_local ) . " AND is_conversion = 0 AND link_id != 'visit'";
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$previous_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$prev_where}" );
 
@@ -537,7 +551,7 @@ class RestController {
 				'by_campaign'            => array_values( (array) $by_campaign ),
 				'by_medium'              => array_values( (array) $by_medium ),
 				'by_device'              => array_values( (array) $by_device ),
-				'by_traffic_source'      => array_values( (array) $by_traffic_source ),
+				'by_channel'             => array_values( (array) $by_channel ),
 				'by_landing'             => array_values( (array) $by_landing ),
 				'by_platform'            => array_values( (array) $by_platform ),
 				'by_referrer'            => array_values( (array) $by_referrer ),
@@ -734,8 +748,11 @@ class RestController {
 	 * the CSV client-side. Exports are privacy-light by design: `ip_hash` and
 	 * `user_agent` are never included. Capped at the newest 10,000 rows.
 	 * Conversion rows are included and flagged via the `is_conversion` column.
+	 * Untagged landing visits are left out unless `include_visits` is set;
+	 * every row carries its `channel`.
 	 *
 	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0 Added the `channel` column and the `include_visits` opt-in.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -747,10 +764,14 @@ class RestController {
 		$now_local = self::resolve_now_local( $request, wp_timezone() );
 		$period    = self::resolve_period( $request, $now_local );
 		$where     = self::build_where( $period, $campaign, $now_local );
+		if ( ! $request->get_param( 'include_visits' ) ) {
+			$where .= " AND link_id != 'visit'";
+		}
+		$channel_case = TrafficSource::sql_channel_expression();
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			"SELECT clicked_at, link_id, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
+			"SELECT clicked_at, link_id, {$channel_case} AS channel, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
 			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total
 			 FROM {$table}
 			 WHERE {$where}
@@ -807,14 +828,15 @@ class RestController {
 	 * POST utmat/v1/settings
 	 *
 	 * Saves the retention window (0 = keep forever), the weekly email
-	 * toggle, the conversion webhook URL (empty disables it) and the
-	 * consent category that gates the attribution cookie (allow-listed,
-	 * anything else falls back to marketing). The weekly report cron is
-	 * scheduled or unscheduled here, at save time, so no scheduling work
-	 * happens on normal page loads.
+	 * toggle, the conversion webhook URL (empty disables it), the consent
+	 * category that gates the attribution cookie (allow-listed, anything
+	 * else falls back to marketing) and the untagged-visit tracking switch.
+	 * The weekly report cron is scheduled or unscheduled here, at save
+	 * time, so no scheduling work happens on normal page loads.
 	 *
 	 * @since 1.0.0 Added the webhook_url setting.
 	 * @since 1.0.0 Added the consent_category setting.
+	 * @since 1.0.0 Added the track_visits setting.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -828,12 +850,14 @@ class RestController {
 		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
 			$consent = 'marketing';
 		}
+		$visits = (bool) $request->get_param( 'track_visits' );
 
 		update_option( 'utmat_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
 		update_option( 'utmat_cookie_days', $cookie );
 		update_option( ConversionWebhook::OPTION_URL, $webhook );
 		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
+		update_option( 'utmat_track_visits', $visits ? 1 : 0 );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -848,6 +872,7 @@ class RestController {
 				'cookie_days'      => $cookie,
 				'webhook_url'      => $webhook,
 				'consent_category' => $consent,
+				'track_visits'     => $visits,
 			),
 			200
 		);
@@ -1131,10 +1156,11 @@ class RestController {
 	 * POST utmat/v1/links — create a managed link.
 	 *
 	 * The slug is derived from the submitted label when no explicit id is
-	 * given. Fails when the slug is empty, reserved, already in use, or the
+	 * given. Fails when the slug is empty, reserved (`incoming` and `visit`
+	 * name event kinds in the events table), already in use, or the
 	 * destination is not a valid http(s) URL.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Also reserves the `visit` slug.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1143,9 +1169,9 @@ class RestController {
 		$id_param = self::param_string( $request, 'id' );
 		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
 
-		if ( '' === $id || 'incoming' === $id ) {
+		if ( '' === $id || in_array( $id, array( 'incoming', 'visit' ), true ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid link slug (the slug "incoming" is reserved).', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Please provide a valid link slug (the slugs "incoming" and "visit" are reserved).', 'utm-attribution-tracker' ) ),
 				400
 			);
 		}

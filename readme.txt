@@ -16,11 +16,12 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Tracking engine:**
 
-* **Cache-proof tracking beacon** — a tiny front-end beacon records UTM-tagged visits even when your pages are served from a full-page cache, where PHP never runs. It self-gates in JS, so untagged page views send nothing.
+* **Cache-proof tracking beacon** — a tiny front-end beacon records the first page of every visit (with its referrer) and every UTM-tagged visit, even when your pages are served from a full-page cache, where PHP never runs. Later untagged page views in the same visit send nothing. "Track the first page of every visit" in Settings switches visit recording off.
+* **Channel classification** — every recorded visit is filed into a marketing channel at write time: direct, organic search, paid search, paid social, organic social, email, referral, AI assistant (ChatGPT, Perplexity, Claude, Gemini, Copilot and others), display and affiliate.
 * **Passive UTM tracking (no-JS fallback)** — on uncached pages, any request arriving with a `utm_*` parameter or an ad click ID (`gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`) is also recorded server-side.
 * **Bot filtering** — crawlers, link-preview unfurlers, and monitoring agents are recognised by user agent and never pollute your stats. Bots still receive the redirect, so social link previews keep working.
 * **Click deduplication** — repeat hits from the same visitor with identical parameters within a 30-minute window (filterable) are recorded once.
-* **First/last-touch attribution cookie** — campaign parameters are persisted in a first-party cookie (`utmat_attr`, 90 days) with separate first-touch and last-touch sets.
+* **First/last-touch attribution cookie** — campaign parameters or, for visits from a search engine, social network, AI assistant or other site, the channel and referrer host are persisted in a first-party cookie (`utmat_attr`, 90 days) with separate first-touch and last-touch sets. Direct visits never write it.
 
 **Links & sharing:**
 
@@ -31,9 +32,9 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Reporting:**
 
-* **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, traffic source (Direct/Organic-Referral/Paid/Google Ads/Tagged), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign.
+* **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, channel (direct, organic search, paid search, paid social, organic social, email, referral, AI assistant, display, affiliate), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign.
 * **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn.
-* **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows). Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
+* **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows), each row with its channel. Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
 * **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active.
 * **Tracking Doctor diagnostics** — a "Run diagnostics" panel on the settings card runs five rule-based local checks (caching, consent, cookies, per-form attribution coverage, WooCommerce order attribution) and reports pass/warn/fail/skip with a plain-language explanation for each. No AI, no external calls — every check inspects local plugin/site state only.
 
@@ -59,11 +60,11 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 = Does this plugin store personal data? =
 
-Raw IP addresses are never stored. Each IP address is combined with a secret per-site salt and hashed with SHA-256 before storage, so the stored hashes cannot be correlated with hashes from other sites. User agents and referrer URLs are stored as-is. Events are pruned automatically after a retention period (180 days by default, adjustable from the dashboard settings card; 0 keeps events forever). CSV exports never include IP hashes or user agents. Suggested privacy policy text is provided under Settings → Privacy → Policy Guide.
+Raw IP addresses are never stored. Each IP address is combined with a secret per-site salt and hashed with SHA-256 before storage, so the stored hashes cannot be correlated with hashes from other sites. User agents and referrer URLs are stored as-is. This applies to the first page of each visit (landing page and referrer, recorded while "Track the first page of every visit" is on under Settings → Tracking) and to every tagged visit. Events are pruned automatically after a retention period (180 days by default, adjustable from the dashboard settings card; 0 keeps events forever). CSV exports never include IP hashes or user agents. Suggested privacy policy text is provided under Settings → Privacy → Policy Guide.
 
 = How does tracking work on a cached site? =
 
-Full-page caches serve HTML without running PHP, which breaks purely server-side trackers. UTM & Attribution Tracker ships a small beacon script in every front-end page: when the visitor's URL carries a tracked parameter, the beacon reports it to a public REST endpoint. On uncached pages a server-side fallback records the visit even for visitors without JavaScript. Deduplication ensures a visit recorded by both paths is only counted once.
+Full-page caches serve HTML without running PHP, which breaks purely server-side trackers. UTM & Attribution Tracker ships a small beacon script in every front-end page: when the visitor's URL carries a tracked parameter, or on the first page of a visit, the beacon reports it to a public REST endpoint. On uncached pages a server-side fallback records tagged visits even for visitors without JavaScript; it does not record untagged landings, because PHP has no per-session marker to tell a landing from the next page view and would count every page of a no-JS visit. Deduplication ensures a tagged visit recorded by both paths is only counted once.
 
 = How do I create a tracked short link? =
 
@@ -75,7 +76,7 @@ No. Requests whose user agent looks like a crawler, link-preview unfurler (Slack
 
 = What does the attribution cookie store? =
 
-When a visitor arrives with a UTM parameter or ad click ID, the plugin sets a first-party cookie named `utmat_attr` containing two sets of campaign data: the visitor's **first touch** (preserved once written) and **last touch** (updated on every tagged visit). Each set holds the whitelisted UTM/click-ID parameters present on that visit plus the landing page URL and a timestamp. The cookie does not store names, email addresses, or IP addresses.
+When a visitor arrives with a UTM parameter or ad click ID, or lands from another site (a search engine, social network, AI assistant or any other referrer), the plugin sets a first-party cookie named `utmat_attr` containing two sets of campaign data: the visitor's **first touch** (preserved once written) and **last touch** (updated on every tagged or referred visit). Each set holds the whitelisted UTM/click-ID parameters present on that visit, or the channel and referrer host of an untagged landing, plus the landing page URL and a timestamp. A direct visit without parameters never writes or updates the cookie. The cookie does not store names, email addresses, or IP addresses.
 
 The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites). Change the lifetime with `utmat_cookie_days` or disable the cookie entirely with `utmat_enable_cookie` (see the filter reference below).
 
@@ -86,7 +87,7 @@ The plugin does not ship a consent banner. If a plugin implementing the [WP Cons
 * **The decision is made in the browser.** The front-end beacon asks the Consent API's JavaScript whether the visitor granted the configured category before it writes the cookie, so gating is correct even on pages served from a full-page cache. The PHP fallback writer (for visitors without JavaScript) applies the same rule per request.
 * **Consent category.** Choose which category gates the cookie under Settings → Data and privacy → Consent: *Marketing* (the default — the cookie carries advertising click IDs), *Statistics*, or *Marketing or statistics*.
 * **Withdrawal deletes the cookie.** When the visitor withdraws consent, the beacon deletes the attribution cookie immediately.
-* **While the banner is undecided** nothing is placed on the visitor's device. The landing visit's campaign data is kept in page memory only and written to the cookie the moment consent is granted on that page; forms are not pre-filled from an existing cookie until the visitor decides. A visitor who navigates away before deciding and grants consent on a later page is attributed from their next tagged visit. The beacon's per-tab duplicate guard for the collect request (the `utmat_sent` marker, which holds the URL's own query string for the life of the tab) is unaffected by consent.
+* **While the banner is undecided** nothing is placed on the visitor's device. The landing visit's campaign data is kept in page memory only and written to the cookie the moment consent is granted on that page; forms are not pre-filled from an existing cookie until the visitor decides. A visitor who navigates away before deciding and grants consent on a later page is attributed from their next tagged visit. The beacon's per-tab duplicate guards for the collect request (the `utmat_sent` marker, which holds the URL's own query string, and the `utmat_visit` flag that records that the tab already reported its landing; both live only for the life of the tab and hold no campaign data) are unaffected by consent.
 * **Events are recorded regardless of consent** by default: a tagged-visit event carries no cookie and only a salted IP hash. Return `true` from the `utmat_consent_gate_events` filter to withhold events as well until the visitor consents.
 * The plugin declares itself to the Consent API and describes the cookie (name, category, lifetime, purpose) so consent banners can list it.
 
@@ -99,19 +100,27 @@ Two notes for sites with a full-page cache:
 
 = How does WooCommerce order attribution work? =
 
-When a visitor who previously arrived through a tracked campaign places an order, the order is stamped with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen), and a conversion event with the order total is recorded. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
+When a visitor who previously arrived through a tracked campaign or from another site places an order, the order is stamped with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen), and a conversion event with the order total is recorded. Each touch carries `ch` (the channel) and, when known, `rh` (the referrer host) alongside the campaign parameters, in the order meta and in the conversion webhook payload. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
+
+= How are channels classified? =
+
+Every recorded visit, click and conversion is filed into one channel when it is written, following the rule order of Google Analytics' default channel grouping with one addition for AI assistants: a `gclid` or `msclkid` is **paid search**; a source naming an AI assistant is **AI assistant**; a display medium (`display`, `banner`, `cpm`, …) is **display**; a paid medium (`cpc`, `ppc`, `paid-social`, …) is **paid search**, **paid social** or **paid (other)** depending on the source; a social medium or source is **organic social**; an `organic` medium or search-engine source is **organic search**; an `email` or `newsletter` source or medium is **email**; `affiliate` is **affiliate**; `referral`, `app` or `link` is **referral**; a Facebook, TikTok, LinkedIn or X click ID without a medium is **paid social**; otherwise the referrer host decides (AI assistant, search engine, social network, or **referral** for any other site); anything else with campaign data is **other** and a visit with neither is **direct**.
+
+Three host lists drive the referrer rules and can be extended with the `utmat_ai_assistant_hosts`, `utmat_search_engine_hosts` and `utmat_social_network_hosts` filters. AI assistants include ChatGPT, Perplexity, Claude, Gemini, Copilot, You.com, Phind, Poe, Meta AI, Mistral, Grok, DeepSeek, Duck.ai and Kimi; ChatGPT and Perplexity also tag their outbound links with `utm_source`, which the source rules recognise. Brave Search counts as organic search, because its AI answers render on the normal results page and the referrer cannot tell them apart. Facebook appends `fbclid` to organic clicks too, so an untagged Facebook click reads as paid social; override any verdict with the `utmat_channel` filter. The channel is derived from the visitor's own referrer, so a Google Mail or Google Docs link is filed as organic search, as in GA4.
+
+Untagged landings are reported by the front-end beacon only (no PHP fallback, see the cached-site FAQ) and share the collect endpoint's rate limit with tagged visits; raise it with `utmat_rate_limit` when many visitors share one IP.
 
 = How do I capture attribution in my lead forms? =
 
-Every tracked parameter is available to forms under its own standard name: `utm_source`, `utm_medium`, `utm_campaign`, `utm_id`, `utm_term`, `utm_content`, `gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`, and `landing_page` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utm_source_first`, `landing_page_first`) for the **first touch**.
+Every tracked parameter is available to forms under its own standard name: `utm_source`, `utm_medium`, `utm_campaign`, `utm_id`, `utm_term`, `utm_content`, `gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`, `landing_page` (the landing page URL), `channel` and `referrer_host`. These hold the visitor's **last touch**; append `_first` (e.g. `utm_source_first`, `landing_page_first`) for the **first touch**.
 
-**Any form plugin (generic):** add a hidden input (or text field) with one of the names above and it is auto-filled from the attribution cookie on page load. Fields that already have a value are never overwritten. Forms injected into the page after load (some popup builders) are not filled automatically.
+**Any form plugin (generic):** add a hidden input (or text field) with one of the names above and it is auto-filled from the attribution cookie on page load. Fields that already have a value are never overwritten. Forms injected into the page after load (some popup builders) are not filled automatically. The cookie carries `channel` only for visits without campaign parameters, so the generic fill populates it for organic, social, AI-assistant and referral visitors; the server-side adapters below always have it.
 
-**Contact Form 7:** zero configuration — the last-touch fields are appended to every form as hidden fields automatically and arrive with each submission. Use special mail tags in your mail templates to include them in notification emails: `[_utm_source]`, `[_utm_campaign]`, `[_gclid]`, `[_landing_page]`, etc. (any field name above with a leading underscore works, including `_first` variants such as `[_utm_source_first]`).
+**Contact Form 7:** zero configuration — the last-touch fields are appended to every form as hidden fields automatically and arrive with each submission. Use special mail tags in your mail templates to include them in notification emails: `[_utm_source]`, `[_utm_campaign]`, `[_gclid]`, `[_landing_page]`, `[_channel]`, `[_referrer_host]`, etc. (any field name above with a leading underscore works, including `_first` variants such as `[_utm_source_first]`).
 
 **Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utm_source` or `utm_source_first`.
 
-**Ninja Forms:** add a Hidden field to your form and set its default value to `{utmat:utm_source}` (or any other tracked parameter, e.g. `{utmat:gclid}`, `{utmat:landing}`, `{utmat:utm_source_first}`) to capture attribution.
+**Ninja Forms:** add a Hidden field to your form and set its default value to `{utmat:utm_source}` (or any other tracked parameter, e.g. `{utmat:gclid}`, `{utmat:landing}`, `{utmat:channel}`, `{utmat:referrer_host}`, `{utmat:utm_source_first}`) to capture attribution.
 
 **Elementor (Pro Forms):** add a Hidden field to your form (Advanced tab), set its Field ID to `utm_source` (or any other tracked parameter name, e.g. `utm_source_first` for first touch), and it is auto-filled from attribution data on render. Requires Elementor Pro — free Elementor has no form builder.
 
@@ -121,7 +130,7 @@ Every tracked parameter is available to forms under its own standard name: `utm_
 
 = How do I export my data? =
 
-Click **Export CSV** on the dashboard to download the raw events for the selected period and campaign filter (the newest 10,000 rows are exported). The CSV contains the click date, link slug, all UTM parameters, ad click IDs, destination, referrer, conversion flag, and order total — but never IP hashes or user agents. Because the export also includes conversion rows (flagged in the `is_conversion` column) alongside click rows, its total row count can exceed the click total shown on the dashboard. Values that could be interpreted as spreadsheet formulas are prefixed with `'` for safety.
+Click **Export CSV** on the dashboard to download the raw events for the selected period and campaign filter (the newest 10,000 rows are exported). The CSV contains the click date, link slug, channel, all UTM parameters, ad click IDs, destination, referrer, conversion flag, and order total — but never IP hashes or user agents. Because the export also includes conversion rows (flagged in the `is_conversion` column) alongside click rows, its total row count can exceed the click total shown on the dashboard. Untagged landing visits are left out unless the REST call to `utmat/v1/export` passes `include_visits=1`. Values that could be interpreted as spreadsheet formulas are prefixed with `'` for safety.
 
 = How do I get a weekly report by email? =
 
@@ -150,6 +159,10 @@ All filters shipped by the plugin:
 * **`utmat_enable_cookie`** *(bool, receives `true`)* — site-wide master switch for the attribution cookie; return `false` to never set it. Per-visitor consent is handled separately through the WP Consent API (see the consent FAQ).
 * **`utmat_consent_gate_events`** *(bool, default `false`)* — return `true` to also withhold tagged-visit event recording (the collect request and the PHP fallback) until the visitor grants the configured consent category.
 * **`utmat_report_recipient`** *(string, default the admin email)* — the recipient address of the weekly summary email.
+* **`utmat_channel`** *(string, receives the computed channel slug and the event row)* — override the channel a visit, click or conversion is filed under; return one of `direct`, `organic_search`, `paid_search`, `paid_social`, `organic_social`, `email`, `referral`, `ai_assistant`, `display`, `affiliate`, `paid_other` or `other` (anything else keeps the computed value).
+* **`utmat_search_engine_hosts`** *(string[])* — the referrer hosts classified as search engines. An entry with a dot matches the host and its subdomains; an entry without a dot (`google`) matches any label of the host.
+* **`utmat_social_network_hosts`** *(string[])* — the referrer hosts classified as social networks, same matching rule.
+* **`utmat_ai_assistant_hosts`** *(string[])* — the referrer hosts classified as AI assistants, same matching rule; checked before the search-engine list.
 
 == Changelog ==
 

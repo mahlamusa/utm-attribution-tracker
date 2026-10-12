@@ -3,19 +3,28 @@
  * UTM & Attribution Tracker — front-end beacon.
  *
  * Enqueued on EVERY front-end page (cached HTML must always contain it) and
- * self-gates here: it exits unless the current URL carries at least one
- * whitelisted UTM parameter or ad click ID. Matching params are POSTed to
- * the public collect endpoint via navigator.sendBeacon() (fetch keepalive
+ * self-gates here. A URL carrying at least one whitelisted UTM parameter or
+ * ad click ID is a tagged visit: the matching params are POSTed to the
+ * public collect endpoint via navigator.sendBeacon() (fetch keepalive
  * fallback), so tracking works even when a page cache/CDN serves the HTML
- * without running PHP. The whitelist comes from utmatBeacon.params
- * (Tracker::param_whitelist(): built-ins plus custom parameters); the
- * literal list below is only a fallback for cached HTML without config.
+ * without running PHP. When utmatBeacon.visitEnabled is on, an untagged
+ * page load that is the first page of the visit (nothing sent yet in this
+ * tab, referrer not this site) is reported once as a landing visit with
+ * its referrer, classified here into a channel (AI assistant, search
+ * engine, social network, referral or direct) from the host lists in
+ * utmatBeacon.hosts; later untagged page views send nothing. The whitelist
+ * comes from utmatBeacon.params (Tracker::param_whitelist(): built-ins plus
+ * custom parameters); the literal list below is only a fallback for cached
+ * HTML without config.
  *
  * The beacon is also the primary writer of the first-party attribution
  * cookie (first/last touch, see Attribution.php) — the cookie is written
  * BEFORE the collect beacon is sent so a quick navigation away cannot lose
  * the cookie write. Rules mirror the PHP fallback in Tracker.php: `first`
  * is preserved once set, `last` is overwritten, values capped at 255 chars.
+ * A tagged touch also carries the external referrer host (`rh`); an
+ * untagged landing writes `{ ch, rh, lp, ts }` unless it is direct, which
+ * never writes or updates the cookie.
  *
  * Consent is decided here, in the browser, so it is correct on cached
  * pages: consentState() returns `off` (the utmatBeacon cookieEnabled
@@ -29,12 +38,15 @@
  * deletes the attribution cookies on the spot.
  *
  * Finally the beacon fills attribution form fields — named after the
- * standard parameters (`utm_source`, `gclid`, `landing_page`, plus `_first`
- * variants), or carrying a `data-utmat-field="<name>"` marker when a form
- * plugin controls the name attribute — from the attribution cookie
- * (fillFormFields below) so any form can capture attribution. This runs on
- * every page, after the cookie write, only fills empty fields, and is
- * skipped while consent is undecided.
+ * standard parameters (`utm_source`, `gclid`, `landing_page`, `channel`,
+ * `referrer_host`, plus `_first` variants), or carrying a
+ * `data-utmat-field="<name>"` marker when a form plugin controls the name
+ * attribute — from the attribution cookie (fillFormFields below) so any
+ * form can capture attribution. This runs on every page, after the cookie
+ * write, only fills empty fields, and is skipped while consent is
+ * undecided. The cookie carries a channel only for untagged landings, so
+ * the client-side fill of `channel` covers those visitors; server-side
+ * adapters derive it for every touch.
  * Forms injected into the DOM after page load are not filled (documented
  * limitation — no MutationObserver).
  */
@@ -49,12 +61,18 @@
 		'utm_content', 'gclid', 'fbclid', 'msclkid', 'ttclid',
 		'li_fat_id', 'twclid',
 	];
+	// Every key a cookie touch may carry (apart from `ts`): the params plus
+	// the landing page, the channel and the referrer host. Mirrors
+	// Attribution::touch_keys().
+	var TOUCH_KEYS = WHITELIST.concat( [ 'lp', 'ch', 'rh' ] );
 
 	var COOKIE_NAME = 'utmat_attr';
 	var VID_COOKIE = 'utmat_vid';
 
 	// Touch held in page memory while consent is undecided; one slot, newest
-	// wins, dies with the page. Never persisted to storage or a cookie.
+	// wins, dies with the page. Never persisted to storage or a cookie. A
+	// parked landing visit is wrapped as { kind: 'visit', touch, ref } so
+	// flushPending() can rebuild its collect request.
 	var pending = null;
 
 	/**
@@ -168,13 +186,23 @@
 	 *
 	 * Mirrors Attribution::field_name(): the field name is the standard
 	 * parameter name itself (`utm_source` → `utm_source`, `gclid` → `gclid`);
-	 * only the landing page key `lp` is renamed to `landing_page`.
+	 * only the touch-level keys are renamed: `lp` → `landing_page`, `ch` →
+	 * `channel`, `rh` → `referrer_host`.
 	 *
-	 * @param {string} param Whitelisted param key, or 'lp' for the landing page.
+	 * @param {string} param Whitelisted param key, or 'lp', 'ch' or 'rh'.
 	 * @return {string}
 	 */
 	function fieldName( param ) {
-		return 'lp' === param ? 'landing_page' : param;
+		if ( 'lp' === param ) {
+			return 'landing_page';
+		}
+		if ( 'ch' === param ) {
+			return 'channel';
+		}
+		if ( 'rh' === param ) {
+			return 'referrer_host';
+		}
+		return param;
 	}
 
 	/**
@@ -189,14 +217,11 @@
 		if ( ! touch || typeof touch !== 'object' ) {
 			return;
 		}
-		for ( i = 0; i < WHITELIST.length; i++ ) {
-			param = WHITELIST[ i ];
+		for ( i = 0; i < TOUCH_KEYS.length; i++ ) {
+			param = TOUCH_KEYS[ i ];
 			if ( typeof touch[ param ] === 'string' && touch[ param ] ) {
 				map[ fieldName( param ) + suffix ] = touch[ param ].slice( 0, 255 );
 			}
-		}
-		if ( typeof touch.lp === 'string' && touch.lp ) {
-			map[ fieldName( 'lp' ) + suffix ] = touch.lp.slice( 0, 255 );
 		}
 	}
 
@@ -204,13 +229,14 @@
 	 * Build the selector matching every recognised attribution field.
 	 *
 	 * Targets inputs and textareas by exact name — the whitelisted params
-	 * plus `landing_page`, each with and without the `_first` suffix — rather
-	 * than a name prefix, since the standard names share no common prefix.
+	 * plus `landing_page`, `channel` and `referrer_host`, each with and
+	 * without the `_first` suffix — rather than a name prefix, since the
+	 * standard names share no common prefix.
 	 *
 	 * @return {string}
 	 */
 	function fieldSelector() {
-		var params = WHITELIST.concat( [ 'lp' ] );
+		var params = TOUCH_KEYS;
 		var parts = [ '[data-utmat-field]' ];
 		var i, name;
 		for ( i = 0; i < params.length; i++ ) {
@@ -328,7 +354,11 @@
 	 * Write the held touch once consent is granted.
 	 *
 	 * The collect request is rebuilt from the touch only when events are
-	 * gated on consent; otherwise it already went out at landing.
+	 * gated on consent; otherwise it already went out at landing. A parked
+	 * landing visit ({ kind: 'visit' }) writes its touch only when it is
+	 * not direct and sends a visit request rather than a tagged one (a
+	 * visit touch has no whitelisted keys, so a tagged rebuild would be an
+	 * empty body the endpoint rejects).
 	 */
 	function flushPending() {
 		var touch = pending;
@@ -339,6 +369,17 @@
 			return;
 		}
 		pending = null;
+
+		if ( 'visit' === touch.kind ) {
+			if ( 'direct' !== touch.touch.ch ) {
+				recordTouch( touch.touch );
+			}
+			if ( config.gateEvents ) {
+				sendVisit( touch.touch.lp, touch.ref );
+			}
+			return;
+		}
+
 		recordTouch( touch );
 
 		if ( config.gateEvents ) {
@@ -402,6 +443,114 @@
 	}
 
 	/**
+	 * Remember that this tab already reported its landing, so later untagged
+	 * page views in the tab are never counted as landings.
+	 */
+	function markVisit() {
+		try {
+			window.sessionStorage.setItem( 'utmat_visit', '1' );
+		} catch ( e ) {
+			// sessionStorage unavailable — the server-side dedup absorbs repeats.
+		}
+	}
+
+	/**
+	 * POST an untagged landing visit (page URL and referrer) and mark the tab.
+	 *
+	 * @param {string} pageUrl  The landing page URL.
+	 * @param {string} referrer The document referrer at landing ('' when none).
+	 */
+	function sendVisit( pageUrl, referrer ) {
+		sendCollect(
+			[
+				'visit=1',
+				'page_url=' + encodeURIComponent( pageUrl ),
+				'referrer=' + encodeURIComponent( referrer || '' ),
+			],
+			window.location.search
+		);
+		markVisit();
+	}
+
+	/**
+	 * The host of the document referrer, '' when absent or unparsable.
+	 *
+	 * Parsed through an anchor element (no URL constructor) so the beacon
+	 * stays ES5.
+	 *
+	 * @return {string} Lower-cased host.
+	 */
+	function referrerHost() {
+		var a;
+		if ( ! document.referrer ) {
+			return '';
+		}
+		a = document.createElement( 'a' );
+		a.href = document.referrer;
+		return ( a.hostname || '' ).toLowerCase();
+	}
+
+	/**
+	 * Whether a host matches a host list — the mirror of
+	 * TrafficSource::host_in_list().
+	 *
+	 * An entry with a dot matches when the host equals it or ends with
+	 * `.` + entry (`l.facebook.com` matches `facebook.com`); an entry without
+	 * a dot matches any dot-separated label of the host (`google` matches
+	 * `www.google.co.uk`).
+	 *
+	 * @param {string}   host Lower-cased host.
+	 * @param {string[]} list Host list entries.
+	 * @return {boolean}
+	 */
+	function hostIn( host, list ) {
+		var labels = host.split( '.' );
+		var i, entry;
+		if ( ! host || ! list || ! list.length ) {
+			return false;
+		}
+		for ( i = 0; i < list.length; i++ ) {
+			entry = String( list[ i ] || '' ).toLowerCase();
+			if ( ! entry ) {
+				continue;
+			}
+			if ( entry.indexOf( '.' ) < 0 ) {
+				if ( labels.indexOf( entry ) > -1 ) {
+					return true;
+				}
+			} else if ( host === entry || host.slice( -( entry.length + 1 ) ) === '.' + entry ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Channel of an untagged landing from its referrer host, in the order
+	 * AI assistant, search engine, social network, else referral; no host
+	 * means direct.
+	 *
+	 * @param {string} host Lower-cased external referrer host ('' when none).
+	 * @return {string} Channel slug.
+	 */
+	function referrerChannel( host ) {
+		var hosts = config.hosts || {};
+		if ( ! host ) {
+			return 'direct';
+		}
+		if ( hostIn( host, hosts.ai ) ) {
+			return 'ai_assistant';
+		}
+		if ( hostIn( host, hosts.search ) ) {
+			return 'organic_search';
+		}
+		if ( hostIn( host, hosts.social ) ) {
+			return 'organic_social';
+		}
+		return 'referral';
+	}
+
+	/**
 	 * Apply a consent state: a withdrawal deletes the attribution cookies
 	 * and drops the held touch; a grant writes the held touch.
 	 *
@@ -432,28 +581,35 @@
 	/**
 	 * Record the visit: record the attribution touch, POST the collect beacon.
 	 *
-	 * Self-gates on the presence of whitelisted params in location.search —
-	 * a no-op on untagged page loads. Always parses the params and hands
-	 * the touch to recordTouch(), so a reload while consent is undecided
-	 * still holds the touch; the collect is deduplicated per tab inside
-	 * sendCollect() and, only when events are gated on consent, deferred
-	 * with the touch until consent is granted.
+	 * A URL with whitelisted params is a tagged visit: the params are always
+	 * parsed and the touch handed to recordTouch(), so a reload while
+	 * consent is undecided still holds the touch; the collect is
+	 * deduplicated per tab inside sendCollect() and, only when events are
+	 * gated on consent, deferred with the touch until consent is granted.
+	 *
+	 * An untagged load is a landing visit when visit tracking is on, the
+	 * tab has not reported a landing yet (`utmat_visit`) and the referrer
+	 * is not this site (so a tab opened from an internal link is never a
+	 * landing). Its touch is { ch, rh, lp, ts }; a direct landing never
+	 * writes the cookie. The visit request waits with the touch when events
+	 * are gated and consent is undecided, and is dropped when denied.
 	 *
 	 * @param {string} state Result of consentState() at load.
 	 */
 	function trackVisit( state ) {
 		var config = window.utmatBeacon;
 		var search = window.location.search;
+		var pairs, fields, touch, found, i, eq, key, value, host, landed;
 
-		if ( ! config || ! config.endpoint || search.length < 2 ) {
+		if ( ! config || ! config.endpoint ) {
 			return;
 		}
 
-		var pairs = search.substring( 1 ).split( '&' );
-		var fields = [];
-		var touch = {};
-		var found = false;
-		var i, eq, key, value;
+		pairs = search.length < 2 ? [] : search.substring( 1 ).split( '&' );
+		fields = [];
+		touch = {};
+		found = false;
+		host = referrerHost();
 
 		for ( i = 0; i < pairs.length; i++ ) {
 			eq = pairs[ i ].indexOf( '=' );
@@ -473,21 +629,56 @@
 			}
 		}
 
-		if ( ! found ) {
+		if ( found ) {
+			// --- Tagged visit. Attribution cookie: record BEFORE sending. ---
+			if ( host && host !== window.location.hostname.toLowerCase() ) {
+				touch.rh = host.slice( 0, 255 );
+			}
+			touch.lp = window.location.href.slice( 0, 255 );
+			touch.ts = Math.floor( Date.now() / 1000 );
+			recordTouch( touch );
+			markVisit();
+
+			// Events carry no cookie, so the collect goes out regardless of
+			// consent unless the site gated events; then it waits with the touch.
+			if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
+				fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
+				fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
+				sendCollect( fields, search );
+			}
 			return;
 		}
 
-		// --- Attribution cookie: record BEFORE sending the beacon. ---
-		touch.lp = window.location.href.slice( 0, 255 );
-		touch.ts = Math.floor( Date.now() / 1000 );
-		recordTouch( touch );
+		// --- Untagged load: a landing visit, once per tab. ---
+		if ( ! config.visitEnabled || host === window.location.hostname.toLowerCase() ) {
+			return;
+		}
+		landed = false;
+		try {
+			landed = !! window.sessionStorage.getItem( 'utmat_visit' );
+		} catch ( e ) {
+			// sessionStorage unavailable — rely on the server-side dedup.
+		}
+		if ( landed ) {
+			return;
+		}
 
-		// Events carry no cookie, so the collect goes out regardless of
-		// consent unless the site gated events; then it waits with the touch.
+		touch = {
+			ch: referrerChannel( host ),
+			lp: window.location.href.slice( 0, 255 ),
+			ts: Math.floor( Date.now() / 1000 ),
+		};
+		if ( host ) {
+			touch.rh = host.slice( 0, 255 );
+		}
+		if ( 'direct' !== touch.ch ) {
+			recordTouch( touch );
+		}
+
 		if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
-			fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
-			fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
-			sendCollect( fields, search );
+			sendVisit( touch.lp, document.referrer || '' );
+		} else if ( 'undecided' === state ) {
+			pending = { kind: 'visit', touch: touch, ref: document.referrer || '' };
 		}
 	}
 

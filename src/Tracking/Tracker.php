@@ -343,7 +343,13 @@ class Tracker {
 	 * Consent API). That pair of checks is the only permitted gate for a
 	 * server-side cookie write.
 	 *
+	 * The touch also carries the external referrer host (`rh`) when the
+	 * request has one; the channel is derived by the reader, never written,
+	 * so both writers stay symmetrical.
+	 *
 	 * @since 1.0.0 Bails unless the visitor's server-side consent verdict is granted.
+	 * @since 1.0.0 Adds the referrer host to the touch.
+	 * @since 1.0.0 Drops the derived channel from the preserved first touch before re-serialising it.
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
@@ -358,9 +364,19 @@ class Tracker {
 			$touch[ $key ] = substr( $value, 0, 255 );
 		}
 		$touch['lp'] = substr( $landing, 0, 255 );
+
+		$referrer_host = isset( $_SERVER['HTTP_REFERER'] )
+			? strtolower( (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) )
+			: '';
+		$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		if ( '' !== $referrer_host && $referrer_host !== $site_host ) {
+			$touch['rh'] = substr( $referrer_host, 0, 255 );
+		}
 		$touch['ts'] = time();
 
 		$first = Attribution::get_first();
+		// The reader derives `ch` on every parse; keep it out of the cookie.
+		unset( $first['ch'] );
 		if ( empty( $first ) ) {
 			$first = $touch;
 		}
@@ -472,9 +488,12 @@ class Tracker {
 	 * absent. `order_total` is only written when present and numeric, so the
 	 * column stays NULL for plain click rows.
 	 *
-	 * A `referrer` key in $data overrides the Referer request header — the
-	 * collect endpoint passes the original document.referrer this way (the
-	 * beacon POST's own Referer header is just the page URL).
+	 * A `referrer` key in $data overrides the Referer request header even
+	 * when it is empty — the collect endpoint passes the original
+	 * document.referrer this way (the beacon POST's own Referer header is
+	 * just the page URL), and an empty one means the visitor arrived direct.
+	 * Callers that omit the key (short-link clicks, the PHP incoming path,
+	 * order conversions) get the request header.
 	 *
 	 * After a successful insert the deduplication transient is set so an
 	 * identical event within the dedup window is skipped (see is_duplicate()).
@@ -482,7 +501,9 @@ class Tracker {
 	 * each order is a distinct conversion — so they neither set nor honour
 	 * the transient.
 	 *
-	 * `channel` and `visitor_id` are written from $data (empty when absent).
+	 * `channel` is written from $data when given, else computed by
+	 * TrafficSource::channel() from the assembled row; `visitor_id` is
+	 * written from $data (empty when absent).
 	 * `custom` is built from a `custom` array in $data plus any configured
 	 * custom parameter passed flat (the incoming, collect and order paths
 	 * pass params that way) and stored as a JSON object; `meta` is a `meta`
@@ -490,6 +511,8 @@ class Tracker {
 	 * to store.
 	 *
 	 * @since 1.0.0 Writes the channel, visitor_id, custom and meta columns.
+	 * @since 1.0.0 Computes the channel when the caller passes none.
+	 * @since 1.0.0 An explicitly supplied empty referrer is stored as empty instead of falling back to the request header.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
@@ -499,7 +522,7 @@ class Tracker {
 		$ip  = self::client_ip();
 		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
 		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
-		if ( isset( $data['referrer'] ) && '' !== $data['referrer'] ) {
+		if ( array_key_exists( 'referrer', $data ) ) {
 			$ref = esc_url_raw( (string) $data['referrer'] );
 		}
 
@@ -528,6 +551,13 @@ class Tracker {
 			'channel'       => substr( $data['channel'] ?? '', 0, 20 ),
 			'visitor_id'    => substr( $data['visitor_id'] ?? '', 0, 36 ),
 		);
+
+		// Classify after the row is assembled so the resolved referrer is
+		// what gets classified. Conversions pass their touch's channel
+		// explicitly because a checkout's request-time referrer is the site.
+		if ( '' === $row['channel'] ) {
+			$row['channel'] = TrafficSource::channel( $row );
+		}
 
 		$formats = array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' );
 
@@ -607,9 +637,13 @@ class Tracker {
 	 * Build the deduplication cache key for an event.
 	 *
 	 * The key is the md5 of hashed IP + link_id + the key-sorted JSON of
-	 * the whitelisted UTM/click-ID values present in the event.
+	 * the whitelisted UTM/click-ID values present in the event. An untagged
+	 * landing visit has no such values, so its key also carries the
+	 * referrer host: a Google landing and a Facebook landing from one IP
+	 * within the window are two visits, reloads of the same landing are one.
 	 *
 	 * @since 1.0.0 Subset built from param_whitelist() so custom parameter values distinguish events.
+	 * @since 1.0.0 Visit rows add the referrer host to the key.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return string
 	 */
@@ -619,6 +653,9 @@ class Tracker {
 			if ( isset( $data[ $key ] ) && '' !== $data[ $key ] ) {
 				$subset[ $key ] = (string) $data[ $key ];
 			}
+		}
+		if ( 'visit' === ( $data['link_id'] ?? '' ) ) {
+			$subset['rh'] = strtolower( (string) wp_parse_url( (string) ( $data['referrer'] ?? '' ), PHP_URL_HOST ) );
 		}
 		ksort( $subset );
 

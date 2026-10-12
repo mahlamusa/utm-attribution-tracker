@@ -22,6 +22,7 @@ use UTMAT\Insights\Recorder;
 use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
+use UTMAT\Tracking\TrafficSource;
 use WC_Order;
 use WP_Post;
 
@@ -31,6 +32,7 @@ defined( 'ABSPATH' ) || exit;
  * WooCommerce
  *
  * @since 1.0.0 Order events carry custom parameter values.
+ * @since 1.0.0 Order events carry the touch's channel; the order screens show the channel and referrer host.
  */
 class WooCommerce {
 
@@ -147,9 +149,11 @@ class WooCommerce {
 	 * Echo the compact last-touch attribution summary for a list row.
 	 *
 	 * Shows `source / campaign` from the last touch (either part omitted
-	 * when empty), or an em dash when the order has no attribution meta.
+	 * when empty), the channel label when both are empty (an untagged
+	 * organic, social, AI-assistant or referral touch), or an em dash when
+	 * the order has no attribution meta.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Falls back to the channel label for touches without a source or campaign.
 	 * @param WC_Order $order The order for the current row.
 	 * @return void
 	 */
@@ -168,6 +172,12 @@ class WooCommerce {
 		);
 
 		if ( empty( $parts ) ) {
+			$labels  = TrafficSource::channel_labels();
+			$channel = (string) ( $last['ch'] ?? '' );
+			if ( isset( $labels[ $channel ] ) ) {
+				echo esc_html( $labels[ $channel ] );
+				return;
+			}
 			echo '<span aria-hidden="true">&mdash;</span>';
 			return;
 		}
@@ -225,6 +235,7 @@ class WooCommerce {
 	 * @since 1.0.0
 	 * @since 1.0.0 Also records the conversion for the recent-leads dashboard widget.
 	 * @since 1.0.0 Copies every Tracker::param_whitelist() value into the order event so custom parameters reach the custom column.
+	 * @since 1.0.0 The order event carries the last touch's channel.
 	 * @param WC_Order $order The order to attach attribution to.
 	 * @param bool     $save  Whether to call save() (true for the Store API path, where the order is already persisted).
 	 * @return void
@@ -261,6 +272,9 @@ class WooCommerce {
 			'touch'         => 'last',
 			'order_total'   => (float) $order->get_total(),
 			'destination'   => $destination,
+			// The checkout's own referrer is the site, so the row inherits
+			// the last touch's channel instead of being classified fresh.
+			'channel'       => (string) ( $last['ch'] ?? '' ),
 		);
 		foreach ( Tracker::param_whitelist() as $key ) {
 			$event[ $key ] = isset( $last[ $key ] ) ? (string) $last[ $key ] : '';
@@ -374,17 +388,23 @@ class WooCommerce {
 	/**
 	 * Render one labelled attribution column (first or last touch).
 	 *
-	 * Lists every stored parameter — the six UTMs, the four ad click IDs, the
-	 * landing page, and the timestamp (formatted in the site timezone via
-	 * wp_date()). All values are escaped at output: esc_html() for text and
-	 * esc_url() for the landing page link.
+	 * Lists every stored parameter — the six UTMs, the six ad click IDs, the
+	 * channel (rendered as its label), the referrer host, the landing page,
+	 * and the timestamp (formatted in the site timezone via wp_date()). All
+	 * values are escaped at output: esc_html() for text and esc_url() for
+	 * the landing page link.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Added the channel and referrer host rows.
 	 * @param string                    $title The column heading.
 	 * @param array<string, string|int> $touch The attribution set to render.
 	 * @return void
 	 */
 	private static function render_touch_column( string $title, array $touch ): void {
+		$channel_labels = TrafficSource::channel_labels();
+		if ( isset( $touch['ch'] ) && isset( $channel_labels[ $touch['ch'] ] ) ) {
+			$touch['ch'] = $channel_labels[ $touch['ch'] ];
+		}
+
 		$labels = array(
 			'utm_source'   => __( 'Source', 'utm-attribution-tracker' ),
 			'utm_medium'   => __( 'Medium', 'utm-attribution-tracker' ),
@@ -398,6 +418,8 @@ class WooCommerce {
 			'ttclid'       => __( 'TikTok click ID', 'utm-attribution-tracker' ),
 			'li_fat_id'    => __( 'LinkedIn click ID', 'utm-attribution-tracker' ),
 			'twclid'       => __( 'X / Twitter click ID', 'utm-attribution-tracker' ),
+			'ch'           => __( 'Channel', 'utm-attribution-tracker' ),
+			'rh'           => __( 'Referrer', 'utm-attribution-tracker' ),
 			'lp'           => __( 'Landing page', 'utm-attribution-tracker' ),
 			'ts'           => __( 'Time', 'utm-attribution-tracker' ),
 		);
