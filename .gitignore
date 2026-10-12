@@ -3,3 +3,4 @@ releases/
 .release/
 .claude/
 .DS_Store
+specs/
