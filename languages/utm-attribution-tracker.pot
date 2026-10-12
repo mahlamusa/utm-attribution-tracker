@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T11:26:24+00:00\n"
+"POT-Creation-Date: 2026-10-12T15:06:38+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utm-attribution-tracker\n"
@@ -55,28 +55,28 @@ msgstr ""
 msgid "%s ago"
 msgstr ""
 
-#: src/Admin/RestController.php:926
+#: src/Admin/RestController.php:927
 msgid "Please provide a preset name."
 msgstr ""
 
-#: src/Admin/RestController.php:957
+#: src/Admin/RestController.php:958
 msgid "Preset not found."
 msgstr ""
 
-#: src/Admin/RestController.php:1075
+#: src/Admin/RestController.php:1076
 msgid "Please provide a valid destination URL (http or https)."
 msgstr ""
 
-#: src/Admin/RestController.php:1130
+#: src/Admin/RestController.php:1131
 msgid "Please provide a valid link slug (the slug \"incoming\" is reserved)."
 msgstr ""
 
-#: src/Admin/RestController.php:1142
+#: src/Admin/RestController.php:1143
 msgid "A link with this slug already exists."
 msgstr ""
 
-#: src/Admin/RestController.php:1173
-#: src/Admin/RestController.php:1214
+#: src/Admin/RestController.php:1174
+#: src/Admin/RestController.php:1215
 msgid "Link not found."
 msgstr ""
 
@@ -871,7 +871,7 @@ msgstr ""
 msgid "Form fields"
 msgstr ""
 
-#. translators: 1: utmat_source field name, 2: utmat_campaign field name, 3: utmat_gclid field name, 4: utmat_landing field name, 5: the _first suffix.
+#. translators: 1: utm_source field name, 2: utm_campaign field name, 3: gclid field name, 4: landing_page field name, 5: the _first suffix.
 #: views/dashboard.php:527
 msgid "Add a hidden field named %1$s, %2$s, %3$s or %4$s (append %5$s for first touch) and it is filled from the attribution cookie. Contact Form 7, Gravity Forms, Ninja Forms and Elementor Pro Forms are supported."
 msgstr ""

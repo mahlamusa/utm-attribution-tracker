@@ -39,7 +39,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Forms & integrations:**
 
-* **Form attribution capture** — add a hidden field named `utmat_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms, plus Ninja Forms and Elementor Pro Forms.
+* **Form attribution capture** — add a hidden field named `utm_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms, plus Ninja Forms and Elementor Pro Forms.
 
 **Privacy & housekeeping:**
 
@@ -88,19 +88,19 @@ When a visitor who previously arrived through a tracked campaign places an order
 
 = How do I capture attribution in my lead forms? =
 
-Every tracked parameter is available to forms under a `utmat_*` field name: `utmat_source`, `utmat_medium`, `utmat_campaign`, `utmat_id`, `utmat_term`, `utmat_content`, `utmat_gclid`, `utmat_fbclid`, `utmat_msclkid`, `utmat_ttclid`, `utmat_li_fat_id`, `utmat_twclid`, and `utmat_landing` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utmat_source_first`) for the **first touch**.
+Every tracked parameter is available to forms under its own standard name: `utm_source`, `utm_medium`, `utm_campaign`, `utm_id`, `utm_term`, `utm_content`, `gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`, and `landing_page` (the landing page URL). These hold the visitor's **last touch**; append `_first` (e.g. `utm_source_first`, `landing_page_first`) for the **first touch**.
 
 **Any form plugin (generic):** add a hidden input (or text field) with one of the names above and it is auto-filled from the attribution cookie on page load. Fields that already have a value are never overwritten. Forms injected into the page after load (some popup builders) are not filled automatically.
 
-**Contact Form 7:** zero configuration — the last-touch fields are appended to every form as hidden fields automatically and arrive with each submission. Use special mail tags in your mail templates to include them in notification emails: `[_utmat_source]`, `[_utmat_campaign]`, etc. (any field name above works, including `_first` variants).
+**Contact Form 7:** zero configuration — the last-touch fields are appended to every form as hidden fields automatically and arrive with each submission. Use special mail tags in your mail templates to include them in notification emails: `[_utm_source]`, `[_utm_campaign]`, `[_gclid]`, `[_landing_page]`, etc. (any field name above with a leading underscore works, including `_first` variants such as `[_utm_source_first]`).
 
-**Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utmat_source` or `utmat_source_first`.
+**Gravity Forms:** add a Hidden field, enable "Allow field to be populated dynamically" under the field's Advanced tab, and set the parameter name to e.g. `utm_source` or `utm_source_first`.
 
 **Ninja Forms:** add a Hidden field to your form and set its default value to `{utmat:utm_source}` (or any other tracked parameter, e.g. `{utmat:gclid}`, `{utmat:landing}`, `{utmat:utm_source_first}`) to capture attribution.
 
-**Elementor (Pro Forms):** add a Hidden field to your form (Advanced tab), set its Field ID to `utmat_source` (or any other tracked parameter name, e.g. `utmat_source_first` for first touch), and it is auto-filled from attribution data on render. Requires Elementor Pro — free Elementor has no form builder.
+**Elementor (Pro Forms):** add a Hidden field to your form (Advanced tab), set its Field ID to `utm_source` (or any other tracked parameter name, e.g. `utm_source_first` for first touch), and it is auto-filled from attribution data on render. Requires Elementor Pro — free Elementor has no form builder.
 
-**Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utmat_source` — the generic layer fills it on page load.
+**Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utm_source` — the generic layer fills it on page load.
 
 **WPForms:** WPForms does not expose a field's HTML `name`, so the generic layer cannot target it. Use a Hidden Field with the `{query_var key="utm_source"}` Smart Tag to capture parameters from the URL the form is submitted on.
 

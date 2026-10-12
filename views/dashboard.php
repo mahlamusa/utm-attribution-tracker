@@ -523,12 +523,12 @@ $utmat_kses = array(
 								<?php
 								echo wp_kses(
 									sprintf(
-										/* translators: 1: utmat_source field name, 2: utmat_campaign field name, 3: utmat_gclid field name, 4: utmat_landing field name, 5: the _first suffix. */
+										/* translators: 1: utm_source field name, 2: utm_campaign field name, 3: gclid field name, 4: landing_page field name, 5: the _first suffix. */
 										__( 'Add a hidden field named %1$s, %2$s, %3$s or %4$s (append %5$s for first touch) and it is filled from the attribution cookie. Contact Form 7, Gravity Forms, Ninja Forms and Elementor Pro Forms are supported.', 'utm-attribution-tracker' ),
-										'<code>utmat_source</code>',
-										'<code>utmat_campaign</code>',
-										'<code>utmat_gclid</code>',
-										'<code>utmat_landing</code>',
+										'<code>utm_source</code>',
+										'<code>utm_campaign</code>',
+										'<code>gclid</code>',
+										'<code>landing_page</code>',
 										'<code>_first</code>'
 									),
 									$utmat_kses

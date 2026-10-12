@@ -16,9 +16,11 @@
  * the cookie write. Rules mirror the PHP fallback in Tracker.php: `first`
  * is preserved once set, `last` is overwritten, values capped at 255 chars.
  *
- * Finally the beacon fills `utmat_*` form fields from the attribution
- * cookie (fillFormFields below) so any form can capture attribution — this
- * runs on every page, after the cookie write, and only fills empty fields.
+ * Finally the beacon fills attribution form fields — named after the
+ * standard parameters (`utm_source`, `gclid`, `landing_page`, plus `_first`
+ * variants) — from the attribution cookie (fillFormFields below) so any form
+ * can capture attribution. This runs on every page, after the cookie write,
+ * and only fills empty fields.
  * Forms injected into the DOM after page load are not filled (documented
  * limitation — no MutationObserver).
  */
@@ -74,14 +76,15 @@
 	/**
 	 * Map an attribution param to its form-field name.
 	 *
-	 * Mirrors Attribution::field_name(): `utm_source` → `utmat_source`,
-	 * `gclid` → `utmat_gclid`.
+	 * Mirrors Attribution::field_name(): the field name is the standard
+	 * parameter name itself (`utm_source` → `utm_source`, `gclid` → `gclid`);
+	 * only the landing page key `lp` is renamed to `landing_page`.
 	 *
-	 * @param {string} param Whitelisted param key.
+	 * @param {string} param Whitelisted param key, or 'lp' for the landing page.
 	 * @return {string}
 	 */
 	function fieldName( param ) {
-		return 'utmat_' + ( param.indexOf( 'utm_' ) === 0 ? param.slice( 4 ) : param );
+		return 'lp' === param ? 'landing_page' : param;
 	}
 
 	/**
@@ -103,19 +106,44 @@
 			}
 		}
 		if ( typeof touch.lp === 'string' && touch.lp ) {
-			map[ 'utmat_landing' + suffix ] = touch.lp.slice( 0, 255 );
+			map[ fieldName( 'lp' ) + suffix ] = touch.lp.slice( 0, 255 );
 		}
 	}
 
 	/**
-	 * Fill `utmat_*` form fields from the attribution cookie.
+	 * Build the selector matching every recognised attribution field.
 	 *
-	 * Any input/textarea whose name is `utmat_source` … `utmat_ttclid`
-	 * or `utmat_landing` receives the last-touch value; the `_first`-suffixed
-	 * names receive the first-touch value. Only empty fields are filled — a
-	 * user-entered or server-rendered value is never overwritten. Values are
-	 * assigned via the .value property (no HTML parsing), so no escaping is
-	 * needed here.
+	 * Targets inputs and textareas by exact name — the whitelisted params
+	 * plus `landing_page`, each with and without the `_first` suffix — rather
+	 * than a name prefix, since the standard names share no common prefix.
+	 *
+	 * @return {string}
+	 */
+	function fieldSelector() {
+		var params = WHITELIST.concat( [ 'lp' ] );
+		var parts = [];
+		var i, name;
+		for ( i = 0; i < params.length; i++ ) {
+			name = fieldName( params[ i ] );
+			parts.push(
+				'input[name="' + name + '"]',
+				'input[name="' + name + '_first"]',
+				'textarea[name="' + name + '"]',
+				'textarea[name="' + name + '_first"]'
+			);
+		}
+		return parts.join( ', ' );
+	}
+
+	/**
+	 * Fill attribution form fields from the attribution cookie.
+	 *
+	 * Any input/textarea whose name is a tracked parameter (`utm_source` …
+	 * `twclid`) or `landing_page` receives the last-touch value; the
+	 * `_first`-suffixed names receive the first-touch value. Only empty
+	 * fields are filled — a user-entered or server-rendered value is never
+	 * overwritten. Values are assigned via the .value property (no HTML
+	 * parsing), so no escaping is needed here.
 	 */
 	function fillFormFields() {
 		var raw = readCookie( COOKIE_NAME );
@@ -136,7 +164,7 @@
 		addTouch( map, attr.last, '' );
 		addTouch( map, attr.first, '_first' );
 
-		nodes = document.querySelectorAll( 'input[name^="utmat_"], textarea[name^="utmat_"]' );
+		nodes = document.querySelectorAll( fieldSelector() );
 		for ( i = 0; i < nodes.length; i++ ) {
 			value = map[ nodes[ i ].name ];
 			if ( value && '' === nodes[ i ].value ) {

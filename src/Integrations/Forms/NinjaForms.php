@@ -122,11 +122,13 @@ class NinjaForms {
 	 * Built from the same source of truth Attribution::field_name() uses
 	 * (Tracker::PARAM_WHITELIST plus the `lp` landing-page param, renamed
 	 * `landing`) so the merge-tag list always matches the recognised field
-	 * names — e.g. `utm_source` => `utmat_source`, `gclid` =>
-	 * `utmat_gclid`, `landing` => `utmat_landing`, plus a
-	 * `_first`-suffixed variant of each for first-touch values.
+	 * names — e.g. `utm_source` => `utm_source`, `gclid` => `gclid`,
+	 * `landing` => `landing_page`, plus a `_first`-suffixed variant of
+	 * each for first-touch values. The tag namespace (`{utmat:…}`) and tag
+	 * params are unchanged; only the field names they map to follow the
+	 * standard parameter names.
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Mapped field names follow the standard parameter names.
 	 * @return array<string, string> Merge-tag param => full attribution field name.
 	 */
 	public static function merge_tag_params(): array {

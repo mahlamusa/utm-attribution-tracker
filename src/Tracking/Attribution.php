@@ -98,22 +98,19 @@ class Attribution {
 	 * Map an attribution param to its public form-field name.
 	 *
 	 * The convention (shared with the front-end beacon's fillFormFields) is
-	 * `utmat_` + the param without its `utm_` prefix: `utm_source` →
-	 * `utmat_source`, `gclid` → `utmat_gclid`. The landing page
-	 * (`lp`) becomes `utmat_landing`. First-touch variants append
-	 * `_first` to the returned name (handled by callers).
+	 * the industry-standard parameter name itself: `utm_source` →
+	 * `utm_source`, `gclid` → `gclid`. Only the landing page (`lp`) is
+	 * renamed, to `landing_page`. First-touch variants append `_first` to
+	 * the returned name (handled by callers).
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Field names switched from the prefixed `utmat_*` convention to the standard parameter names.
 	 *
 	 * @param string $param Whitelisted param key, or 'lp' for the landing page.
 	 *
 	 * @return string
 	 */
 	public static function field_name( string $param ): string {
-		if ( 'lp' === $param ) {
-			$param = 'landing';
-		}
-		return 'utmat_' . ( ( 0 === strpos( $param, 'utm_' ) ) ? substr( $param, 4 ) : $param );
+		return ( 'lp' === $param ) ? 'landing_page' : $param;
 	}
 
 	/**

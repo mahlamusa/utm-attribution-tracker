@@ -3,9 +3,10 @@
  * Contact Form 7 integration — zero-config form attribution capture.
  *
  * Appends the visitor's last-touch attribution parameters to every CF7 form
- * as hidden fields (named `utmat_*`) so submissions carry source data,
- * and resolves `[_utmat_*]` special mail tags in mail templates from
- * the submitted fields.
+ * as hidden fields (named after the parameter itself: `utm_source`,
+ * `gclid`, `landing_page`, …) so submissions carry source data, and
+ * resolves the matching `[_utm_source]`-style special mail tags in mail
+ * templates from the submitted fields.
  *
  * Hooks register only when Contact Form 7 is active (`WPCF7_VERSION`
  * defined, checked at `plugins_loaded` priority 20). Without CF7 the class
@@ -88,17 +89,20 @@ class ContactForm7 {
 	}
 
 	/**
-	 * Resolve `[_utmat_*]` special mail tags from the submitted fields.
+	 * Resolve the attribution special mail tags from the submitted fields.
 	 *
 	 * Supports every recognised field name, including `_first` variants:
-	 * `[_utmat_source]`, `[_utmat_campaign_first]`, etc. Reads the
-	 * value from the submitted POST fields (filled server-side or by the
-	 * beacon), so the mail body reflects exactly what the form submitted.
+	 * `[_utm_source]`, `[_utm_campaign_first]`, `[_gclid]`, `[_landing_page]`,
+	 * etc. CF7 special mail tags carry a leading underscore, which is stripped
+	 * to find the field. Reads the value from the submitted POST fields (filled
+	 * server-side or by the beacon), so the mail body reflects exactly what the
+	 * form submitted. None of these names collide with CF7's own special tags
+	 * (`_url`, `_user_*`, `_post_*`, `_site_*`, `_date`, `_time`, …).
 	 *
-	 * @since 1.0.0
+	 * @since 1.0.0 Tag names follow the standard field names (`[_utm_source]` instead of a prefixed variant).
 	 *
 	 * @param string $output The tag output resolved so far.
-	 * @param string $name   The tag name including its leading underscore, e.g. `_utmat_source`.
+	 * @param string $name   The tag name including its leading underscore, e.g. `_utm_source`.
 	 * @param bool   $html   Whether the mail body is HTML.
 	 *
 	 * @return string

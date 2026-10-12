@@ -3,7 +3,7 @@
  * Gravity Forms integration — dynamic field population.
  *
  * Registers a `gform_field_value_{name}` filter for every recognised
- * attribution field name (`utmat_source` … `utmat_landing`, plus
+ * attribution field name (`utm_source` … `twclid`, `landing_page`, plus
  * `_first` variants) so users can add a Hidden field with "Allow field to
  * be populated dynamically" and the matching parameter name to capture
  * attribution — values come from the Attribution cookie reader server-side.
