@@ -17,8 +17,7 @@
  * sql_channel_expression() reads the stored channel and maps legacy rows
  * (written before the column existed) through the legacy rule set.
  *
- * @since 1.0.0 Added the channel taxonomy, the classifier and the referrer host lists.
- * @since 1.0.0 The source first-label shortcut ignores subdomain entries.
+ * @since 1.0.0
  *
  * @package UTMAT\Tracking
  */
@@ -31,8 +30,6 @@ defined( 'ABSPATH' ) || exit;
  * TrafficSource
  *
  * @since 1.0.0
- * @since 1.0.0 Added the channel taxonomy, channel(), channel_labels(), sql_channel_expression() and the host lists.
- * @since 1.0.0 source_in_list() applies the first-label shortcut to brand entries only.
  */
 class TrafficSource {
 
@@ -235,7 +232,6 @@ class TrafficSource {
 	 * `meta.ai` entry.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added meta.com.
 	 *
 	 * @var string[]
 	 */
@@ -521,7 +517,6 @@ class TrafficSource {
 	 * filed as an AI assistant or a search engine.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 The first-label shortcut ignores entries with a subdomain.
 	 * @param string   $source The utm_source value.
 	 * @param string[] $hosts  Host list entries.
 	 * @return bool
@@ -585,7 +580,6 @@ class TrafficSource {
 	 * CHANNELS falls back to the computed one.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Rule 2 no longer fires for a source that also names a social network.
 	 * @param array<string, mixed> $row Event-shaped row (utm_*, click IDs, `referrer` URL or `rh` host). Missing keys are treated as empty.
 	 * @return string One of the CHANNELS slugs.
 	 */
@@ -696,7 +690,7 @@ class TrafficSource {
 	 * organic, social, AI-assistant and referral visits) counts as having a
 	 * referrer, so such leads read as organic/referral rather than direct.
 	 *
-	 * @since 1.0.0 An `rh` key stands in for an empty `referrer`.
+	 * @since 1.0.0
 	 * @param array<string, mixed> $event Associative event row; keys match the `events` table columns. Missing keys are treated as empty strings.
 	 * @return string One of the machine-readable bucket constants (GOOGLE_ADS, PAID, DIRECT, ORGANIC_REFERRAL, TAGGED).
 	 */

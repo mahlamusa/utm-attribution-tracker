@@ -14,10 +14,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 /**
  * Remove the events table, options, transients, and cron hook for the current site.
  *
- * @since 1.0.0 Table name passed through esc_sql() before interpolation.
- * @since 1.0.0 Also deletes the custom parameters option.
- * @since 1.0.0 Also deletes the consent category option.
- * @since 1.0.0 Also deletes the untagged-visit tracking option.
+ * @since 1.0.0
  * @return void
  */
 function utmat_uninstall_site(): void {

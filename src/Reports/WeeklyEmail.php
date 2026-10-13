@@ -24,7 +24,6 @@ defined( 'ABSPATH' ) || exit;
  * WeeklyEmail
  *
  * @since 1.0.0
- * @since 1.0.0 Click totals exclude untagged landing visits.
  */
 class WeeklyEmail {
 
@@ -90,7 +89,7 @@ class WeeklyEmail {
 	 * the resolved recipient is empty. Pass `$force` to send regardless of
 	 * the toggle — used by the dashboard's "Send test email" button.
 	 *
-	 * @since 1.0.0 Added the $force parameter and the bool return.
+	 * @since 1.0.0
 	 * @param bool $force Send even when the weekly toggle is off.
 	 * @return bool Whether the mail was handed to wp_mail() successfully.
 	 */
@@ -133,8 +132,7 @@ class WeeklyEmail {
 	 * Untagged landing visits (`link_id = 'visit'`) are not clicks and stay
 	 * out of the totals.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
-	 * @since 1.0.0 The click totals exclude untagged landing visits.
+	 * @since 1.0.0
 	 * @return string
 	 */
 	private static function build_html(): string {

@@ -86,8 +86,7 @@ class Retention {
 	 * always swept; the event-row delete does nothing when the retention
 	 * window is 0 (keep forever).
 	 *
-	 * @since 1.0.0 Also sweeps expired plugin transients.
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function prune(): void {
@@ -116,7 +115,7 @@ class Retention {
 	 * accumulate in wp_options on sites without a persistent object cache.
 	 * No-ops when an external object cache handles transients.
 	 *
-	 * @since 1.0.0 Widened the phpcs annotation to cover the no-caching sniff.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	private static function cleanup_expired_transients(): void {

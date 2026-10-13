@@ -114,7 +114,7 @@ class LinkManager {
 	 * enabled (the rewrite rule in Rewrites only works then); falls back to
 	 * the query-string form on plain permalinks.
 	 *
-	 * @since 1.0.0 Added the pretty `/go/{slug}/` form.
+	 * @since 1.0.0
 	 * @param string $id Link slug.
 	 * @return string
 	 */

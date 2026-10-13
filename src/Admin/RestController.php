@@ -14,7 +14,7 @@
  *
  * All routes require the `manage_options` capability.
  *
- * @since 1.0.0 Stats report channels and exclude untagged landing visits; settings carry the visit-tracking switch.
+ * @since 1.0.0
  *
  * @package UTMAT\Admin
  */
@@ -38,8 +38,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * RestController
  *
- * @since 1.0.0 The settings route accepts the consent category.
- * @since 1.0.0 Added `by_channel`, the export `include_visits` and `channel` column, the `track_visits` setting and the reserved `visit` slug.
+ * @since 1.0.0
  */
 class RestController {
 
@@ -47,8 +46,6 @@ class RestController {
 	 * Register REST routes.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the consent_category argument to the settings route.
-	 * @since 1.0.0 Added the track_visits settings argument and the export include_visits argument.
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -271,8 +268,7 @@ class RestController {
 	 * double-counted as a click, and untagged landing visits (`link_id =
 	 * 'visit'`), which only the `by_channel` breakdown reports.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
-	 * @since 1.0.0 Click metrics exclude untagged landing visits; `by_channel` replaces `by_traffic_source`.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -643,7 +639,7 @@ class RestController {
 	 * bounds a custom past date range instead of leaking events after it. An
 	 * optional campaign filter is appended.
 	 *
-	 * @since 1.0.0 Added the upper bound so a custom `until` date is respected.
+	 * @since 1.0.0
 	 * @param int               $period    Period length in days.
 	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
 	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
@@ -675,7 +671,7 @@ class RestController {
 	 * the trend indicator (that window can end mid-day; this one always ends
 	 * at a local midnight so it lines up with $by_day's date buckets one-for-one).
 	 *
-	 * @since 1.0.0 Now takes the caller-resolved $now_local instead of the live instant.
+	 * @since 1.0.0
 	 * @param int               $period    Period length in days.
 	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
 	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
@@ -712,7 +708,7 @@ class RestController {
 	 * only a few hours of today in it. Same optional campaign filter as
 	 * {@see build_where()}.
 	 *
-	 * @since 1.0.0 Previous window now matches the current window's elapsed duration, and takes the caller-resolved $now_local.
+	 * @since 1.0.0
 	 * @param int               $period    Period length in days.
 	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
 	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
@@ -751,8 +747,7 @@ class RestController {
 	 * Untagged landing visits are left out unless `include_visits` is set;
 	 * every row carries its `channel`.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
-	 * @since 1.0.0 Added the `channel` column and the `include_visits` opt-in.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -834,9 +829,7 @@ class RestController {
 	 * The weekly report cron is scheduled or unscheduled here, at save
 	 * time, so no scheduling work happens on normal page loads.
 	 *
-	 * @since 1.0.0 Added the webhook_url setting.
-	 * @since 1.0.0 Added the consent_category setting.
-	 * @since 1.0.0 Added the track_visits setting.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -886,8 +879,7 @@ class RestController {
 	 * map of previously used source/medium/campaign values for the add-link
 	 * form datalists.
 	 *
-	 * @since 1.0.0 Response shape changed from a bare array to `{ links, suggestions }`.
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1016,7 +1008,7 @@ class RestController {
 	 * conversion) with the values stored on managed links, deduped and capped
 	 * at 20 per field.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0
 	 * @param array<string, array<string, string>> $links Managed links keyed by slug.
 	 * @return array<string, string[]> Keys `sources`, `mediums`, `campaigns`.
 	 */
@@ -1106,7 +1098,7 @@ class RestController {
 	 * dashboard JS applies the same normalization for immediate feedback,
 	 * but this server-side pass is authoritative.
 	 *
-	 * @since 1.0.0 Added UTM value normalization.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return array<string, string>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
 	 */
@@ -1160,7 +1152,7 @@ class RestController {
 	 * name event kinds in the events table), already in use, or the
 	 * destination is not a valid http(s) URL.
 	 *
-	 * @since 1.0.0 Also reserves the `visit` slug.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1204,7 +1196,7 @@ class RestController {
 	 * link. The slug is immutable — renaming would orphan recorded events.
 	 * Returns 404 for an unknown slug and 400 for an invalid destination.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */

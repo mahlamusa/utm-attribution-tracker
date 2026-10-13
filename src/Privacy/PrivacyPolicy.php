@@ -15,7 +15,6 @@ defined( 'ABSPATH' ) || exit;
  * PrivacyPolicy
  *
  * @since 1.0.0
- * @since 1.0.0 The opening sentence follows the untagged-visit tracking setting.
  */
 class PrivacyPolicy {
 
@@ -28,7 +27,7 @@ class PrivacyPolicy {
 	 * on (the default) it says the first page of every visit is recorded,
 	 * off it covers campaign links only.
 	 *
-	 * @since 1.0.0 The opening sentence is chosen by the utmat_track_visits option.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function register(): void {

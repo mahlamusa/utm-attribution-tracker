@@ -11,7 +11,7 @@
  * endpoint carries its own defenses — strict param whitelist, same-origin
  * check, per-IP rate limiting, bot filtering, and deduplication.
  *
- * @since 1.0.0 Added the untagged landing visit path.
+ * @since 1.0.0
  *
  * @package UTMAT\Rest
  */
@@ -27,8 +27,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * CollectController
  *
- * @since 1.0.0 Route arguments and extraction follow Tracker::param_whitelist().
- * @since 1.0.0 Added the `visit` argument and the landing-visit branch.
+ * @since 1.0.0
  */
 class CollectController {
 
@@ -44,8 +43,7 @@ class CollectController {
 	/**
 	 * Register the collect REST route.
 	 *
-	 * @since 1.0.0 One argument per Tracker::param_whitelist() entry, so custom parameters are accepted.
-	 * @since 1.0.0 Added the boolean `visit` argument.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -95,8 +93,7 @@ class CollectController {
 	 * get a 200 with `recorded: false` so they learn nothing; duplicates
 	 * within the dedup window respond the same way.
 	 *
-	 * @since 1.0.0 Extracts every Tracker::param_whitelist() entry, custom parameters included.
-	 * @since 1.0.0 Records untagged landing visits when the `visit` argument is set.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -175,7 +172,7 @@ class CollectController {
 	 * same-origin POST/sendBeacon, so requests with neither header are
 	 * rejected, as are downgraded-scheme origins (http on an https site).
 	 *
-	 * @since 1.0.0 Scheme is now compared in addition to the host.
+	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return bool
 	 */
@@ -225,7 +222,7 @@ class CollectController {
 	 * (`utmat_rl_{ip_hash}`, 60 s TTL); the counter is only
 	 * incremented for requests that pass.
 	 *
-	 * @since 1.0.0 Limit is now filterable via utmat_rate_limit.
+	 * @since 1.0.0
 	 * @return bool True when the current request exceeds the limit.
 	 */
 	private static function is_rate_limited(): bool {

@@ -31,8 +31,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * WooCommerce
  *
- * @since 1.0.0 Order events carry custom parameter values.
- * @since 1.0.0 Order events carry the touch's channel; the order screens show the channel and referrer host.
+ * @since 1.0.0
  */
 class WooCommerce {
 
@@ -153,7 +152,7 @@ class WooCommerce {
 	 * organic, social, AI-assistant or referral touch), or an em dash when
 	 * the order has no attribution meta.
 	 *
-	 * @since 1.0.0 Falls back to the channel label for touches without a source or campaign.
+	 * @since 1.0.0
 	 * @param WC_Order $order The order for the current row.
 	 * @return void
 	 */
@@ -233,9 +232,6 @@ class WooCommerce {
 	 * distinct conversion and must never be deduplicated away.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Also records the conversion for the recent-leads dashboard widget.
-	 * @since 1.0.0 Copies every Tracker::param_whitelist() value into the order event so custom parameters reach the custom column.
-	 * @since 1.0.0 The order event carries the last touch's channel.
 	 * @param WC_Order $order The order to attach attribution to.
 	 * @param bool     $save  Whether to call save() (true for the Store API path, where the order is already persisted).
 	 * @return void
@@ -394,7 +390,7 @@ class WooCommerce {
 	 * values are escaped at output: esc_html() for text and esc_url() for
 	 * the landing page link.
 	 *
-	 * @since 1.0.0 Added the channel and referrer host rows.
+	 * @since 1.0.0
 	 * @param string                    $title The column heading.
 	 * @param array<string, string|int> $touch The attribution set to render.
 	 * @return void

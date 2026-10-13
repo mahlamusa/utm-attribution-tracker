@@ -7,7 +7,6 @@
  * through the utmat/v1 REST routes.
  *
  * @since 1.0.0
- * @since 1.0.0 Added the Consent group with its server-rendered WP Consent API status hint.
  *
  * @package UTMAT\Admin
  */

@@ -2,7 +2,7 @@
 /**
  * DB Schema — creates and upgrades the utmat_events table.
  *
- * @since 1.0.0 Version 5 adds the channel, visitor_id, custom and meta columns.
+ * @since 1.0.0
  *
  * @package UTMAT\DB
  */
@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Schema
  *
- * @since 1.0.0 Bumped to version 5 for the channel, visitor_id, custom and meta columns.
+ * @since 1.0.0
  */
 class Schema {
 
@@ -65,7 +65,7 @@ class Schema {
 	 * clause on purpose: TEXT columns cannot have one on older MySQL, and
 	 * dbDelta would otherwise try to re-alter them on every run.
 	 *
-	 * @since 1.0.0 Added channel, visitor_id, custom and meta plus the visitor_id and channel keys.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	private static function run_dbdelta(): void {
@@ -119,7 +119,7 @@ class Schema {
 	/**
 	 * Drop the events table.
 	 *
-	 * @since 1.0.0 Table name passed through esc_sql() before interpolation.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function drop(): void {

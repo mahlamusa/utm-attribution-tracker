@@ -17,8 +17,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Dashboard
  *
- * @since 1.0.0 Localizes the consent category setting.
- * @since 1.0.0 Localizes the untagged-visit tracking setting.
+ * @since 1.0.0
  */
 class Dashboard {
 
@@ -54,8 +53,6 @@ class Dashboard {
 	 * Enqueue Chart.js and dashboard assets on this page only.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Localizes the consent category setting.
-	 * @since 1.0.0 Localizes the untagged-visit tracking setting.
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -157,7 +154,7 @@ class Dashboard {
 	 * wonder. Detection is a fixed allow-list of well-known plugins; an
 	 * unrecognised cache returns an empty string and the notice is skipped.
 	 *
-	 * @since 1.0.0 Made public so Diagnostics\Checks::caching() can reuse the same allow-list.
+	 * @since 1.0.0
 	 * @return string The detected plugin's display name, or '' when none matched.
 	 */
 	public static function detect_cache_plugin(): string {

@@ -10,8 +10,7 @@
  * Filter `utmat_track_logged_in_users` (bool, default false) controls whether
  * administrator clicks are recorded.
  *
- * @since 1.0.0 Added the custom-parameter accessors and the channel, visitor_id, custom and meta row fields.
- * @since 1.0.0 The cookie writer preserves a beacon-stored first-touch channel.
+ * @since 1.0.0
  *
  * @package UTMAT\Tracking
  */
@@ -26,9 +25,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Tracker
  *
- * @since 1.0.0 Added param_whitelist() and the custom-parameter validation helpers.
- * @since 1.0.0 Cookie writes and, when opted in, passive event records honour the visitor's consent verdict.
- * @since 1.0.0 maybe_set_attribution_cookie() preserves a beacon-stored first-touch channel.
+ * @since 1.0.0
  */
 class Tracker {
 
@@ -40,7 +37,7 @@ class Tracker {
 	 * front-end beacon via `utmatBeacon.params`) use param_whitelist(), which
 	 * merges in the admin-defined custom parameters.
 	 *
-	 * @since 1.0.0 Runtime readers moved to param_whitelist(); the constant is the built-in list only.
+	 * @since 1.0.0
 	 *
 	 * @var string[]
 	 */
@@ -249,8 +246,7 @@ class Tracker {
 	/**
 	 * Main entry-point hooked on `init` (priority 1).
 	 *
-	 * @since 1.0.0 Passive capture reads param_whitelist() so custom parameters count as tagged visits.
-	 * @since 1.0.0 The passive-incoming record honours the consent event gate; the redirect path never does.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function handle_incoming_request(): void {
@@ -351,10 +347,7 @@ class Tracker {
 	 * landing is preserved verbatim when the first touch is re-serialised, so
 	 * both writers stay symmetrical.
 	 *
-	 * @since 1.0.0 Bails unless the visitor's server-side consent verdict is granted.
-	 * @since 1.0.0 Adds the referrer host to the touch.
-	 * @since 1.0.0 Drops the derived channel from the preserved first touch before re-serialising it.
-	 * @since 1.0.0 Preserves a beacon-stored channel in the first touch instead of dropping it.
+	 * @since 1.0.0
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
@@ -520,9 +513,7 @@ class Tracker {
 	 * array stored as JSON. Both columns are left NULL when there is nothing
 	 * to store.
 	 *
-	 * @since 1.0.0 Writes the channel, visitor_id, custom and meta columns.
-	 * @since 1.0.0 Computes the channel when the caller passes none.
-	 * @since 1.0.0 An explicitly supplied empty referrer is stored as empty instead of falling back to the request header.
+	 * @since 1.0.0
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
@@ -652,8 +643,7 @@ class Tracker {
 	 * referrer host: a Google landing and a Facebook landing from one IP
 	 * within the window are two visits, reloads of the same landing are one.
 	 *
-	 * @since 1.0.0 Subset built from param_whitelist() so custom parameter values distinguish events.
-	 * @since 1.0.0 Visit rows add the referrer host to the key.
+	 * @since 1.0.0
 	 * @param array<string, mixed> $data Event fields.
 	 * @return string
 	 */

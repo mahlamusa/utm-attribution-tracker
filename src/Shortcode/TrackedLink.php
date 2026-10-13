@@ -28,7 +28,7 @@ class TrackedLink {
 	/**
 	 * Render the [utmat_link] shortcode.
 	 *
-	 * @since 1.0.0 Enclosed content is now rendered as the link text.
+	 * @since 1.0.0
 	 * @param array<string, string>|string $atts    Shortcode attributes.
 	 * @param string|null                  $content Shortcode inner content; wins over the label attribute.
 	 * @return string HTML anchor tag or empty string.

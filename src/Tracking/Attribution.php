@@ -13,9 +13,7 @@
  * WP Consent API category (consented()), the event-gating filter and the
  * cookie registration with the Consent API.
  *
- * @since 1.0.0 Added the consent category setting, the server-side consent verdict and the Consent API cookie registration.
- * @since 1.0.0 Touches carry a channel and a referrer host; touch_keys() is the canonical key set.
- * @since 1.0.0 Added stored_first_channel() for the PHP cookie writer.
+ * @since 1.0.0
  *
  * @package UTMAT\Tracking
  */
@@ -27,10 +25,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Attribution
  *
- * @since 1.0.0 Field and allow-lists derive from Tracker::param_whitelist() instead of the built-in constant.
- * @since 1.0.0 enabled() is the master switch only; per-visitor consent moved to consented().
- * @since 1.0.0 Added touch_keys(); the channel and referrer host are form fields and the channel is recomputed on read.
- * @since 1.0.0 Added stored_first_channel(), the raw first-touch channel for the PHP cookie writer.
+ * @since 1.0.0
  */
 class Attribution {
 
@@ -174,8 +169,7 @@ class Attribution {
 	 * `referrer_host`. First-touch variants append `_first` to the returned
 	 * name (handled by callers).
 	 *
-	 * @since 1.0.0 Field names switched from the prefixed `utmat_*` convention to the standard parameter names.
-	 * @since 1.0.0 Added the `ch` and `rh` entries.
+	 * @since 1.0.0
 	 *
 	 * @param string $param Whitelisted param key, or 'lp', 'ch' or 'rh'.
 	 *
@@ -193,8 +187,7 @@ class Attribution {
 	/**
 	 * All recognised form-field names — last-touch and `_first` variants.
 	 *
-	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameters get field names too.
-	 * @since 1.0.0 Built from touch_keys(), so channel and referrer_host are included.
+	 * @since 1.0.0
 	 * @return string[]
 	 */
 	public static function field_names(): array {
@@ -216,8 +209,7 @@ class Attribution {
 	 * them (Contact Form 7, Gravity Forms) esc_attr() at render; any caller
 	 * emitting markup itself must escape.
 	 *
-	 * @since 1.0.0 Built from Tracker::param_whitelist() so custom parameter values are mapped too.
-	 * @since 1.0.0 Built from touch_keys(), so channel and referrer_host values are mapped too.
+	 * @since 1.0.0
 	 * @return array<string, string>
 	 */
 	public static function field_map(): array {
@@ -246,7 +238,7 @@ class Attribution {
 	 * settings card, default 90); the filter of the same name runs last and
 	 * stays authoritative for code-level overrides.
 	 *
-	 * @since 1.0.0 Now backed by the utmat_cookie_days option.
+	 * @since 1.0.0
 	 * @return int
 	 */
 	public static function cookie_days(): int {
@@ -272,7 +264,7 @@ class Attribution {
 	 * the browser. A site that must never write the cookie returns false
 	 * from the filter.
 	 *
-	 * @since 1.0.0 No longer folds the WP Consent API verdict in; that moved to consented().
+	 * @since 1.0.0
 	 * @return bool
 	 */
 	public static function enabled(): bool {
@@ -462,8 +454,7 @@ class Attribution {
 	 * touch carries parameters or a referrer host (direct visits never
 	 * write), so the recomputation always has its input.
 	 *
-	 * @since 1.0.0 Allow-list built from Tracker::param_whitelist() so custom parameter keys survive the parse.
-	 * @since 1.0.0 Allow-list is touch_keys() plus `ts`; `rh` is sanitised as a host and `ch` is always recomputed.
+	 * @since 1.0.0
 	 * @param string $set Which set to extract: 'first' or 'last'.
 	 * @return array<string, string|int>
 	 */
