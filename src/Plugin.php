@@ -20,10 +20,15 @@ use UTMAT\Admin\Dashboard;
 use UTMAT\Admin\DashboardWidget;
 use UTMAT\Admin\RestController;
 use UTMAT\Integrations\WooCommerce;
+use UTMAT\Integrations\Forms\Bricks;
 use UTMAT\Integrations\Forms\ContactForm7;
 use UTMAT\Integrations\Forms\Elementor;
+use UTMAT\Integrations\Forms\FluentForms;
+use UTMAT\Integrations\Forms\Formidable;
+use UTMAT\Integrations\Forms\Forminator;
 use UTMAT\Integrations\Forms\GravityForms;
 use UTMAT\Integrations\Forms\NinjaForms;
+use UTMAT\Integrations\Forms\WPForms;
 use UTMAT\Rest\CollectController;
 use UTMAT\Shortcode\TrackedLink;
 
@@ -32,9 +37,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin — the singleton returned by Plugin::instance().
  *
- * @since 1.0.0 The beacon config now carries the parameter whitelist.
- * @since 1.0.0 The beacon config carries the consent gating keys and the plugin registers with the WP Consent API.
- * @since 1.0.0 The beacon config carries the visit-tracking switch and the referrer host lists.
+ * @since 1.0.0
  */
 class Plugin {
 
@@ -69,10 +72,6 @@ class Plugin {
 	 * Register all WordPress hooks.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the Ninja Forms adapter to the form-plugin wiring.
-	 * @since 1.0.0 Added the recent-leads Dashboard widget.
-	 * @since 1.0.0 Dropped the manual text-domain load; WordPress.org loads translations for the plugin slug automatically.
-	 * @since 1.0.0 Registers the plugin and its cookie with the WP Consent API.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -123,6 +122,14 @@ class Plugin {
 		add_action( 'plugins_loaded', array( GravityForms::class, 'maybe_init' ), 20 );
 		add_action( 'plugins_loaded', array( NinjaForms::class, 'maybe_init' ), 20 );
 		add_action( 'plugins_loaded', array( Elementor::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( WPForms::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( FluentForms::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( Formidable::class, 'maybe_init' ), 20 );
+		add_action( 'plugins_loaded', array( Forminator::class, 'maybe_init' ), 20 );
+
+		// Bricks is a theme: nothing of it exists at `plugins_loaded`, so its
+		// adapter detects it once the theme has been set up.
+		add_action( 'after_setup_theme', array( Bricks::class, 'maybe_init' ) );
 
 		// Admin dashboard.
 		if ( is_admin() ) {
@@ -167,9 +174,7 @@ class Plugin {
 	 * path's exclusion; `hosts` carries the three filtered referrer host
 	 * lists the beacon classifies the landing with.
 	 *
-	 * @since 1.0.0 Added the params whitelist to the localized config.
-	 * @since 1.0.0 Added the conditional wp-consent-api dependency and the consentApi, consentCategory and gateEvents keys.
-	 * @since 1.0.0 Added the visitEnabled and hosts keys.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function enqueue_beacon(): void {
@@ -225,7 +230,7 @@ class Plugin {
 	 * The /go/{slug}/ rewrite rule is registered before the flush so the
 	 * flushed rules include it (activation runs before our `init` hook).
 	 *
-	 * @since 1.0.0 Added the pretty short-link rewrite registration.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function activate(): void {
@@ -242,7 +247,7 @@ class Plugin {
 	/**
 	 * Plugin deactivation — unschedule retention pruning and the weekly report.
 	 *
-	 * @since 1.0.0 Added weekly report unscheduling.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function deactivate(): void {

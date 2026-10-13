@@ -124,9 +124,15 @@ Every tracked parameter is available to forms under its own standard name: `utm_
 
 **Elementor (Pro Forms):** add a Hidden field to your form (Advanced tab), set its Field ID to `utm_source` (or any other tracked parameter name, e.g. `utm_source_first` for first touch), and it is auto-filled from attribution data on render. Requires Elementor Pro — free Elementor has no form builder.
 
-**Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utm_source` — the generic layer fills it on page load.
+**Fluent Forms:** add a Hidden Field and set its *Name Attribute* to e.g. `utm_source` (or `utm_source_first`). It is filled from the attribution cookie by the page script on load. Submissions are listed in the dashboard widget automatically.
 
-**WPForms:** WPForms does not expose a field's HTML `name`, so the generic layer cannot target it. Use a Hidden Field with the `{query_var key="utm_source"}` Smart Tag to capture parameters from the URL the form is submitted on.
+**WPForms (Lite and Pro):** zero configuration — every attribution field above is added to each form as an empty hidden input and filled on page load, so the values arrive with each submission. To put them in notification emails, add the smart tags `{utm_source}`, `{utm_campaign}`, `{landing_page}` … (any field name above, including `_first` variants) to the notification subject or message. To store a value in an entry (Pro), set one of those tags as the default value of a Hidden Field (Lite: a Single Line Text field); it is filled on page load, not when the page is generated. If "Optimize Email Sending" is enabled, notification emails are sent later in the background, where the tags cannot be resolved — use a field default instead.
+
+**Formidable Forms:** add a Hidden field and, under Advanced, set its *Field Key* to e.g. `utm_source` (Formidable may append a number on other forms, such as `utm_source2` — that still works). The field is filled on page load.
+
+**Forminator:** add a Hidden Field, set *Default Value* to "Query parameter" and the *Query parameter* to e.g. `utm_source` (or `utm_source_first`). The field is filled on page load; a matching URL parameter on the current page takes precedence. Forms set to "Load form using AJAX" are inserted after page load and are not filled.
+
+**Bricks Builder:** add a Hidden field to the Form element and set its value to the dynamic data tag `{utm_source}` (all field names above are listed under the "UTM & Attribution" group of the dynamic data picker). To list the submission as a lead in the dashboard widget, add the "Custom" action under "Actions after successful form submit". The tag is resolved when the page is generated, so on a fully page-cached site the stored value may be stale. Bricks support is untested against a live Bricks install; please report problems.
 
 = How do I export my data? =
 

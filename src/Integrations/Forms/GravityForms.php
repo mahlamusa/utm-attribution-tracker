@@ -31,6 +31,15 @@ defined( 'ABSPATH' ) || exit;
 class GravityForms {
 
 	/**
+	 * Gravity Forms field types that are not submitted values of the form's
+	 * own fields: hidden inputs, uploads, passwords and non-input elements.
+	 *
+	 * @since 1.0.0
+	 * @var string[]
+	 */
+	private const SKIPPED_TYPES = array( 'hidden', 'fileupload', 'password', 'html', 'section', 'page', 'captcha', 'honeypot', 'creditcard', 'signature', 'repeater' );
+
+	/**
 	 * Register the dynamic-population filters — only when GF is active.
 	 *
 	 * Hooked on `plugins_loaded` priority 20 (Gravity Forms may load after
@@ -43,7 +52,6 @@ class GravityForms {
 	 * escaping them here too would double-encode.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the recent-leads recorder on `gform_after_submission`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -76,16 +84,41 @@ class GravityForms {
 	 *
 	 * Fires on `gform_after_submission`, which only runs once the entry has
 	 * been successfully saved. Skips silently when the visitor carries no
-	 * attribution data (nothing to classify).
+	 * attribution data (nothing to classify). The submitted values of the
+	 * form's own fields are passed as `fields`, keyed by label (falling
+	 * back to the field ID), read through each field's export value so
+	 * multi-input fields such as name and address come back joined; hidden
+	 * fields, uploads, passwords and non-input elements are left out. Built
+	 * from the Gravity Forms developer documentation; untested locally
+	 * because Gravity Forms is a paid plugin.
 	 *
 	 * @since 1.0.0
-	 * @param array $entry The submitted entry (unused — attribution comes from the request-scoped cookie, not the entry's field values).
+	 * @param array $entry The submitted entry, read for the field values.
 	 * @param array $form  The form the entry belongs to.
 	 * @return void
 	 */
 	public static function record_lead( $entry, $form ): void {
 		if ( ! Attribution::has_data() ) {
 			return;
+		}
+
+		$entry     = is_array( $entry ) ? $entry : array();
+		$submitted = array();
+
+		foreach ( (array) ( is_array( $form ) ? ( $form['fields'] ?? array() ) : array() ) as $field ) {
+			if ( ! is_object( $field ) || in_array( (string) ( $field->type ?? '' ), self::SKIPPED_TYPES, true ) ) {
+				continue;
+			}
+
+			$id    = (string) ( $field->id ?? '' );
+			$label = (string) ( $field->label ?? '' );
+			$value = method_exists( $field, 'get_value_export' ) ? $field->get_value_export( $entry ) : null;
+
+			if ( null === $value || '' === $value ) {
+				$value = $entry[ $id ] ?? '';
+			}
+
+			$submitted[ '' !== $label ? $label : $id ] = $value;
 		}
 
 		Recorder::record(
@@ -95,6 +128,7 @@ class GravityForms {
 				'form_title' => is_array( $form ) ? ( $form['title'] ?? '' ) : '',
 				'posted'     => Attribution::get_last(),
 				'created_at' => time(),
+				'fields'     => $submitted,
 			)
 		);
 	}

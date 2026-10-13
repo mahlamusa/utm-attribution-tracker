@@ -13,15 +13,15 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Bootstrap — loads all plugin classes in dependency order.
+ *
+ * @since 1.0.0
  */
 class Bootstrap {
 
 	/**
 	 * Require all source files.
 	 *
-	 * @since 1.0.0 Added Diagnostics/Checks.php.
-	 * @since 1.0.0 Added Integrations/Forms/NinjaForms.php.
-	 * @since 1.0.0 Added Insights/Recorder.php, Insights/Insights.php, and Admin/DashboardWidget.php.
+	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function load(): void {
@@ -45,6 +45,11 @@ class Bootstrap {
 		require_once $base . 'Integrations/Forms/GravityForms.php';
 		require_once $base . 'Integrations/Forms/NinjaForms.php';
 		require_once $base . 'Integrations/Forms/Elementor.php';
+		require_once $base . 'Integrations/Forms/WPForms.php';
+		require_once $base . 'Integrations/Forms/FluentForms.php';
+		require_once $base . 'Integrations/Forms/Formidable.php';
+		require_once $base . 'Integrations/Forms/Forminator.php';
+		require_once $base . 'Integrations/Forms/Bricks.php';
 		require_once $base . 'Admin/Dashboard.php';
 		require_once $base . 'Admin/DashboardWidget.php';
 		require_once $base . 'Diagnostics/Checks.php';

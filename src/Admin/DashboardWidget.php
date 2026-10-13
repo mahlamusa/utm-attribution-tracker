@@ -48,6 +48,11 @@ class DashboardWidget {
 		'gravity-forms'  => 'Gravity Forms',
 		'ninja-forms'    => 'Ninja Forms',
 		'elementor'      => 'Elementor',
+		'wpforms'        => 'WPForms',
+		'fluent-forms'   => 'Fluent Forms',
+		'formidable'     => 'Formidable Forms',
+		'forminator'     => 'Forminator',
+		'bricks'         => 'Bricks Builder',
 		'woocommerce'    => 'WooCommerce',
 	);
 

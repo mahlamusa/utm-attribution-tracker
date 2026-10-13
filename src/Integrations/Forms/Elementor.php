@@ -26,11 +26,20 @@ defined( 'ABSPATH' ) || exit;
 class Elementor {
 
 	/**
+	 * Elementor Pro form field types that are not submitted values of the
+	 * form's own fields: hidden inputs, uploads, passwords and non-input
+	 * elements.
+	 *
+	 * @since 1.0.0
+	 * @var string[]
+	 */
+	private const SKIPPED_TYPES = array( 'hidden', 'upload', 'password', 'honeypot', 'recaptcha', 'recaptcha_v3', 'step', 'html' );
+
+	/**
 	 * Register the hidden-field auto-fill filter when Elementor and
 	 * Elementor Pro are both active.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the recent-leads recorder on `elementor_pro/forms/new_record`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -50,7 +59,12 @@ class Elementor {
 	 * before the form's configured actions (email, webhook, etc.) run.
 	 * Skips silently when the visitor carries no attribution data (nothing
 	 * to classify) or when $record doesn't expose get_form_settings()
-	 * (a shape change in a future Elementor Pro version).
+	 * (a shape change in a future Elementor Pro version). The submitted
+	 * values of the form's own fields are passed as `fields`, keyed by
+	 * field title (falling back to the field ID); hidden fields, uploads,
+	 * passwords and non-input elements are left out. Built from the
+	 * Elementor Pro Form_Record documentation; untested locally because
+	 * Elementor Pro is a paid plugin.
 	 *
 	 * @since 1.0.0
 	 * @param mixed $record  The Elementor Pro form record instance (`Elementor\Pro\Modules\Forms\Classes\Form_Record`).
@@ -62,6 +76,20 @@ class Elementor {
 			return;
 		}
 
+		$submitted = array();
+
+		if ( method_exists( $record, 'get' ) ) {
+			foreach ( (array) $record->get( 'fields' ) as $id => $field ) {
+				if ( ! is_array( $field ) || in_array( (string) ( $field['type'] ?? '' ), self::SKIPPED_TYPES, true ) ) {
+					continue;
+				}
+
+				$label = (string) ( $field['title'] ?? '' );
+
+				$submitted[ '' !== $label ? $label : (string) ( $field['id'] ?? $id ) ] = $field['value'] ?? '';
+			}
+		}
+
 		Recorder::record(
 			'elementor',
 			array(
@@ -69,6 +97,7 @@ class Elementor {
 				'form_title' => (string) $record->get_form_settings( 'form_name' ),
 				'posted'     => Attribution::get_last(),
 				'created_at' => time(),
+				'fields'     => $submitted,
 			)
 		);
 	}

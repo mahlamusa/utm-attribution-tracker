@@ -20,6 +20,7 @@ namespace UTMAT\Integrations\Forms;
 use UTMAT\Insights\Recorder;
 use UTMAT\Tracking\Attribution;
 use WPCF7_ContactForm;
+use WPCF7_Submission;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,9 +28,18 @@ defined( 'ABSPATH' ) || exit;
  * ContactForm7
  *
  * @since 1.0.0
- * @since 1.0.0 Hidden fields follow Tracker::param_whitelist().
  */
 class ContactForm7 {
+
+	/**
+	 * CF7 tag basetypes that are not submitted values of the form's own
+	 * fields: hidden inputs, uploads, the submit button and quiz/response
+	 * tags.
+	 *
+	 * @since 1.0.0
+	 * @var string[]
+	 */
+	private const SKIPPED_BASETYPES = array( 'hidden', 'file', 'submit', 'response', 'quiz' );
 
 	/**
 	 * Register Contact Form 7 hooks — only when CF7 is active.
@@ -38,7 +48,6 @@ class ContactForm7 {
 	 * Bails without adding a single hook when CF7 is absent.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the recent-leads recorder on `wpcf7_mail_sent`.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -66,8 +75,7 @@ class ContactForm7 {
 	 * (WPCF7_ContactForm::form_hidden_fields()), so the input-sanitized
 	 * values are passed raw here — escaping them too would double-encode.
 	 *
-	 * @since 1.0.0 Loops Tracker::param_whitelist() so custom parameters get hidden fields too.
-	 * @since 1.0.0 Loops Attribution::touch_keys(), so channel and referrer_host fields are appended too.
+	 * @since 1.0.0
 	 *
 	 * @param array<string, string> $fields Hidden fields registered so far.
 	 *
@@ -102,7 +110,7 @@ class ContactForm7 {
 	 * form submitted. None of these names collide with CF7's own special tags
 	 * (`_url`, `_user_*`, `_post_*`, `_site_*`, `_date`, `_time`, …).
 	 *
-	 * @since 1.0.0 Tag names follow the standard field names (`[_utm_source]` instead of a prefixed variant).
+	 * @since 1.0.0
 	 *
 	 * @param string $output The tag output resolved so far.
 	 * @param string $name   The tag name including its leading underscore, e.g. `_utm_source`.
@@ -136,7 +144,10 @@ class ContactForm7 {
 	 * Fires on `wpcf7_mail_sent` — CF7 only runs this action after the
 	 * notification email was sent, i.e. a genuine successful submission.
 	 * Skips silently when the visitor carries no attribution data (nothing
-	 * to classify).
+	 * to classify). The submitted values of the form's own tags are passed
+	 * as `fields`, keyed by tag name (CF7 tags carry no labels); hidden
+	 * fields, uploads, the submit button and quiz/response tags are left
+	 * out.
 	 *
 	 * @since 1.0.0
 	 * @param WPCF7_ContactForm $contact_form The submitted form.
@@ -147,6 +158,23 @@ class ContactForm7 {
 			return;
 		}
 
+		$submitted  = array();
+		$submission = class_exists( 'WPCF7_Submission' ) ? WPCF7_Submission::get_instance() : null;
+
+		if ( $submission ) {
+			$posted = (array) $submission->get_posted_data();
+
+			foreach ( (array) $contact_form->scan_form_tags() as $tag ) {
+				$name = (string) ( $tag->name ?? '' );
+
+				if ( '' === $name || in_array( (string) ( $tag->basetype ?? '' ), self::SKIPPED_BASETYPES, true ) ) {
+					continue;
+				}
+
+				$submitted[ $name ] = $posted[ $name ] ?? '';
+			}
+		}
+
 		Recorder::record(
 			'contact-form-7',
 			array(
@@ -154,6 +182,7 @@ class ContactForm7 {
 				'form_title' => $contact_form->title(),
 				'posted'     => Attribution::get_last(),
 				'created_at' => time(),
+				'fields'     => $submitted,
 			)
 		);
 	}

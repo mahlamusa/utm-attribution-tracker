@@ -39,9 +39,17 @@ defined( 'ABSPATH' ) || exit;
  * NinjaForms
  *
  * @since 1.0.0
- * @since 1.0.0 Merge-tag params follow Tracker::param_whitelist().
  */
 class NinjaForms {
+
+	/**
+	 * Ninja Forms field types that are not submitted values of the form's
+	 * own fields: hidden inputs, uploads, passwords and non-input elements.
+	 *
+	 * @since 1.0.0
+	 * @var string[]
+	 */
+	private const SKIPPED_TYPES = array( 'hidden', 'file_upload', 'password', 'passwordconfirm', 'submit', 'html', 'hr', 'note', 'recaptcha', 'recaptcha_v3', 'hcaptcha', 'turnstile', 'spam', 'signature', 'repeater', 'creditcard', 'creditcardcvc', 'creditcardexpiration', 'creditcardfullname', 'creditcardnumber', 'creditcardzip' );
 
 	/**
 	 * Register the merge-tag hook — only when Ninja Forms is active.
@@ -57,8 +65,6 @@ class NinjaForms {
 	 * already fired and only deferred to it otherwise.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Added the recent-leads recorder on `ninja_forms_after_submission`.
-	 * @since 1.0.0 Registers the merge tags immediately when `ninja_forms_loaded` has already fired.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -83,7 +89,12 @@ class NinjaForms {
 	 *
 	 * Fires on `ninja_forms_after_submission`, which Ninja Forms runs once a
 	 * submission has been processed and saved. Skips silently when the
-	 * visitor carries no attribution data (nothing to classify).
+	 * visitor carries no attribution data (nothing to classify). The
+	 * submitted values of the form's own fields are passed as `fields`,
+	 * keyed by label (falling back to the field key); the submission data
+	 * carries neither label nor type, so both come from the form's field
+	 * models. Hidden fields, uploads, passwords and non-input elements are
+	 * left out.
 	 *
 	 * @since 1.0.0
 	 * @param array $form_data Submission data Ninja Forms passes to the action (`form_id`, `fields`, `settings`, etc.).
@@ -94,13 +105,38 @@ class NinjaForms {
 			return;
 		}
 
+		$form_id   = $form_data['form_id'] ?? '';
+		$models    = array();
+		$submitted = array();
+
+		if ( '' !== $form_id && function_exists( 'Ninja_Forms' ) ) {
+			foreach ( (array) Ninja_Forms()->form( $form_id )->get_fields() as $model ) {
+				if ( is_object( $model ) && method_exists( $model, 'get_id' ) ) {
+					$models[ (string) $model->get_id() ] = $model;
+				}
+			}
+		}
+
+		foreach ( (array) ( $form_data['fields'] ?? array() ) as $id => $field ) {
+			$model = $models[ (string) ( $field['id'] ?? $id ) ] ?? null;
+
+			if ( ! is_array( $field ) || null === $model || in_array( (string) $model->get_setting( 'type' ), self::SKIPPED_TYPES, true ) ) {
+				continue;
+			}
+
+			$label = (string) $model->get_setting( 'label' );
+
+			$submitted[ '' !== $label ? $label : (string) ( $field['key'] ?? $id ) ] = $field['value'] ?? '';
+		}
+
 		Recorder::record(
 			'ninja-forms',
 			array(
-				'form_id'    => $form_data['form_id'] ?? '',
+				'form_id'    => $form_id,
 				'form_title' => $form_data['settings']['title'] ?? '',
 				'posted'     => Attribution::get_last(),
 				'created_at' => time(),
+				'fields'     => $submitted,
 			)
 		);
 	}
@@ -140,8 +176,7 @@ class NinjaForms {
 	 * `landing` tag param; the channel and referrer host use the field
 	 * name itself.
 	 *
-	 * @since 1.0.0 Mapped field names follow the standard parameter names; the list comes from Tracker::param_whitelist().
-	 * @since 1.0.0 Iterates Attribution::touch_keys(), adding the channel and referrer_host tags.
+	 * @since 1.0.0
 	 * @return array<string, string> Merge-tag param => full attribution field name.
 	 */
 	public static function merge_tag_params(): array {

@@ -14,10 +14,15 @@
 namespace UTMAT\Diagnostics;
 
 use UTMAT\Admin\Dashboard;
+use UTMAT\Integrations\Forms\Bricks;
 use UTMAT\Integrations\Forms\ContactForm7;
 use UTMAT\Integrations\Forms\Elementor;
+use UTMAT\Integrations\Forms\FluentForms;
+use UTMAT\Integrations\Forms\Formidable;
+use UTMAT\Integrations\Forms\Forminator;
 use UTMAT\Integrations\Forms\GravityForms;
 use UTMAT\Integrations\Forms\NinjaForms;
+use UTMAT\Integrations\Forms\WPForms;
 use UTMAT\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
@@ -26,7 +31,6 @@ defined( 'ABSPATH' ) || exit;
  * Checks
  *
  * @since 1.0.0
- * @since 1.0.0 The consent check describes the applicable gating rule instead of the admin's own consent state.
  */
 class Checks {
 
@@ -91,7 +95,7 @@ class Checks {
 	 * wp_get_consent_type() and consent_api_registered() are guarded by the
 	 * API's presence since both are defined by the WP Consent API plugin.
 	 *
-	 * @since 1.0.0 Rewritten to report the applicable rule (API presence, consent type, registration, category) instead of the admin's consent state; the pass message says whether events are gated too.
+	 * @since 1.0.0
 	 * @return array{id: string, label: string, status: string, message: string, details: array}
 	 */
 	public static function consent(): array {
@@ -240,6 +244,31 @@ class Checks {
 				'label'  => __( 'Elementor Pro Forms', 'utm-attribution-tracker' ),
 				'active' => defined( 'ELEMENTOR_PRO_VERSION' ),
 				'class'  => Elementor::class,
+			),
+			array(
+				'label'  => __( 'WPForms', 'utm-attribution-tracker' ),
+				'active' => defined( 'WPFORMS_VERSION' ),
+				'class'  => WPForms::class,
+			),
+			array(
+				'label'  => __( 'Fluent Forms', 'utm-attribution-tracker' ),
+				'active' => defined( 'FLUENTFORM' ),
+				'class'  => FluentForms::class,
+			),
+			array(
+				'label'  => __( 'Formidable Forms', 'utm-attribution-tracker' ),
+				'active' => class_exists( 'FrmAppHelper' ),
+				'class'  => Formidable::class,
+			),
+			array(
+				'label'  => __( 'Forminator', 'utm-attribution-tracker' ),
+				'active' => defined( 'FORMINATOR_VERSION' ),
+				'class'  => Forminator::class,
+			),
+			array(
+				'label'  => __( 'Bricks Builder (untested)', 'utm-attribution-tracker' ),
+				'active' => defined( 'BRICKS_VERSION' ),
+				'class'  => Bricks::class,
 			),
 		);
 	}
