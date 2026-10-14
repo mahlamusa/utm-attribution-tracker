@@ -52,7 +52,7 @@ class LinkManager {
 	 * Return all managed links keyed by their slug.
 	 *
 	 * @since 1.0.0
-	 * @return array<string, array<string, string>>
+	 * @return array<string, array<string, string|array<string, string>>>
 	 */
 	public static function all(): array {
 		$links = get_option( self::OPTION_KEY, array() );
@@ -64,7 +64,7 @@ class LinkManager {
 	 *
 	 * @since 1.0.0
 	 * @param string $id Link slug.
-	 * @return array<string, string>|null
+	 * @return array<string, string|array<string, string>>|null
 	 */
 	public static function get( string $id ): ?array {
 		$all = self::all();
@@ -78,8 +78,14 @@ class LinkManager {
 	 * query parameters are appended and re-attached afterwards, so
 	 * `https://ex.com/page#pricing` yields `https://ex.com/page?utm_…#pricing`.
 	 *
+	 * After the six UTM keys, any link-level custom parameter values are
+	 * appended in saved order. They are filtered against the current custom
+	 * parameter configuration (a removed parameter stops being appended while
+	 * its stored value survives in case it is re-added) and are not
+	 * normalised — coupon and affiliate codes are often case-sensitive.
+	 *
 	 * @since 1.0.0
-	 * @param array<string, string> $link Link data array.
+	 * @param array<string, mixed> $link Link data array.
 	 * @return string
 	 */
 	public static function build_url( array $link ): string {
@@ -89,6 +95,13 @@ class LinkManager {
 		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ) as $key ) {
 			if ( ! empty( $link[ $key ] ) ) {
 				$params[ $key ] = $link[ $key ];
+			}
+		}
+
+		$custom = isset( $link['custom'] ) && is_array( $link['custom'] ) ? $link['custom'] : array();
+		foreach ( Tracker::custom_params() as $name ) {
+			if ( isset( $custom[ $name ] ) && is_scalar( $custom[ $name ] ) && '' !== (string) $custom[ $name ] ) {
+				$params[ $name ] = (string) $custom[ $name ];
 			}
 		}
 

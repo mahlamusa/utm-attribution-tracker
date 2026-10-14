@@ -128,6 +128,8 @@ class Tracker {
 		'user_login',
 		'user_email',
 		'user_pass',
+		// The beacon configuration key and the settings input id.
+		'params',
 	);
 
 	/**
@@ -224,7 +226,7 @@ class Tracker {
 		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{0,31}$/D', $name ) ) {
 			return false;
 		}
-		if ( str_starts_with( $name, 'utm_' ) || str_starts_with( $name, 'utmat_' ) || str_ends_with( $name, '_first' ) ) {
+		if ( str_starts_with( $name, 'utm_' ) || str_starts_with( $name, 'utmat_' ) || str_starts_with( $name, 'first_' ) || str_ends_with( $name, '_first' ) ) {
 			return false;
 		}
 
@@ -276,6 +278,7 @@ class Tracker {
 					'utm_id'       => $link['utm_id'] ?? '',
 					'utm_term'     => $link['utm_term'] ?? '',
 					'utm_content'  => $link['utm_content'] ?? '',
+					'custom'       => (array) ( $link['custom'] ?? array() ),
 					'destination'  => $destination,
 				);
 				if ( ! $is_bot && ! self::is_duplicate( $data ) ) {

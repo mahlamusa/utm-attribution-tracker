@@ -107,18 +107,26 @@ class ContactForm7 {
 	 * leading underscore, which is stripped
 	 * to find the field. Reads the value from the submitted POST fields (filled
 	 * server-side or by the beacon), so the mail body reflects exactly what the
-	 * form submitted. None of these names collide with CF7's own special tags
-	 * (`_url`, `_user_*`, `_post_*`, `_site_*`, `_date`, `_time`, …).
+	 * form submitted. A tag already resolved by an earlier handler on the
+	 * same filter (CF7's own `_date`, `_time`, `_url`, `_remote_ip`,
+	 * `_user_*`, `_post_*`, `_site_*`, … handlers run first) is passed
+	 * through untouched, so a custom parameter named like one of CF7's
+	 * special tags can never hijack it — only `null` output (a tag CF7 did
+	 * not recognise) is looked up here.
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param string $output The tag output resolved so far.
-	 * @param string $name   The tag name including its leading underscore, e.g. `_utm_source`.
-	 * @param bool   $html   Whether the mail body is HTML.
+	 * @param string|null $output The tag output resolved so far, null when unrecognised.
+	 * @param string      $name   The tag name including its leading underscore, e.g. `_utm_source`.
+	 * @param bool        $html   Whether the mail body is HTML.
 	 *
-	 * @return string
+	 * @return string|null The resolved value, or the incoming $output when the tag is unrecognised.
 	 */
 	public static function resolve_mail_tag( $output, $name, $html ) {
+		if ( null !== $output ) {
+			return $output;
+		}
+
 		$field = ltrim( (string) $name, '_' );
 
 		if ( ! in_array( $field, Attribution::field_names(), true ) ) {

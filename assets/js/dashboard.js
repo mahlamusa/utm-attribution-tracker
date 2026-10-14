@@ -81,6 +81,7 @@
 	const elCookieDays   = document.getElementById( 'utmat-cookie-days' );
 	const elConsentCategory = document.getElementById( 'utmat-consent-category' );
 	const elTrackVisits  = document.getElementById( 'utmat-track-visits' );
+	const elCustomParams = document.getElementById( 'utmat-custom-params' );
 	const elChannelHint  = document.getElementById( 'utmat-channel-hint' );
 	const elSettingsMsg  = document.getElementById( 'utmat-settings-msg' );
 	const elLinksFilter  = document.getElementById( 'utmat-links-filter' );
@@ -117,6 +118,14 @@
 	const elDrawerShortlink = document.getElementById( 'utmat-drawer-shortlink' );
 	const elDrawerPreview   = document.getElementById( 'utmat-drawer-preview' );
 	const elDrawerShortcode = document.getElementById( 'utmat-drawer-shortcode' );
+	const elBuilderRow      = document.getElementById( 'utmat-builder-row' );
+	const elBuilderToggle   = document.getElementById( 'utmat-builder-toggle' );
+	const elLabelField      = document.getElementById( 'utmat-drawer-label-field' );
+	const elShortlinkLabel  = document.getElementById( 'utmat-drawer-shortlink-label' );
+	const elPreviewLabel    = document.getElementById( 'utmat-drawer-preview-label' );
+	const elPreviewLabelBuilder = document.getElementById( 'utmat-drawer-preview-label-builder' );
+	const elDrawerCustom    = document.getElementById( 'utmat-drawer-custom' );
+	const elDrawerCustomGrid = document.getElementById( 'utmat-drawer-custom-grid' );
 	const elUnsaved         = document.getElementById( 'utmat-unsaved-count' );
 	const elSavebar         = document.getElementById( 'utmat-savebar' );
 	const elDiscard         = document.getElementById( 'utmat-settings-discard' );
@@ -1656,9 +1665,116 @@
 		}
 	}
 
+	// ── Drawer custom-parameter inputs ────────────────────────────────────────
+	// One text input per configured custom parameter (utmatData.customParams),
+	// rendered into the drawer. The inputs carry NO name attribute: the submit
+	// handler builds its payload via FormData.forEach, and a named
+	// custom[coupon] input would arrive as a flat string key — instead the
+	// handler adds payload.custom = readCustomInputs() explicitly. The raw
+	// parameter name is the label (inside <code>), never translated.
+	function renderCustomInputs( values ) {
+		if ( ! elDrawerCustom || ! elDrawerCustomGrid ) {
+			return;
+		}
+		const names  = utmatData.customParams || [];
+		const filled = values || {};
+		elDrawerCustomGrid.innerHTML = '';
+		elDrawerCustom.hidden = ! names.length;
+		names.forEach( function ( name ) {
+			const field = document.createElement( 'div' );
+			field.className = 'utmat-drawer__field';
+
+			const label = document.createElement( 'label' );
+			label.setAttribute( 'for', 'utmat-custom-' + name );
+			const code = document.createElement( 'code' );
+			code.textContent = name;
+			label.appendChild( code );
+
+			const input = document.createElement( 'input' );
+			input.type = 'text';
+			input.id   = 'utmat-custom-' + name;
+			input.setAttribute( 'data-utmat-custom', name );
+			if ( filled[ name ] ) {
+				input.value = filled[ name ];
+			}
+
+			field.appendChild( label );
+			field.appendChild( input );
+			elDrawerCustomGrid.appendChild( field );
+		} );
+	}
+
+	// Non-empty custom input values, keyed by parameter name. Values are
+	// trimmed but NOT normalized (case-sensitive coupon/affiliate codes).
+	function readCustomInputs() {
+		const values = {};
+		if ( ! elDrawerCustom ) {
+			return values;
+		}
+		elDrawerCustom.querySelectorAll( '[data-utmat-custom]' ).forEach( function ( input ) {
+			const value = input.value.trim();
+			if ( value ) {
+				values[ input.getAttribute( 'data-utmat-custom' ) ] = value;
+			}
+		} );
+		return values;
+	}
+
+	// ── "Build a URL only" mode ───────────────────────────────────────────────
+	// Turns the drawer into a UTM builder: the link-specific fields hide, the
+	// live preview becomes the output, and the submit button becomes the copy
+	// action. No short link is created and no request is made on submit.
+	function setBuilderMode( on ) {
+		if ( elLabelField ) {
+			elLabelField.hidden = on;
+		}
+		if ( elShortlinkLabel ) {
+			elShortlinkLabel.hidden = on;
+		}
+		if ( elDrawerShortlink ) {
+			elDrawerShortlink.hidden = on;
+		}
+		if ( elDrawerShortcode ) {
+			elDrawerShortcode.hidden = on;
+		}
+		if ( elPreviewLabel ) {
+			elPreviewLabel.hidden = on;
+		}
+		if ( elPreviewLabelBuilder ) {
+			elPreviewLabelBuilder.hidden = ! on;
+		}
+		// The Label input stays required in link mode; hiding it alone would
+		// leave the browser blocking submit on an invisible control.
+		elAddForm.elements.label.required = ! on;
+		if ( elDrawerTitle ) {
+			elDrawerTitle.textContent = on
+				? ( i18n.drawerBuildTitle || 'Build a tagged URL' )
+				: ( i18n.drawerAddTitle || 'Add tracked link' );
+		}
+		elSubmitBtn.textContent = on
+			? ( i18n.copyTaggedUrl || 'Copy tagged URL' )
+			: ( i18n.addLink || 'Add link' );
+		if ( elDrawer ) {
+			elDrawer.classList.toggle( 'is-builder', on );
+		}
+		if ( on ) {
+			elAddForm.elements.destination.focus();
+		} else {
+			elAddForm.elements.label.focus();
+		}
+	}
+
+	if ( elBuilderToggle ) {
+		elBuilderToggle.addEventListener( 'change', function () {
+			setBuilderMode( elBuilderToggle.checked );
+		} );
+	}
+
 	// Client-side mirror of LinkManager::build_url(): same parameter order,
 	// empty values skipped, values normalized like the server does, an
-	// existing query string and fragment respected. Preview only.
+	// existing query string and fragment respected. Custom parameter values
+	// are appended after the UTM keys, trimmed but not normalized, mirroring
+	// the server. Preview only.
 	function buildDestinationPreview() {
 		const base = elAddForm.elements.destination.value.trim();
 		if ( ! base ) {
@@ -1670,6 +1786,15 @@
 			const value = normalizeUtm( ( input && input.value ) || '' );
 			if ( value ) {
 				params.append( key, value );
+			}
+		} );
+		( utmatData.customParams || [] ).forEach( function ( name ) {
+			const input = elDrawerCustom
+				? elDrawerCustom.querySelector( '[data-utmat-custom="' + name + '"]' )
+				: null;
+			const value = input ? input.value.trim() : '';
+			if ( value ) {
+				params.append( name, value );
 			}
 		} );
 		const qs = params.toString();
@@ -1695,6 +1820,13 @@
 	function openAddDrawer( trigger ) {
 		editingId = null;
 		elAddForm.reset();
+		renderCustomInputs();
+		if ( elBuilderRow ) {
+			show( elBuilderRow );
+		}
+		// Runs after reset() — the reset unchecks the toggle but does not
+		// re-sync the hidden flags and labels this manages.
+		setBuilderMode( false );
 		const advanced = elAddForm.querySelector( '.utmat-add-form__advanced' );
 		if ( advanced ) {
 			advanced.open = false;
@@ -1714,6 +1846,13 @@
 	// submit button becomes "Save changes", and the slug is locked (it is not
 	// a form field — the PUT request targets the stored slug directly).
 	function enterEditMode( link, trigger ) {
+		// Builder mode never applies to an existing link; the row hides and
+		// the mode resets before openDrawer() so the edit title survives.
+		if ( elBuilderRow ) {
+			hide( elBuilderRow );
+		}
+		setBuilderMode( false );
+		renderCustomInputs( link.custom || {} );
 		openDrawer( 'edit', trigger );
 		hide( elNormNotice );
 		resetPresetUi();
@@ -1756,6 +1895,11 @@
 	 * @return {void}
 	 */
 	function enterDuplicateMode( link, trigger ) {
+		setBuilderMode( false );
+		if ( elBuilderRow ) {
+			show( elBuilderRow );
+		}
+		renderCustomInputs( link.custom || {} );
 		openDrawer( 'add', trigger );
 		hide( elNormNotice );
 		resetPresetUi();
@@ -1787,6 +1931,7 @@
 	function exitEditMode() {
 		editingId = null;
 		elAddForm.reset();
+		setBuilderMode( false );
 		elSubmitBtn.textContent = i18n.addLink || 'Add link';
 		hide( elNormNotice );
 		closeDrawer();
@@ -1851,11 +1996,28 @@
 			show( elNormNotice );
 		}
 
+		// Builder mode: the submit button is the copy action. The tagged URL
+		// is built from the current fields (naming enforcement above applied),
+		// copied to the clipboard and announced; no request is made and the
+		// drawer stays open. An empty destination is already blocked by the
+		// required destination input.
+		if ( elBuilderToggle && elBuilderToggle.checked ) {
+			const url = buildDestinationPreview();
+			if ( url ) {
+				copyWithTextFeedback( elSubmitBtn, url );
+				announce( url );
+			}
+			return;
+		}
+
 		const formData = new FormData( elAddForm );
 		const payload  = {};
 		formData.forEach( function ( value, key ) {
 			payload[ key ] = value;
 		} );
+		// The custom inputs carry no name attribute (FormData would flatten
+		// them into string keys); they travel as one object instead.
+		payload.custom = readCustomInputs();
 
 		const isEdit = null !== editingId;
 		const path   = isEdit ? '/links/' + encodeURIComponent( editingId ) : '/links';
@@ -1912,9 +2074,11 @@
 				return;
 			}
 
-			const lines = [ EXPORT_COLUMNS.map( csvCell ).join( ',' ) ];
+			// One column per configured custom parameter, after the built-ins.
+			const columns = EXPORT_COLUMNS.concat( utmatData.customParams || [] );
+			const lines   = [ columns.map( csvCell ).join( ',' ) ];
 			rows.forEach( function ( row ) {
-				lines.push( EXPORT_COLUMNS.map( function ( col ) {
+				lines.push( columns.map( function ( col ) {
 					return csvCell( row[ col ] );
 				} ).join( ',' ) );
 			} );
@@ -2011,6 +2175,7 @@
 			leads:     elWebhookLeads ? String( !! elWebhookLeads.checked ) : 'true',
 			consent:   elConsentCategory ? String( elConsentCategory.value ) : '',
 			visits:    elTrackVisits ? String( !! elTrackVisits.checked ) : '',
+			custom:    elCustomParams ? String( elCustomParams.value ) : '',
 		};
 	}
 
@@ -2019,6 +2184,9 @@
 		elRetention.value  = s.retention;
 		elCookieDays.value = s.cookie;
 		elWeekly.checked   = 'true' === s.weekly;
+		if ( elCustomParams ) {
+			elCustomParams.value = s.custom || '';
+		}
 		if ( elConsentCategory ) {
 			elConsentCategory.value = s.consent || 'marketing';
 		}
@@ -2089,6 +2257,9 @@
 			elWebhookLeads.checked = undefined === settings.webhookLeads || !! settings.webhookLeads;
 		}
 		applyPresetUi( settings.webhookPreset || 'generic' );
+	}
+	if ( elCustomParams ) {
+		elCustomParams.value = ( utmatData.customParams || [] ).join( ', ' );
 	}
 	snapshotSettings();
 
@@ -2162,11 +2333,19 @@
 				webhook_leads:  elWebhookLeads ? elWebhookLeads.checked : true,
 				consent_category: elConsentCategory ? elConsentCategory.value : 'marketing',
 				track_visits:   elTrackVisits ? elTrackVisits.checked : true,
+				custom_params:  elCustomParams ? elCustomParams.value.trim() : '',
 			} ),
 		} ).then( function ( body ) {
 			elRetention.value  = body.retention_days;
 			elWeekly.checked   = !! body.weekly_email;
 			elCookieDays.value = body.cookie_days || 90;
+			if ( elCustomParams && Array.isArray( body.custom_params ) ) {
+				elCustomParams.value = body.custom_params.join( ', ' );
+				// Refresh the in-memory list so the drawer inputs and the
+				// CSV export columns pick the new names up without a reload.
+				utmatData.customParams = body.custom_params;
+				renderCustomInputs();
+			}
 			if ( elConsentCategory ) {
 				elConsentCategory.value = body.consent_category || 'marketing';
 			}

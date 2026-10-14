@@ -632,16 +632,16 @@ class ConversionWebhook {
 	 * @return void
 	 */
 	private static function flatten_touch( array $touch, string $prefix, array &$out ): void {
-		// The stable key set: the twelve built-in parameters plus the
-		// landing page (`lp` in the touch, `landing_page` when flattened),
-		// always present so the structure never changes between the sample
-		// request and real events.
-		foreach ( array_merge( Tracker::PARAM_WHITELIST, array( 'lp' ) ) as $key ) {
+		// The stable key set: the tracked parameters (built-ins plus the
+		// site's custom parameters) plus the landing page (`lp` in the touch,
+		// `landing_page` when flattened), always present so the structure
+		// never changes between the sample request and real events.
+		foreach ( array_merge( Tracker::param_whitelist(), array( 'lp' ) ) as $key ) {
 			$flat_key                   = Attribution::field_name( $key );
 			$out[ $prefix . $flat_key ] = isset( $touch[ $key ] ) && is_scalar( $touch[ $key ] ) ? (string) $touch[ $key ] : '';
 		}
 
-		// Present-only keys: channel, referrer host and custom parameters.
+		// Present-only keys: the channel and the referrer host.
 		foreach ( $touch as $key => $value ) {
 			if ( 'ts' === $key || ! is_string( $key ) || ! is_scalar( $value ) ) {
 				continue;

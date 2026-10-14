@@ -413,6 +413,26 @@ $utmat_kses = array(
 						</div>
 					</div>
 				</div>
+				<div class="utmat-card utmat-settings-card">
+					<div class="utmat-field">
+						<label class="utmat-field__label" for="utmat-custom-params"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmat-field__control">
+							<input type="text" id="utmat-custom-params" name="custom_params" class="regular-text" placeholder="coupon, aff, promo2" />
+							<p class="utmat-field__hint">
+								<?php
+								echo wp_kses(
+									sprintf(
+										/* translators: %1$s: example custom parameter name, as inline code. */
+										__( 'Extra URL parameters to capture alongside UTM tags and click IDs, separated by commas. Up to 10 names that start with a letter and use lowercase letters, digits and underscores. Each one is available to forms under its own name (%1$s) and becomes a CSV column. Do not use the name of a form field or anything that identifies a person.', 'utm-attribution-tracker' ),
+										'<code>coupon</code>'
+									),
+									$utmat_kses
+								);
+								?>
+							</p>
+						</div>
+					</div>
+				</div>
 			</section>
 
 			<section class="utmat-settings-section" aria-labelledby="utmat-settings-privacy">
@@ -752,7 +772,16 @@ $utmat_kses = array(
 			</div>
 
 			<div class="utmat-drawer__body">
-				<div class="utmat-drawer__field">
+				<div class="utmat-drawer__field" id="utmat-builder-row">
+					<label class="utmat-switch" for="utmat-builder-toggle">
+						<input type="checkbox" id="utmat-builder-toggle" class="utmat-switch__input" />
+						<span class="utmat-switch__track" aria-hidden="true"></span>
+						<span class="utmat-switch__text"><?php esc_html_e( 'Build a URL only', 'utm-attribution-tracker' ); ?></span>
+					</label>
+					<p class="utmat-field__hint"><?php esc_html_e( 'Get a tagged URL to paste anywhere. No short link is created and nothing is saved.', 'utm-attribution-tracker' ); ?></p>
+				</div>
+
+				<div class="utmat-drawer__field" id="utmat-drawer-label-field">
 					<label for="utmat-new-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></label>
 					<input type="text" id="utmat-new-label" name="label" required
 						placeholder="<?php esc_attr_e( 'Spring newsletter button', 'utm-attribution-tracker' ); ?>" />
@@ -829,10 +858,28 @@ $utmat_kses = array(
 					</div>
 				</details>
 
+				<div class="utmat-drawer__field" id="utmat-drawer-custom" hidden>
+					<span class="utmat-field__label"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmat-drawer__grid" id="utmat-drawer-custom-grid"></div>
+					<p class="utmat-field__hint">
+						<?php
+						echo wp_kses(
+							sprintf(
+								/* translators: %s: link to the Settings tab. */
+								__( 'Set up under %s.', 'utm-attribution-tracker' ),
+								'<a href="#settings">' . esc_html__( 'Settings', 'utm-attribution-tracker' ) . '</a>'
+							),
+							$utmat_kses
+						);
+						?>
+					</p>
+				</div>
+
 				<div class="utmat-drawer__generated">
-					<p class="utmat-field__label"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmat-field__label" id="utmat-drawer-shortlink-label"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></p>
 					<p class="utmat-readonly" id="utmat-drawer-shortlink"></p>
-					<p class="utmat-field__label"><?php esc_html_e( 'Visitors are forwarded to', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmat-field__label" id="utmat-drawer-preview-label"><?php esc_html_e( 'Visitors are forwarded to', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmat-field__label" id="utmat-drawer-preview-label-builder" hidden><?php esc_html_e( 'Tagged URL', 'utm-attribution-tracker' ); ?></p>
 					<p class="utmat-readonly utmat-readonly--wrap" id="utmat-drawer-preview"></p>
 				</div>
 			</div>
@@ -924,6 +971,8 @@ $utmat_kses = array(
 			'diagNone'              => __( '—', 'utm-attribution-tracker' ),
 			'drawerAddTitle'        => __( 'Add tracked link', 'utm-attribution-tracker' ),
 			'drawerEditTitle'       => __( 'Edit tracked link', 'utm-attribution-tracker' ),
+			'drawerBuildTitle'      => __( 'Build a tagged URL', 'utm-attribution-tracker' ),
+			'copyTaggedUrl'         => __( 'Copy tagged URL', 'utm-attribution-tracker' ),
 			'copyLink'              => __( 'Copy link', 'utm-attribution-tracker' ),
 			'copyShortLink'         => __( 'Copy short link', 'utm-attribution-tracker' ),
 			'copyDestination'       => __( 'Copy destination URL', 'utm-attribution-tracker' ),

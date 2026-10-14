@@ -51,9 +51,9 @@ class PrivacyPolicy {
 		}
 
 		if ( 1 === (int) get_option( 'utmat_track_visits', 1 ) ) {
-			$opening = __( 'This site uses UTM & Attribution Tracker to measure where visitors come from and how marketing campaigns perform. When you arrive on the site, the plugin records the first page of your visit, the address of the site you came from (referrer), any campaign parameters (UTM values and advertising click IDs) in the URL, your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
+			$opening = __( 'This site uses UTM & Attribution Tracker to measure where visitors come from and how marketing campaigns perform. When you arrive on the site, the plugin records the first page of your visit, the address of the site you came from (referrer), any campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) in the URL, your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
 		} else {
-			$opening = __( 'This site uses UTM & Attribution Tracker to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values and advertising click IDs) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
+			$opening = __( 'This site uses UTM & Attribution Tracker to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
 		}
 
 		$content  = '<p>' . $opening . ' ' . __( 'The same data is recorded when you submit a form after arriving through a campaign link.', 'utm-attribution-tracker' ) . ' ' . __( 'The raw IP address is never stored, and the hash cannot be linked to you across other websites.', 'utm-attribution-tracker' ) . '</p>';

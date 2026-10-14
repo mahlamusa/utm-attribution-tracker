@@ -29,6 +29,7 @@ use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\LinkManager;
+use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\TrafficSource;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -252,6 +253,10 @@ class RestController {
 					'track_visits'     => array(
 						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
+					'custom_params'    => array(
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
 			)
@@ -773,7 +778,9 @@ class RestController {
 	 * `user_agent` are never included. Capped at the newest 10,000 rows.
 	 * Conversion rows are included and flagged via the `is_conversion` column.
 	 * Untagged landing visits are left out unless `include_visits` is set;
-	 * every row carries its `channel`.
+	 * every row carries its `channel` and one key per configured custom
+	 * parameter (empty string when the row has no value; the raw `custom`
+	 * JSON column is never returned).
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -795,7 +802,7 @@ class RestController {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			"SELECT clicked_at, link_id, {$channel_case} AS channel, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
-			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total
+			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total, custom
 			 FROM {$table}
 			 WHERE {$where}
 			 ORDER BY clicked_at DESC
@@ -803,6 +810,19 @@ class RestController {
 			ARRAY_A
 		);
 		// phpcs:enable
+
+		// Spread the `custom` JSON object into one plain key per configured
+		// custom parameter name (empty string when the row carries no value),
+		// so the client-side CSV gains a column per custom parameter. Plain
+		// names are safe as keys: every events-table column name is reserved.
+		$custom_params = Tracker::custom_params();
+		foreach ( (array) $rows as $index => $row ) {
+			$decoded = json_decode( (string) ( $row['custom'] ?? '' ), true );
+			unset( $rows[ $index ]['custom'] );
+			foreach ( $custom_params as $name ) {
+				$rows[ $index ][ $name ] = isset( $decoded[ $name ] ) ? (string) $decoded[ $name ] : '';
+			}
+		}
 
 		return new WP_REST_Response( array( 'rows' => array_values( (array) $rows ) ), 200 );
 	}
@@ -862,15 +882,25 @@ class RestController {
 	 * toggle, the webhook settings (URL — empty disables it; preset; the
 	 * order/lead event toggles), the consent category that gates the
 	 * attribution cookie (allow-listed, anything else falls back to
-	 * marketing) and the untagged-visit tracking switch. The weekly report
-	 * cron is scheduled or unscheduled here, at save time, so no scheduling
-	 * work happens on normal page loads.
+	 * marketing), the untagged-visit tracking switch and the custom
+	 * parameter names (comma/space separated here; stored as a validated
+	 * array). The custom names are validated — shape, reserved names
+	 * including the public query variables, and the maximum count — before
+	 * any option is written, so a rejected list leaves every setting at its
+	 * previous value. The weekly report cron is scheduled or unscheduled
+	 * here, at save time, so no scheduling work happens on normal page
+	 * loads.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
+		$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
+		if ( $custom_names instanceof WP_REST_Response ) {
+			return $custom_names;
+		}
+
 		$retention = absint( $request->get_param( 'retention_days' ) );
 		$weekly    = (bool) $request->get_param( 'weekly_email' );
 		$cookie    = absint( $request->get_param( 'cookie_days' ) );
@@ -902,6 +932,7 @@ class RestController {
 		);
 		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
 		update_option( 'utmat_track_visits', $visits ? 1 : 0 );
+		update_option( 'utmat_custom_params', $custom_names );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -920,9 +951,74 @@ class RestController {
 				'webhook_leads'    => $leads,
 				'consent_category' => $consent,
 				'track_visits'     => $visits,
+				'custom_params'    => $custom_names,
 			),
 			200
 		);
+	}
+
+	/**
+	 * Parse and validate the custom parameter names from the settings form.
+	 *
+	 * The raw input is a comma/space separated list; input is lowercased and
+	 * trimmed, duplicates collapse silently. Every name must pass
+	 * Tracker::is_valid_custom_param() with the query-var check on (save
+	 * time), and a list longer than Tracker::MAX_CUSTOM_PARAMS is
+	 * rejected. The first rejected name is named in the
+	 * error message; an empty input saves an empty list (all custom
+	 * parameters removed).
+	 *
+	 * @since 1.0.0
+	 * @param string $raw Comma/space separated names, e.g. "Coupon, aff, promo2".
+	 * @return string[]|WP_REST_Response Validated names, or a 400 response naming the rejected entry.
+	 */
+	private static function validate_custom_params( string $raw ) {
+		$names = preg_split( '/[\s,]+/', strtolower( trim( $raw ) ), -1, PREG_SPLIT_NO_EMPTY );
+		$names = array_values( array_unique( is_array( $names ) ? $names : array() ) );
+
+		foreach ( $names as $name ) {
+			if ( Tracker::is_valid_custom_param( $name, true ) ) {
+				continue;
+			}
+
+			$reserved = in_array( $name, Tracker::reserved_param_names( true ), true )
+				|| str_starts_with( $name, 'utm_' )
+				|| str_starts_with( $name, 'utmat_' )
+				|| str_starts_with( $name, 'first_' )
+				|| str_ends_with( $name, '_first' );
+
+			return new WP_REST_Response(
+				array(
+					'message' => $reserved
+						? sprintf(
+							/* translators: %s: the rejected custom parameter name. */
+							__( '%s is reserved and cannot be used as a custom parameter.', 'utm-attribution-tracker' ),
+							$name
+						)
+						: sprintf(
+							/* translators: %s: the rejected custom parameter name. */
+							__( 'Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s', 'utm-attribution-tracker' ),
+							$name
+						),
+				),
+				400
+			);
+		}
+
+		if ( count( $names ) > Tracker::MAX_CUSTOM_PARAMS ) {
+			return new WP_REST_Response(
+				array(
+					'message' => sprintf(
+						/* translators: %d: maximum number of custom parameters. */
+						__( 'You can define up to %d custom parameters.', 'utm-attribution-tracker' ),
+						Tracker::MAX_CUSTOM_PARAMS
+					),
+				),
+				400
+			);
+		}
+
+		return $names;
 	}
 
 	/**
@@ -1100,14 +1196,15 @@ class RestController {
 	/**
 	 * Format a managed link for a REST response.
 	 *
-	 * Includes both the built destination (UTM parameters appended) and the
-	 * raw stored fields so the dashboard edit form can pre-fill correctly.
+	 * Includes both the built destination (UTM parameters and link-level
+	 * custom parameter values appended) and the raw stored fields so the
+	 * dashboard edit form can pre-fill correctly.
 	 *
 	 * @since 1.0.0
-	 * @param string                $id     Link slug.
-	 * @param array<string, string> $link   Stored link fields.
-	 * @param int                   $clicks Recorded click count for the slug.
-	 * @return array<string, int|string>
+	 * @param string               $id     Link slug.
+	 * @param array<string, mixed> $link   Stored link fields.
+	 * @param int                  $clicks Recorded click count for the slug.
+	 * @return array<string, int|string|array<string, string>|stdClass> The custom entry is a stdClass (JSON object over REST).
 	 */
 	private static function format_link( string $id, array $link, int $clicks ): array {
 		return array(
@@ -1123,6 +1220,7 @@ class RestController {
 			'utm_id'          => $link['utm_id'] ?? '',
 			'utm_term'        => $link['utm_term'] ?? '',
 			'utm_content'     => $link['utm_content'] ?? '',
+			'custom'          => (object) ( isset( $link['custom'] ) && is_array( $link['custom'] ) ? $link['custom'] : array() ),
 		);
 	}
 
@@ -1150,11 +1248,15 @@ class RestController {
 	 * destination as an http(s) URL. UTM values are normalized for
 	 * consistent reporting (lowercase, whitespace collapsed to `-`) — the
 	 * dashboard JS applies the same normalization for immediate feedback,
-	 * but this server-side pass is authoritative.
+	 * but this server-side pass is authoritative. Custom parameter values
+	 * from the `custom` object are kept only for currently configured
+	 * names, sanitized and capped at 255 characters but deliberately not
+	 * normalized (coupon and affiliate codes are often case-sensitive);
+	 * unknown keys are dropped silently.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
-	 * @return array<string, string>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
+	 * @return array<string, mixed>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
 	 */
 	private static function validate_link_input( WP_REST_Request $request ) {
 		$destination = esc_url_raw( self::param_string( $request, 'destination' ), array( 'http', 'https' ) );
@@ -1172,6 +1274,23 @@ class RestController {
 		);
 		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ) as $key ) {
 			$link[ $key ] = self::normalize_utm( sanitize_text_field( self::param_string( $request, $key ) ) );
+		}
+
+		$custom_in = $request->get_param( 'custom' );
+		if ( is_array( $custom_in ) ) {
+			$custom = array();
+			foreach ( Tracker::custom_params() as $name ) {
+				$value = $custom_in[ $name ] ?? '';
+				if ( is_scalar( $value ) ) {
+					$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+					if ( '' !== $value ) {
+						$custom[ $name ] = $value;
+					}
+				}
+			}
+			if ( array() !== $custom ) {
+				$link['custom'] = $custom;
+			}
 		}
 
 		return $link;

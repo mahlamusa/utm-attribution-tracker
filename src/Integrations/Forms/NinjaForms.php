@@ -243,7 +243,7 @@ class NinjaForms {
 
 			foreach ( (array) Ninja_Forms()->form( $form_id )->get_fields() as $field ) {
 				$default = (string) $field->get_setting( 'default' );
-				if ( preg_match( '/^\{utmat:([a-z_]+)\}$/', $default, $matches ) && isset( $params[ $matches[1] ] ) ) {
+				if ( preg_match( '/^\{utmat:([a-z0-9_]+)\}$/', $default, $matches ) && isset( $params[ $matches[1] ] ) ) {
 					$present[] = $params[ $matches[1] ];
 				}
 			}

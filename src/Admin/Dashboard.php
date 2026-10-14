@@ -11,6 +11,7 @@ use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\LinkManager;
+use UTMAT\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -142,6 +143,7 @@ class Dashboard {
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => ConversionWebhook::secret(),
 				'webhookLast'    => ConversionWebhook::last_delivery(),
+				'customParams'   => Tracker::custom_params(),
 			)
 		);
 	}
