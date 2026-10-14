@@ -183,11 +183,13 @@ class WeeklyEmail {
 
 		$revenue = array();
 		if ( class_exists( 'WooCommerce' ) ) {
+			// Order conversion rows only: lead conversions carry no order
+			// total and must not inflate the order counts.
 			$revenue = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT utm_campaign AS label, COUNT(*) AS orders, SUM(order_total) AS revenue
 					 FROM {$table}
-					 WHERE clicked_at >= %s AND is_conversion = 1 AND utm_campaign != ''
+					 WHERE clicked_at >= %s AND is_conversion = 1 AND link_id != 'lead' AND utm_campaign != ''
 					 GROUP BY utm_campaign
 					 ORDER BY revenue DESC
 					 LIMIT 5",

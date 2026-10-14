@@ -698,8 +698,9 @@
 	}
 
 	// ── Stat tiles ────────────────────────────────────────────────────────────
-	// Conversions only come from WooCommerce orders, so the tile shows when
-	// WooCommerce is active or the period has conversions anyway.
+	// Conversions come from WooCommerce orders and attributed form leads, so
+	// the tile shows when WooCommerce is active or the period has
+	// conversions anyway.
 	function renderConversions( clicks, conversions, isEmpty ) {
 		const tile  = document.getElementById( 'utmat-tile-conversions' );
 		const count = document.getElementById( 'utmat-conv-count' );
@@ -716,7 +717,7 @@
 		}
 		if ( meta ) {
 			if ( isEmpty ) {
-				meta.textContent = i18n.tileWooHint || 'Appears with WooCommerce orders';
+				meta.textContent = i18n.tileConvHint || 'Appears with WooCommerce orders and form leads';
 			} else {
 				meta.textContent = clicks > 0
 					? fmt( i18n.convRate || '%s of clicks', ( conversions / clicks * 100 ).toFixed( 1 ) + '%' )
@@ -1945,10 +1946,57 @@
 	const elWebhookSecret   = document.getElementById( 'utmat-webhook-secret' );
 	const elWebhookSecretRow = document.getElementById( 'utmat-webhook-secret-row' );
 	const elTestWebhook     = document.getElementById( 'utmat-test-webhook' );
+	const elWebhookPreset   = document.getElementById( 'utmat-webhook-preset' );
+	const elPresetHelp      = document.getElementById( 'utmat-webhook-preset-help' );
+	const elWebhookOrders   = document.getElementById( 'utmat-webhook-orders' );
+	const elWebhookOrdersHint = document.getElementById( 'utmat-webhook-orders-hint' );
+	const elWebhookLeads    = document.getElementById( 'utmat-webhook-leads' );
+
+	// Preset-specific URL placeholders — plain vendor URL shapes, not
+	// translated strings.
+	const WEBHOOK_PLACEHOLDERS = {
+		generic:      'https://example.com/webhooks/utm',
+		zapier:       'https://hooks.zapier.com/hooks/catch/123456/abcdef/',
+		make:         'https://hook.eu1.make.com/abcdefghijklmnopqrstuvwxyz012345',
+		hubspot:      'https://api.hsforms.com/submissions/v3/integration/submit/{portalId}/{formGuid}',
+		gohighlevel:  'https://services.leadconnectorhq.com/hooks/{locationId}/webhook-trigger/{id}',
+	};
+
+	const PRESET_HELP_KEYS = {
+		generic:      'presetHelpGeneric',
+		zapier:       'presetHelpZapier',
+		make:         'presetHelpMake',
+		hubspot:      'presetHelpHubspot',
+		gohighlevel:  'presetHelpGohighlevel',
+	};
 
 	function toggleWebhookExtras( hasUrl ) {
 		if ( elWebhookSecretRow ) elWebhookSecretRow.hidden = ! hasUrl;
 		if ( elTestWebhook ) elTestWebhook.hidden = ! hasUrl;
+	}
+
+	// Swap the preset help text and URL placeholder, and disable the orders
+	// switch under the HubSpot preset (orders are never sent there).
+	function applyPresetUi( preset ) {
+		if ( ! PRESET_HELP_KEYS[ preset ] ) {
+			preset = 'generic';
+		}
+		if ( elPresetHelp ) {
+			elPresetHelp.textContent = i18n[ PRESET_HELP_KEYS[ preset ] ] || '';
+		}
+		if ( elWebhookUrl && WEBHOOK_PLACEHOLDERS[ preset ] ) {
+			elWebhookUrl.placeholder = WEBHOOK_PLACEHOLDERS[ preset ];
+		}
+		if ( elWebhookPreset ) {
+			elWebhookPreset.value = preset;
+		}
+		if ( elWebhookOrders ) {
+			const hubspot = 'hubspot' === preset;
+			elWebhookOrders.disabled = hubspot;
+			if ( elWebhookOrdersHint ) {
+				elWebhookOrdersHint.hidden = ! hubspot;
+			}
+		}
 	}
 
 	// Current form values as strings, for the unsaved-changes comparison.
@@ -1958,6 +2006,9 @@
 			cookie:    String( elCookieDays.value ),
 			weekly:    String( !! elWeekly.checked ),
 			webhook:   elWebhookUrl ? String( elWebhookUrl.value ) : '',
+			preset:    elWebhookPreset ? String( elWebhookPreset.value ) : 'generic',
+			orders:    elWebhookOrders ? String( !! elWebhookOrders.checked ) : 'true',
+			leads:     elWebhookLeads ? String( !! elWebhookLeads.checked ) : 'true',
 			consent:   elConsentCategory ? String( elConsentCategory.value ) : '',
 			visits:    elTrackVisits ? String( !! elTrackVisits.checked ) : '',
 		};
@@ -1978,6 +2029,13 @@
 			elWebhookUrl.value = s.webhook;
 			toggleWebhookExtras( !! s.webhook );
 		}
+		if ( elWebhookOrders ) {
+			elWebhookOrders.checked = 'true' === s.orders;
+		}
+		if ( elWebhookLeads ) {
+			elWebhookLeads.checked = 'true' === s.leads;
+		}
+		applyPresetUi( s.preset || 'generic' );
 	}
 
 	function countSettingsChanges() {
@@ -2023,6 +2081,14 @@
 			elWebhookUrl.value = settings.webhookUrl || '';
 			toggleWebhookExtras( !! settings.webhookUrl );
 		}
+		if ( elWebhookOrders ) {
+			// On unless the admin switched it off (both events default to on).
+			elWebhookOrders.checked = undefined === settings.webhookOrders || !! settings.webhookOrders;
+		}
+		if ( elWebhookLeads ) {
+			elWebhookLeads.checked = undefined === settings.webhookLeads || !! settings.webhookLeads;
+		}
+		applyPresetUi( settings.webhookPreset || 'generic' );
 	}
 	snapshotSettings();
 
@@ -2091,6 +2157,9 @@
 				weekly_email:   elWeekly.checked,
 				cookie_days:    parseInt( elCookieDays.value, 10 ) || 90,
 				webhook_url:    elWebhookUrl ? elWebhookUrl.value.trim() : '',
+				webhook_preset: elWebhookPreset ? elWebhookPreset.value : 'generic',
+				webhook_orders: elWebhookOrders ? elWebhookOrders.checked : true,
+				webhook_leads:  elWebhookLeads ? elWebhookLeads.checked : true,
 				consent_category: elConsentCategory ? elConsentCategory.value : 'marketing',
 				track_visits:   elTrackVisits ? elTrackVisits.checked : true,
 			} ),
@@ -2116,6 +2185,13 @@
 				elWebhookUrl.value = body.webhook_url || '';
 				toggleWebhookExtras( !! body.webhook_url );
 			}
+			if ( elWebhookOrders ) {
+				elWebhookOrders.checked = undefined === body.webhook_orders || !! body.webhook_orders;
+			}
+			if ( elWebhookLeads ) {
+				elWebhookLeads.checked = undefined === body.webhook_leads || !! body.webhook_leads;
+			}
+			applyPresetUi( body.webhook_preset || 'generic' );
 			snapshotSettings();
 			elSettingsMsg.textContent = i18n.settingsSaved || 'Settings saved.';
 			elSettingsMsg.className   = 'utmat-add-form__msg is-success';
@@ -2148,6 +2224,14 @@
 	} );
 
 	// ── Test webhook ──────────────────────────────────────────────────────────
+	if ( elWebhookPreset ) {
+		// The form-level change listener already updates the unsaved count;
+		// this one swaps the preset-specific help text and placeholder.
+		elWebhookPreset.addEventListener( 'change', function () {
+			applyPresetUi( elWebhookPreset.value );
+		} );
+	}
+
 	if ( elTestWebhook ) {
 		const elWebhookMsg = elTestWebhookMsg || elSettingsMsg;
 		elTestWebhook.addEventListener( 'click', function () {
@@ -2155,7 +2239,16 @@
 			elWebhookMsg.textContent = i18n.testWebhookSending || 'Sending…';
 			elWebhookMsg.className   = 'utmat-add-form__msg';
 
-			apiFetch( '/test-webhook', { method: 'POST' } ).then( function ( body ) {
+			// Post the live select and leads switch so the admin can test a
+			// preset before saving it.
+			apiFetch( '/test-webhook', {
+				method:  'POST',
+				headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
+				body:    JSON.stringify( {
+					preset: elWebhookPreset ? elWebhookPreset.value : '',
+					leads:  elWebhookLeads ? elWebhookLeads.checked : true,
+				} ),
+			} ).then( function ( body ) {
 				elWebhookMsg.textContent = body.sent
 					? ( i18n.testWebhookSent || 'Test webhook sent.' )
 					: ( i18n.testWebhookFailed || 'Delivery failed — check the URL and your receiver.' );

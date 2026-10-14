@@ -296,6 +296,10 @@ class WooCommerce {
 					: __( 'New order', 'utm-attribution-tracker' ),
 				'posted'     => $last,
 				'created_at' => time(),
+				// The order conversion row and the conversion webhook were
+				// both sent above — without this flag Recorder::record()
+				// would add a second `lead` row and a second POST per order.
+				'is_lead'    => false,
 			)
 		);
 

@@ -35,6 +35,13 @@ function utmat_uninstall_site(): void {
 	delete_option( 'utmat_custom_params' );
 	delete_option( 'utmat_consent_category' );
 	delete_option( 'utmat_track_visits' );
+	delete_option( 'utmat_webhook_url' );
+	delete_option( 'utmat_webhook_secret' );
+	delete_option( 'utmat_webhook_last' );
+	delete_option( 'utmat_webhook_preset' );
+	delete_option( 'utmat_webhook_events' );
+	delete_option( 'utmat_recent_leads' );
+	delete_option( 'utmat_presets' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

@@ -10,6 +10,7 @@ namespace UTMAT;
 use UTMAT\DB\Schema;
 use UTMAT\DB\Retention;
 use UTMAT\Privacy\PrivacyPolicy;
+use UTMAT\Reports\ConversionWebhook;
 use UTMAT\Reports\WeeklyEmail;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\Tracker;
@@ -95,6 +96,10 @@ class Plugin {
 
 		// Weekly email report (cron is only scheduled while the toggle is on).
 		add_action( WeeklyEmail::HOOK, array( WeeklyEmail::class, 'send' ) );
+
+		// Lead webhook: deliver every attributed form submission recorded by
+		// the Insights\Recorder to the configured webhook URL.
+		add_action( 'utmat_lead_recorded', array( ConversionWebhook::class, 'send_lead' ), 10, 2 );
 
 		// Suggested privacy policy text.
 		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );

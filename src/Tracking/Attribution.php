@@ -52,6 +52,19 @@ class Attribution {
 	public const OPTION_CONSENT_CATEGORY = 'utmat_consent_category';
 
 	/**
+	 * Name of the per-browser visitor id cookie.
+	 *
+	 * The value is a UUID v4 written alongside the attribution cookie so a
+	 * visitor's later orders and form submissions can be tied back to their
+	 * visits.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const VISITOR_COOKIE_NAME = 'utmat_vid';
+
+	/**
 	 * Accepted values of the consent category setting.
 	 *
 	 * `marketing` and `statistics` gate on that single category; `either`
@@ -132,6 +145,26 @@ class Attribution {
 		$channel = $decoded['first']['ch'] ?? '';
 
 		return ( is_string( $channel ) && in_array( $channel, TrafficSource::CHANNELS, true ) ) ? $channel : '';
+	}
+
+	/**
+	 * The validated visitor id from the `utmat_vid` cookie.
+	 *
+	 * Returns the cookie value (unslashed, sanitized) when it is a well-formed
+	 * UUID v4, and an empty string when the cookie is absent or malformed —
+	 * a crafted value is dropped, never passed on.
+	 *
+	 * @since 1.0.0
+	 * @return string A lowercase UUID v4, or ''.
+	 */
+	public static function visitor_id(): string {
+		if ( ! isset( $_COOKIE[ self::VISITOR_COOKIE_NAME ] ) ) {
+			return '';
+		}
+
+		$vid = is_string( $_COOKIE[ self::VISITOR_COOKIE_NAME ] ) ? sanitize_text_field( wp_unslash( $_COOKIE[ self::VISITOR_COOKIE_NAME ] ) ) : '';
+
+		return wp_is_uuid( $vid, 4 ) ? $vid : '';
 	}
 
 	/**

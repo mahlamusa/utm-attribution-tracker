@@ -195,6 +195,14 @@ class RestController {
 				'methods'             => 'POST',
 				'callback'            => array( self::class, 'send_test_webhook' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array(
+					'preset' => array(
+						'sanitize_callback' => 'sanitize_key',
+					),
+					'leads'  => array(
+						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
+				),
 			)
 		);
 
@@ -221,6 +229,21 @@ class RestController {
 					'webhook_url'      => array(
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'webhook_preset'   => array(
+						'default'           => 'generic',
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => static function ( $value ) {
+							return in_array( $value, ConversionWebhook::PRESETS, true );
+						},
+					),
+					'webhook_orders'   => array(
+						'default'           => true,
+						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
+					'webhook_leads'    => array(
+						'default'           => true,
+						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'consent_category' => array(
 						'default'           => 'marketing',
@@ -264,8 +287,9 @@ class RestController {
 	 * than today's can shift by an hour — acceptable for daily aggregation.
 	 *
 	 * Click-oriented queries exclude conversion rows (`is_conversion = 1`,
-	 * written by the WooCommerce integration) so a converting visit is not
-	 * double-counted as a click, and untagged landing visits (`link_id =
+	 * written by the WooCommerce integration and the lead recorder) so a
+	 * converting visit is not double-counted as a click, and untagged
+	 * landing visits (`link_id =
 	 * 'visit'`), which only the `by_channel` breakdown reports.
 	 *
 	 * @since 1.0.0
@@ -299,7 +323,7 @@ class RestController {
 		);
 		// phpcs:enable
 
-		// Conversions by day (WooCommerce order rows), same local-date grouping.
+		// Conversions by day (WooCommerce order rows plus form lead rows), same local-date grouping.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$conv_day_raw = $wpdb->get_results(
 			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
@@ -484,12 +508,15 @@ class RestController {
 		);
 		// phpcs:enable
 
-		// Revenue by campaign — conversion rows only (WooCommerce orders).
+		// Revenue by campaign — order conversion rows only (WooCommerce).
+		// Lead conversions carry no order total and must not inflate the
+		// order counts; legacy conversion rows seeded with other link ids
+		// keep counting, matching the Journeys tab's kind derivation.
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$revenue_raw = $wpdb->get_results(
 			"SELECT utm_campaign AS label, COUNT(*) AS orders, SUM(order_total) AS revenue
 			 FROM {$table}
-			 WHERE {$where} AND is_conversion = 1 AND utm_campaign != ''
+			 WHERE {$where} AND is_conversion = 1 AND link_id != 'lead' AND utm_campaign != ''
 			 GROUP BY utm_campaign
 			 ORDER BY revenue DESC
 			 LIMIT 10",
@@ -514,7 +541,8 @@ class RestController {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$all_time_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
 
-		// Conversions in the period (WooCommerce order rows) for the totals row.
+		// Conversions in the period (WooCommerce order rows plus form lead
+		// rows) for the totals row.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$conversions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where} AND is_conversion = 1" );
 
@@ -793,17 +821,25 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/test-webhook — send a synthetic conversion payload now.
+	 * POST utmat/v1/test-webhook — send a synthetic payload now.
 	 *
 	 * Lets the admin verify their receiver and HMAC signature checking work
-	 * before relying on the webhook for real orders. No-ops (returns
-	 * sent:false) when no URL is configured.
+	 * before relying on it for real events. The optional `preset` and
+	 * `leads` args forward the live settings-form values so a preset can be
+	 * tested before it is saved. No-ops (returns sent:false) when no URL is
+	 * configured or no event is enabled.
 	 *
 	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
-	public static function send_test_webhook(): WP_REST_Response {
-		return new WP_REST_Response( array( 'sent' => ConversionWebhook::send_test() ), 200 );
+	public static function send_test_webhook( WP_REST_Request $request ): WP_REST_Response {
+		$sent = ConversionWebhook::send_test(
+			(string) $request->get_param( 'preset' ),
+			$request->has_param( 'leads' ) ? (bool) $request->get_param( 'leads' ) : null
+		);
+
+		return new WP_REST_Response( array( 'sent' => $sent ), 200 );
 	}
 
 	/**
@@ -823,11 +859,12 @@ class RestController {
 	 * POST utmat/v1/settings
 	 *
 	 * Saves the retention window (0 = keep forever), the weekly email
-	 * toggle, the conversion webhook URL (empty disables it), the consent
-	 * category that gates the attribution cookie (allow-listed, anything
-	 * else falls back to marketing) and the untagged-visit tracking switch.
-	 * The weekly report cron is scheduled or unscheduled here, at save
-	 * time, so no scheduling work happens on normal page loads.
+	 * toggle, the webhook settings (URL — empty disables it; preset; the
+	 * order/lead event toggles), the consent category that gates the
+	 * attribution cookie (allow-listed, anything else falls back to
+	 * marketing) and the untagged-visit tracking switch. The weekly report
+	 * cron is scheduled or unscheduled here, at save time, so no scheduling
+	 * work happens on normal page loads.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -839,7 +876,13 @@ class RestController {
 		$cookie    = absint( $request->get_param( 'cookie_days' ) );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
 		$webhook   = esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) );
-		$consent   = self::param_string( $request, 'consent_category' );
+		$preset    = self::param_string( $request, 'webhook_preset' );
+		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
+			$preset = 'generic';
+		}
+		$orders  = (bool) $request->get_param( 'webhook_orders' );
+		$leads   = (bool) $request->get_param( 'webhook_leads' );
+		$consent = self::param_string( $request, 'consent_category' );
 		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
 			$consent = 'marketing';
 		}
@@ -849,6 +892,14 @@ class RestController {
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
 		update_option( 'utmat_cookie_days', $cookie );
 		update_option( ConversionWebhook::OPTION_URL, $webhook );
+		update_option( ConversionWebhook::OPTION_PRESET, $preset );
+		update_option(
+			ConversionWebhook::OPTION_EVENTS,
+			array(
+				'orders' => $orders,
+				'leads'  => $leads,
+			)
+		);
 		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
 		update_option( 'utmat_track_visits', $visits ? 1 : 0 );
 
@@ -864,6 +915,9 @@ class RestController {
 				'weekly_email'     => $weekly,
 				'cookie_days'      => $cookie,
 				'webhook_url'      => $webhook,
+				'webhook_preset'   => $preset,
+				'webhook_orders'   => $orders,
+				'webhook_leads'    => $leads,
 				'consent_category' => $consent,
 				'track_visits'     => $visits,
 			),
@@ -1148,9 +1202,9 @@ class RestController {
 	 * POST utmat/v1/links — create a managed link.
 	 *
 	 * The slug is derived from the submitted label when no explicit id is
-	 * given. Fails when the slug is empty, reserved (`incoming` and `visit`
-	 * name event kinds in the events table), already in use, or the
-	 * destination is not a valid http(s) URL.
+	 * given. Fails when the slug is empty, reserved (`incoming`, `visit`,
+	 * `order` and `lead` name event kinds in the events table), already in
+	 * use, or the destination is not a valid http(s) URL.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -1161,9 +1215,9 @@ class RestController {
 		$id_param = self::param_string( $request, 'id' );
 		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
 
-		if ( '' === $id || in_array( $id, array( 'incoming', 'visit' ), true ) ) {
+		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid link slug (the slugs "incoming" and "visit" are reserved).', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Please provide a valid link slug (incoming, visit, order and lead are reserved).', 'utm-attribution-tracker' ) ),
 				400
 			);
 		}

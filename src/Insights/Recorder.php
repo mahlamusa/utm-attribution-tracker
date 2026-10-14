@@ -1,6 +1,6 @@
 <?php
 /**
- * Recorder — ring-buffer storage for the most recent leads/conversions.
+ * Recorder — lead recording: ring buffer plus conversion event row.
  *
  * Backs the recent-leads dashboard widget. Stores one option,
  * `utmat_recent_leads` (autoload=false — only ever read on the
@@ -8,6 +8,11 @@
  * `array<string integration_slug, array<record>>`, capped at
  * MAX_PER_INTEGRATION records per slug (oldest evicted first). Mirrors
  * HandL's `handl_recent_leads` / `MAX_PER_PLUGIN` pattern.
+ *
+ * Every attributed form submission is also written to the events table as
+ * a `link_id = 'lead'` conversion row (WooCommerce orders excepted — they
+ * carry their own `order` row) and announced on the
+ * `utmat_lead_recorded` action for the lead webhook.
  *
  * A record may carry the submitted form field values under `fields`; they
  * are cleaned, handed to the `utmat_lead_recorded` action and dropped
@@ -20,6 +25,7 @@
 namespace UTMAT\Insights;
 
 use UTMAT\Tracking\Attribution;
+use UTMAT\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -84,10 +90,18 @@ class Recorder {
 	 * wp_options. Callers that pass no `fields` are unaffected (the action
 	 * receives an empty array).
 	 *
+	 * Unless the caller passes `'is_lead' => false` (the WooCommerce
+	 * integration does, because it writes its own `order` conversion row and
+	 * sends its own webhook), the record also becomes a first-class
+	 * conversion: a `link_id = 'lead'` event row is inserted through
+	 * Tracker::record() and the `utmat_lead_recorded` action fires after it,
+	 * carrying the record with its sanitised `page_url` so listeners see the
+	 * same value the row stored.
+	 *
 	 * @since 1.0.0
 	 *
 	 * @param string               $integration Integration slug, e.g. 'contact-form-7', 'gravity-forms', 'ninja-forms', 'elementor', 'woocommerce'.
-	 * @param array<string, mixed> $record_data Record data. Expected keys: form_id (int|string), form_title (string), posted (array<string,string> attribution data — same shape TrafficSource::classify() expects), created_at (int, Unix timestamp), fields (optional array<string, string|array> submitted values keyed by label; never stored).
+	 * @param array<string, mixed> $record_data Record data. Expected keys: form_id (int|string), form_title (string), posted (array<string,string> attribution data — same shape TrafficSource::classify() expects), created_at (int, Unix timestamp), fields (optional array<string, string|array> submitted values keyed by label; never stored), is_lead (optional bool, default true), page_url (optional string; resolved from the referer when absent).
 	 *
 	 * @return void
 	 */
@@ -96,8 +110,15 @@ class Recorder {
 
 		$record_data['fields'] = self::clean_fields( $fields );
 
-		$stored = $record_data;
-		unset( $stored['fields'] );
+		$is_lead = ! isset( $record_data['is_lead'] ) || false !== $record_data['is_lead'];
+
+		$page_url = self::resolve_page_url( $record_data );
+
+		$record_data['page_url'] = $page_url;
+
+		// Whitelist the ring-buffer copy: only these keys ever reach
+		// wp_options, whatever a caller passes.
+		$stored = array_intersect_key( $record_data, array_flip( array( 'form_id', 'form_title', 'posted', 'created_at' ) ) );
 
 		$all = self::all();
 
@@ -113,18 +134,106 @@ class Recorder {
 
 		self::save( $all );
 
-		/**
-		 * Fires after a lead or conversion has been recorded.
-		 *
-		 * The record carries the cleaned submitted `fields`, which are not
-		 * stored anywhere by the plugin itself.
-		 *
-		 * @since 1.0.0
-		 *
-		 * @param string               $integration Integration slug.
-		 * @param array<string, mixed> $record_data The record: form_id, form_title, posted, created_at and fields (always an array).
-		 */
-		do_action( 'utmat_lead_recorded', $integration, $record_data );
+		if ( $is_lead ) {
+			self::record_lead_event( $integration, $record_data, $page_url );
+
+			/**
+			 * Fires after an attributed form submission has been recorded as a
+			 * lead conversion event.
+			 *
+			 * The record carries the cleaned submitted `fields` and the
+			 * sanitised `page_url` stored on the event row; the field values
+			 * are not stored anywhere by the plugin itself.
+			 *
+			 * @since 1.0.0
+			 *
+			 * @param string               $integration Integration slug.
+			 * @param array<string, mixed> $record_data The record: form_id, form_title, posted, created_at, page_url and fields (always an array).
+			 */
+			do_action( 'utmat_lead_recorded', $integration, $record_data );
+		}
+	}
+
+	/**
+	 * Insert the `link_id = 'lead'` conversion event row for a recorded lead.
+	 *
+	 * The row mirrors the WooCommerce order conversion's shape: built from
+	 * the last touch (`posted`), no order total, and the channel passed
+	 * explicitly because the submission request's own referrer is the site
+	 * (or absent for admin-ajax/REST submissions), never the campaign that
+	 * brought the visitor. Form metadata travels in the `meta` JSON column;
+	 * the submitted field values never reach the table.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string               $integration Integration slug.
+	 * @param array<string, mixed> $record_data The record (cleaned `fields` included; unused here).
+	 * @param string               $page_url    Sanitised page URL stored as the row's destination.
+	 * @return void
+	 */
+	private static function record_lead_event( string $integration, array $record_data, string $page_url ): void {
+		$posted = isset( $record_data['posted'] ) && is_array( $record_data['posted'] ) ? $record_data['posted'] : array();
+
+		$event = array(
+			'link_id'       => 'lead',
+			'is_conversion' => 1,
+			'touch'         => 'last',
+			'destination'   => $page_url,
+			// The submission's request-time referrer is the form page itself,
+			// so the row inherits the last touch's channel instead of being
+			// classified fresh.
+			'channel'       => isset( $posted['ch'] ) && is_scalar( $posted['ch'] ) ? (string) $posted['ch'] : '',
+			'meta'          => array(
+				'integration' => $integration,
+				'form_id'     => is_scalar( $record_data['form_id'] ?? '' ) ? (string) $record_data['form_id'] : '',
+				'form_title'  => is_scalar( $record_data['form_title'] ?? '' ) ? (string) $record_data['form_title'] : '',
+			),
+			'visitor_id'    => Attribution::visitor_id(),
+		);
+
+		foreach ( Tracker::param_whitelist() as $key ) {
+			$event[ $key ] = isset( $posted[ $key ] ) && is_scalar( $posted[ $key ] ) ? (string) $posted[ $key ] : '';
+		}
+
+		// Conversion rows never set or honour the dedup transient, matching
+		// the WooCommerce order path.
+		Tracker::record( $event );
+	}
+
+	/**
+	 * Resolve the page URL to store as a lead event's destination.
+	 *
+	 * The record's own `page_url` when it carries one; otherwise the request
+	 * referer — REST and admin-ajax form submissions (Contact Form 7, Ninja
+	 * Forms) send the form page as their Referer, and wp_get_referer() only
+	 * returns same-site URLs, so an external referer correctly falls through
+	 * — and finally the current request URL, mirroring how
+	 * Tracker::handle_incoming_request() builds it.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array<string, mixed> $record_data The record being recorded.
+	 * @return string An esc_url_raw()'d URL, or '' on a CLI request with no referer.
+	 */
+	private static function resolve_page_url( array $record_data ): string {
+		$given    = $record_data['page_url'] ?? null;
+		$page_url = esc_url_raw( is_scalar( $given ) ? (string) $given : '' );
+
+		if ( '' !== $page_url ) {
+			return $page_url;
+		}
+
+		$page_url = esc_url_raw( (string) wp_get_referer() );
+
+		if ( '' !== $page_url ) {
+			return $page_url;
+		}
+
+		if ( ! isset( $_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'] ) ) {
+			return '';
+		}
+
+		return esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ) );
 	}
 
 	/**
