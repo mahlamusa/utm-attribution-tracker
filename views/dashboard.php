@@ -32,7 +32,6 @@ $utmatra_kses = array(
 		<div class="utmatra-header__titles">
 			<h1 class="utmatra-brand">
 				<img class="utmatra-brand__logo" src="<?php echo esc_url( UTMATRA_URL . 'assets/images/utmatra-logo.svg' ); ?>" width="161" height="39" alt="Utmatra" />
-				<span class="screen-reader-text"> </span>
 				<span class="utmatra-brand__tagline"><?php esc_html_e( 'UTM Attribution and Tracking', 'utm-attribution-tracker' ); ?></span>
 			</h1>
 			<p class="utmatra-header__sub"><?php esc_html_e( 'Campaign clicks, conversions and first/last-touch attribution, kept on your own site.', 'utm-attribution-tracker' ); ?></p>
