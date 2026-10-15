@@ -452,8 +452,6 @@ $utmat_kses = array(
 							<p class="utmat-field__hint"><?php esc_html_e( 'Records the landing page and referrer of visits that arrive without campaign parameters, so organic, social, AI-assistant and referral traffic appear in the Channels report. On by default; about one event per visit.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-				</div>
-				<div class="utmat-card utmat-settings-card">
 					<div class="utmat-field">
 						<label class="utmat-field__label" for="utmat-custom-params"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></label>
 						<div class="utmat-field__control">
