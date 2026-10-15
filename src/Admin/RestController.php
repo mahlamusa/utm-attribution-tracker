@@ -843,14 +843,17 @@ class RestController {
 	 * Build the prepared WHERE clause for the period immediately before the
 	 * requested one.
 	 *
-	 * Starts at site-local midnight `2 × $period` days ago and spans exactly
-	 * the same duration as the current window has elapsed so far (period days
-	 * plus the partial current day). Comparing equal durations keeps the
-	 * trend percentage fair early in the day, when the current window has
-	 * only a few hours of today in it. Same optional campaign filter as
+	 * Starts at site-local midnight `2 × $period + 1` days ago (the current
+	 * window covers `$period + 1` calendar days, so this ends just before it
+	 * starts) and spans exactly the same duration as the current window has
+	 * elapsed so far (period days plus the partial current day). Comparing
+	 * equal durations keeps the trend percentage fair early in the day, when
+	 * the current window has only a few hours of today in it. Same optional
+	 * campaign filter as
 	 * {@see build_where()}.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Previous window now ends before the current one starts.
 	 * @param int               $period    Period length in days.
 	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
 	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
@@ -860,7 +863,7 @@ class RestController {
 		global $wpdb;
 
 		$utc    = new DateTimeZone( 'UTC' );
-		$double = 2 * $period;
+		$double = 2 * $period + 1;
 
 		$since_current = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
 		$since_prev    = $now_local->modify( "-{$double} days" )->setTime( 0, 0, 0 );
@@ -1369,9 +1372,9 @@ class RestController {
 	 * array). The custom names are validated — shape, reserved names
 	 * including the public query variables, and the maximum count — before
 	 * any option is written, so a rejected list leaves every setting at its
-	 * previous value. The weekly report cron is scheduled or unscheduled
-	 * here, at save time, so no scheduling work happens on normal page
-	 * loads.
+	 * previous value. The weekly report job is scheduled or unscheduled
+	 * here, at save time; Scheduler::heal() only recreates it if it goes
+	 * missing.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -1737,6 +1740,7 @@ class RestController {
 	 * unknown keys are dropped silently.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 * @param WP_REST_Request $request REST request.
 	 * @return array<string, mixed>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
 	 */
@@ -1764,7 +1768,7 @@ class RestController {
 			foreach ( Tracker::custom_params() as $name ) {
 				$value = $custom_in[ $name ] ?? '';
 				if ( is_scalar( $value ) ) {
-					$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+					$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
 					if ( '' !== $value ) {
 						$custom[ $name ] = $value;
 					}

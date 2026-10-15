@@ -115,6 +115,7 @@ class ContactForm7 {
 	 * not recognise) is looked up here.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 *
 	 * @param string|null $output The tag output resolved so far, null when unrecognised.
 	 * @param string      $name   The tag name including its leading underscore, e.g. `_utm_source`.
@@ -139,7 +140,7 @@ class ContactForm7 {
 		// 255 chars to match the attribution writers.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$value = isset( $_POST[ $field ] ) && is_string( $_POST[ $field ] )
-			? substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
+			? mb_substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
 			: '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 

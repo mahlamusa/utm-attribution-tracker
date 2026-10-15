@@ -73,6 +73,7 @@ class Plugin {
 	 * Register all WordPress hooks.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the schedule-heal hook.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -94,8 +95,13 @@ class Plugin {
 		// Daily retention pruning.
 		add_action( Retention::HOOK, array( Retention::class, 'prune' ) );
 
-		// Weekly email report (cron is only scheduled while the toggle is on).
+		// Weekly email report (only scheduled while the toggle is on).
 		add_action( WeeklyEmail::HOOK, array( WeeklyEmail::class, 'send' ) );
+
+		// Recreate any missing recurring job (throttled to twice a day). On
+		// `init`, so the WP-Cron fallback heals too when Action Scheduler is
+		// not loaded; Scheduler::ensure() defers until it has initialised.
+		add_action( 'init', array( Scheduler::class, 'heal' ), 20 );
 
 		// Lead webhook: deliver every attributed form submission recorded by
 		// the Insights\Recorder to the configured webhook URL.
@@ -236,6 +242,7 @@ class Plugin {
 	 * flushed rules include it (activation runs before our `init` hook).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Resets the schedule-heal throttle.
 	 * @return void
 	 */
 	public static function activate(): void {
@@ -244,6 +251,9 @@ class Plugin {
 			add_option( 'utmatra_salt', wp_generate_password( 64, true, true ) );
 		}
 		LinkManager::seed_defaults();
+		// Heal on the next request too, so a reactivation restores the
+		// weekly report (deactivation removed it) without a settings save.
+		delete_option( Scheduler::HEAL_OPTION );
 		Retention::schedule();
 		Rewrites::add_rules();
 		flush_rewrite_rules();
@@ -252,12 +262,20 @@ class Plugin {
 	/**
 	 * Plugin deactivation — unschedule retention pruning and the weekly report.
 	 *
+	 * Queued order webhooks are cancelled too: with the plugin inactive no
+	 * callback is registered, so they would otherwise run and fail.
+	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Cancels queued order webhooks.
 	 * @return void
 	 */
 	public static function deactivate(): void {
 		Retention::unschedule();
 		WeeklyEmail::unschedule();
+		if ( function_exists( 'as_unschedule_all_actions' ) ) {
+			// Null args match every queued webhook (each carries an order id).
+			as_unschedule_all_actions( WooCommerce::WEBHOOK_HOOK, null, Scheduler::GROUP );
+		}
 		flush_rewrite_rules();
 	}
 }

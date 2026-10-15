@@ -7,3 +7,4 @@ specs/
 .spec-status
 .design-sync/ds-bundle/
 .zcodeignore
+vendor/

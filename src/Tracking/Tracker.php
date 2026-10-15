@@ -329,7 +329,11 @@ class Tracker {
 			$data['visitor_id'] = self::maybe_set_visitor_cookie();
 			// The event gate is off by default (an event carries no cookie);
 			// when a site opts in, the passive record waits for consent too.
-			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data ) ) {
+			// Dedup on the incoming cookie only when this request stamps a
+			// visitor id; with the gate closed record() stores the IP marker
+			// alone, so the check must use the IP key too.
+			$dedup_vid = '' === $data['visitor_id'] ? '' : Attribution::visitor_id();
+			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data, $dedup_vid ) ) {
 				self::record( $data );
 			}
 			// Cookie logic runs regardless of dedup — a deduplicated repeat
@@ -361,6 +365,7 @@ class Tracker {
 	 * both writers stay symmetrical.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
@@ -372,16 +377,16 @@ class Tracker {
 
 		$touch = array();
 		foreach ( $params as $key => $value ) {
-			$touch[ $key ] = substr( $value, 0, 255 );
+			$touch[ $key ] = mb_substr( $value, 0, 255 );
 		}
-		$touch['lp'] = substr( $landing, 0, 255 );
+		$touch['lp'] = mb_substr( $landing, 0, 255 );
 
 		$referrer_host = isset( $_SERVER['HTTP_REFERER'] )
 			? strtolower( (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) )
 			: '';
 		$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		if ( '' !== $referrer_host && $referrer_host !== $site_host ) {
-			$touch['rh'] = substr( $referrer_host, 0, 255 );
+			$touch['rh'] = mb_substr( $referrer_host, 0, 255 );
 		}
 		$touch['ts'] = time();
 
@@ -585,6 +590,7 @@ class Tracker {
 	 * to store.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character; sets IP-only and visitor dedup markers.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
@@ -592,7 +598,7 @@ class Tracker {
 		global $wpdb;
 
 		$ip  = self::client_ip();
-		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
+		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? mb_substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
 		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
 		if ( array_key_exists( 'referrer', $data ) ) {
 			$ref = esc_url_raw( (string) $data['referrer'] );
@@ -604,29 +610,29 @@ class Tracker {
 		$vid = (string) ( $data['visitor_id'] ?? Attribution::visitor_id() );
 
 		$row = array(
-			'link_id'       => substr( $data['link_id'] ?? '', 0, 64 ),
-			'utm_source'    => substr( $data['utm_source'] ?? '', 0, 100 ),
-			'utm_medium'    => substr( $data['utm_medium'] ?? '', 0, 100 ),
-			'utm_campaign'  => substr( $data['utm_campaign'] ?? '', 0, 100 ),
-			'utm_id'        => substr( $data['utm_id'] ?? '', 0, 100 ),
-			'utm_term'      => substr( $data['utm_term'] ?? '', 0, 100 ),
-			'utm_content'   => substr( $data['utm_content'] ?? '', 0, 255 ),
-			'destination'   => substr( $data['destination'] ?? '', 0, 2083 ),
-			'gclid'         => substr( $data['gclid'] ?? '', 0, 255 ),
-			'fbclid'        => substr( $data['fbclid'] ?? '', 0, 255 ),
-			'msclkid'       => substr( $data['msclkid'] ?? '', 0, 255 ),
-			'ttclid'        => substr( $data['ttclid'] ?? '', 0, 255 ),
-			'li_fat_id'     => substr( $data['li_fat_id'] ?? '', 0, 255 ),
-			'twclid'        => substr( $data['twclid'] ?? '', 0, 255 ),
+			'link_id'       => mb_substr( $data['link_id'] ?? '', 0, 64 ),
+			'utm_source'    => mb_substr( $data['utm_source'] ?? '', 0, 100 ),
+			'utm_medium'    => mb_substr( $data['utm_medium'] ?? '', 0, 100 ),
+			'utm_campaign'  => mb_substr( $data['utm_campaign'] ?? '', 0, 100 ),
+			'utm_id'        => mb_substr( $data['utm_id'] ?? '', 0, 100 ),
+			'utm_term'      => mb_substr( $data['utm_term'] ?? '', 0, 100 ),
+			'utm_content'   => mb_substr( $data['utm_content'] ?? '', 0, 255 ),
+			'destination'   => mb_substr( $data['destination'] ?? '', 0, 2083 ),
+			'gclid'         => mb_substr( $data['gclid'] ?? '', 0, 255 ),
+			'fbclid'        => mb_substr( $data['fbclid'] ?? '', 0, 255 ),
+			'msclkid'       => mb_substr( $data['msclkid'] ?? '', 0, 255 ),
+			'ttclid'        => mb_substr( $data['ttclid'] ?? '', 0, 255 ),
+			'li_fat_id'     => mb_substr( $data['li_fat_id'] ?? '', 0, 255 ),
+			'twclid'        => mb_substr( $data['twclid'] ?? '', 0, 255 ),
 			'is_conversion' => empty( $data['is_conversion'] ) ? 0 : 1,
-			'touch'         => substr( $data['touch'] ?? '', 0, 10 ),
+			'touch'         => mb_substr( $data['touch'] ?? '', 0, 10 ),
 			'device'        => self::device_type( $ua ),
 			'ip_hash'       => self::hash_ip( $ip ),
 			'user_agent'    => $ua,
-			'referrer'      => substr( $ref, 0, 2083 ),
+			'referrer'      => mb_substr( $ref, 0, 2083 ),
 			'clicked_at'    => current_time( 'mysql', true ),
-			'channel'       => substr( $data['channel'] ?? '', 0, 20 ),
-			'visitor_id'    => substr( $vid, 0, 36 ),
+			'channel'       => mb_substr( $data['channel'] ?? '', 0, 20 ),
+			'visitor_id'    => mb_substr( $vid, 0, 36 ),
 		);
 
 		// Classify after the row is assembled so the resolved referrer is
@@ -653,7 +659,7 @@ class Tracker {
 			if ( ! is_scalar( $value ) ) {
 				continue;
 			}
-			$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+			$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
 			if ( '' !== $value ) {
 				$custom[ $name ] = $value;
 			}
@@ -680,9 +686,14 @@ class Tracker {
 			$formats
 		);
 
+		// Two markers: the IP-only one matches later requests that carry no
+		// established visitor id; the visitor one matches the same browser.
 		$window = self::dedup_window();
 		if ( empty( $data['is_conversion'] ) && false !== $inserted && $window > 0 ) {
 			set_transient( 'utmatra_dd_' . self::dedup_key( $data ), 1, $window );
+			if ( '' !== $vid ) {
+				set_transient( 'utmatra_dd_' . self::dedup_key( $data, $vid ), 1, $window );
+			}
 		}
 	}
 
@@ -690,24 +701,38 @@ class Tracker {
 	 * Whether an identical event was already recorded within the dedup window.
 	 *
 	 * Identity = same hashed client IP + same link_id + same set of
-	 * UTM/click-ID values. Checked against a transient
-	 * (`utmatra_dd_{md5}`) so no table scan is needed; record() sets the
-	 * transient after a successful insert. A window of 0 disables dedup.
-	 * Conversion rows are exempt: an order is always a distinct conversion,
-	 * so `is_conversion` truthy is never a duplicate.
+	 * UTM/click-ID values, plus the visitor id when the request carries an
+	 * established one. Checked against a transient (`utmatra_dd_{md5}`) so
+	 * no table scan is needed; record() sets an IP-only marker and, for rows
+	 * with a visitor id, a visitor marker after a successful insert. A window
+	 * of 0 disables dedup. Conversion rows are exempt: an order is always a
+	 * distinct conversion, so `is_conversion` truthy is never a duplicate.
+	 *
+	 * The visitor id counts only when it is established: the incoming
+	 * `utmatra_vid` cookie by default, or the beacon's `vid`, which it sends
+	 * only once its cookie write is confirmed (it may have been generated on
+	 * this request). So two browsers behind one IP each record their own
+	 * touch, a browser that refuses cookies (a fresh id on every request)
+	 * still dedups by IP, and the PHP fallback and the beacon still match on
+	 * uncached pages. Trade-off: a first-time visitor without JavaScript, on
+	 * an IP that just recorded the same tagged URL, has no established id yet
+	 * and is deduplicated by IP; with JavaScript its beacon records it.
 	 *
 	 * @since 1.0.0
-	 * @param array<string, mixed> $data Event fields (same shape as record()).
+	 * @since 1.0.0 Adds the established visitor id to the identity.
+	 * @param array<string, mixed> $data       Event fields (same shape as record()).
+	 * @param string|null          $visitor_id Established visitor id; null reads the incoming cookie.
 	 * @return bool
 	 */
-	public static function is_duplicate( array $data ): bool {
+	public static function is_duplicate( array $data, ?string $visitor_id = null ): bool {
 		if ( ! empty( $data['is_conversion'] ) ) {
 			return false;
 		}
 		if ( self::dedup_window() <= 0 ) {
 			return false;
 		}
-		return false !== get_transient( 'utmatra_dd_' . self::dedup_key( $data ) );
+		$visitor_id = null === $visitor_id ? Attribution::visitor_id() : $visitor_id;
+		return false !== get_transient( 'utmatra_dd_' . self::dedup_key( $data, $visitor_id ) );
 	}
 
 	/**
@@ -719,11 +744,16 @@ class Tracker {
 	 * referrer host: a Google landing and a Facebook landing from one IP
 	 * within the window are two visits, reloads of the same landing are one.
 	 *
+	 * A non-empty visitor id makes it a per-browser key (see is_duplicate()
+	 * for which id counts); an empty one leaves the key IP-based.
+	 *
 	 * @since 1.0.0
-	 * @param array<string, mixed> $data Event fields.
+	 * @since 1.0.0 Takes an optional visitor id.
+	 * @param array<string, mixed> $data       Event fields.
+	 * @param string               $visitor_id Visitor id to key on, or '' for the IP-only key.
 	 * @return string
 	 */
-	private static function dedup_key( array $data ): string {
+	private static function dedup_key( array $data, string $visitor_id = '' ): string {
 		$subset = array();
 		foreach ( self::param_whitelist() as $key ) {
 			if ( isset( $data[ $key ] ) && '' !== $data[ $key ] ) {
@@ -732,6 +762,9 @@ class Tracker {
 		}
 		if ( 'visit' === ( $data['link_id'] ?? '' ) ) {
 			$subset['rh'] = strtolower( (string) wp_parse_url( (string) ( $data['referrer'] ?? '' ), PHP_URL_HOST ) );
+		}
+		if ( '' !== $visitor_id ) {
+			$subset['vid'] = $visitor_id;
 		}
 		ksort( $subset );
 

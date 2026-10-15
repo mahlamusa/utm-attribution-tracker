@@ -101,6 +101,7 @@ class CollectController {
 	 * and is dropped when it is not a well-formed UUID v4.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Passes the beacon's visitor id to the dedup check.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -170,7 +171,10 @@ class CollectController {
 
 		$data['visitor_id'] = wp_is_uuid( $vid, 4 ) ? $vid : '';
 
-		if ( Tracker::is_duplicate( $data ) ) {
+		// The beacon sends vid only once its cookie write is confirmed (it may
+		// be new this request), so it counts as established; the fetch
+		// fallback carries no cookies to read.
+		if ( Tracker::is_duplicate( $data, $data['visitor_id'] ) ) {
 			return new WP_REST_Response( array( 'recorded' => false ), 200 );
 		}
 

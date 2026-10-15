@@ -124,6 +124,7 @@ class WPForms {
 	 * cookie for a tag used without a matching field.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 *
 	 * @param mixed  $value     Value resolved so far.
 	 * @param string $tag_name  Smart tag name.
@@ -151,7 +152,7 @@ class WPForms {
 		// values are ignored and the value is capped like the cookie writers.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST[ $tag_name ] ) && is_string( $_POST[ $tag_name ] ) && '' !== $_POST[ $tag_name ] ) {
-			return substr( sanitize_text_field( wp_unslash( $_POST[ $tag_name ] ) ), 0, 255 );
+			return mb_substr( sanitize_text_field( wp_unslash( $_POST[ $tag_name ] ) ), 0, 255 );
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 

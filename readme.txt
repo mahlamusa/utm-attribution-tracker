@@ -1,7 +1,7 @@
 === Utmatra - UTM Attribution and Tracking ===
 Contributors:      mahlamusa
 Tags:              utm, analytics, attribution, woocommerce, tracking
-Requires at least: 6.0
+Requires at least: 6.5
 Tested up to:      7.1
 Requires PHP:      8.0
 Stable tag:        1.0.0
@@ -34,7 +34,7 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 **Reporting:**
 
 * **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, channel (direct, organic search, paid search, paid social, organic social, email, referral, AI assistant, display, affiliate), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign. The Conversions tile counts WooCommerce orders **and** attributed form leads.
-* **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn. Revenue counts orders only; form leads are conversions without a total.
+* **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data at checkout (visible in a metabox on the order screen), the conversion is recorded once the order is paid, and a revenue-by-campaign chart shows what your campaigns actually earn. Revenue counts orders only; form leads are conversions without a total.
 * **Customer journeys** — a Journeys tab lists recent orders and form leads with every tagged visit that preceded them, built from a random first-party visitor id.
 * **Lead webhooks** — every attributed form submission is recorded as a conversion and can be POSTed, with its attribution data and submitted field values, to Zapier, Make, HubSpot or GoHighLevel (see the webhook FAQ).
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows), each row with its channel. Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
@@ -52,7 +52,8 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 * **WP Consent API integration** — the attribution cookie is gated in the visitor's browser on a configurable consent category, deleted on withdrawal, and declared to the API so consent banners can list it.
 * **Data retention** — events are pruned automatically after a configurable retention window (180 days by default, 0 = keep forever) from the dashboard settings card.
 * **Suggested privacy policy text** — provided under Settings → Privacy → Policy Guide.
-* **No external dependencies** — no Composer, no npm build step, no CDN calls. Chart.js and the QR library ship bundled with the plugin.
+* **No external services** — no CDN calls and no third-party analytics. Chart.js, the QR library and Action Scheduler ship bundled with the plugin.
+* **Reliable background jobs** — retention pruning and the weekly report run on Action Scheduler (the job queue WooCommerce uses), listed under Tools → Scheduled Actions in the `utmatra` group, and they reschedule themselves if they go missing (after a reactivation, or on a multisite subsite). Action Scheduler keeps its own `actionscheduler_*` tables and a once-a-minute WP-Cron queue runner; they are shared with any other plugin that uses it (such as WooCommerce) and are left in place on uninstall.
 
 == Installation ==
 
@@ -120,7 +121,7 @@ Two notes for sites with a full-page cache:
 
 = How does WooCommerce order attribution work? =
 
-When a visitor who previously arrived through a tracked campaign or from another site places an order, the order is stamped with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen), and a conversion event with the order total is recorded. Each touch carries `ch` (the channel) and, when known, `rh` (the referrer host) alongside the campaign parameters, in the order meta and in the conversion webhook payload. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
+When a visitor who previously arrived through a tracked campaign or from another site places an order, the order is stamped at checkout with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen). The conversion event with the order total is recorded, and the conversion webhook sent, once the order is paid: when the gateway completes payment, or when the order moves to a paid status such as processing or completed (cash on delivery, or bank transfer once marked paid). Declined, abandoned and unpaid orders are never counted, and each order is counted once. Each touch carries `ch` (the channel) and, when known, `rh` (the referrer host) alongside the campaign parameters, in the order meta and in the conversion webhook payload. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
 
 = How are channels classified? =
 
@@ -156,7 +157,7 @@ Every tracked parameter is available to forms under its own standard name: `utm_
 
 = Can I send leads and orders to Zapier, Make, HubSpot or GoHighLevel? =
 
-Yes. Under **Settings → Webhooks**, paste your receiver's URL, pick a preset (Generic JSON, Zapier, Make, HubSpot Forms, GoHighLevel) and use the "Send for" switches to enable or disable WooCommerce orders and form leads independently (both are on by default; the HubSpot preset sends leads only). Because the payloads carry the submitted form fields, use an `https://` URL so the values are not sent in cleartext. Every request is a JSON POST signed with an `X-Utmatra-Signature` header (sha256 = HMAC of the body over a per-site secret shown on the same card) and tagged with an `X-Utmatra-Event` header (`conversion`, `lead` or `test`), so any receiver can verify and route it — compare the signature with a constant-time check (e.g. PHP's `hash_equals()`). **Send test webhook** posts a synthetic payload in the selected preset's shape before you rely on it.
+Yes. Under **Settings → Webhooks**, paste your receiver's URL, pick a preset (Generic JSON, Zapier, Make, HubSpot Forms, GoHighLevel) and use the "Send for" switches to enable or disable WooCommerce orders and form leads independently (both are on by default; the HubSpot preset sends leads only). Because the payloads carry the submitted form fields, use an `https://` URL so the values are not sent in cleartext. Every request is a JSON POST signed with an `X-Utmatra-Signature` header (sha256 = HMAC of the body over a per-site secret shown on the same card) and tagged with an `X-Utmatra-Event` header (`conversion`, `lead` or `test`), so any receiver can verify and route it — compare the signature with a constant-time check (e.g. PHP's `hash_equals()`). **Send test webhook** posts a synthetic payload in the selected preset's shape before you rely on it. Lead webhooks are sent as the form is submitted; order webhooks are sent by the background queue (Action Scheduler) once the order is paid, usually within a minute.
 
 A lead payload carries the integration (e.g. `contact-form-7`), the form id and title, the **submitted form field values keyed by label** (up to 50 fields of 1,000 characters each; file uploads, passwords and hidden fields are never sent), the first- and last-touch attribution sets, the page URL and a timestamp. The plugin itself never stores the submitted field values — they travel only in the webhook request. One exception: when a receiver answers with an error, a short excerpt of its response is kept under "Last delivery" so the failure can be diagnosed, and such an error message may quote a submitted value (HubSpot, for instance, echoes an invalid email address back). Values that are arrays (checkbox groups) arrive comma-joined; deeply nested values arrive as a JSON string. Field forwarding for Gravity Forms and Elementor Pro is derived from the vendors' documentation, untested against a live install.
 

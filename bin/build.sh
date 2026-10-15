@@ -42,6 +42,6 @@ mkdir -p "$ROOT/languages"
 $POT_CMD i18n make-pot "$ROOT" "$ROOT/languages/${TEXT_DOMAIN}.pot" \
     --domain="${TEXT_DOMAIN}" \
     --slug="${TEXT_DOMAIN}" \
-    --exclude=bin,releases,.release,.claude
+    --exclude=bin,releases,.release,.claude,vendor,specs,node_modules,.design-sync,.wordpress.org
 
 echo "==> Build complete."

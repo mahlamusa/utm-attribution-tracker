@@ -12,7 +12,7 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 /**
- * Remove the events table, options, transients, and cron hook for the current site.
+ * Remove the events table, options, transients, and scheduled jobs for the current site.
  *
  * @since 1.0.0
  * @return void
@@ -42,6 +42,7 @@ function utmatra_uninstall_site(): void {
 	delete_option( 'utmatra_webhook_events' );
 	delete_option( 'utmatra_recent_leads' );
 	delete_option( 'utmatra_presets' );
+	delete_option( 'utmatra_schedules_next_check' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -53,9 +54,29 @@ function utmatra_uninstall_site(): void {
 		)
 	);
 
-	// Clear the retention and weekly report cron events.
-	wp_clear_scheduled_hook( 'utmatra_prune_events' );
-	wp_clear_scheduled_hook( 'utmatra_weekly_report' );
+	// Remove the recurring jobs, any queued order webhooks, and legacy cron
+	// events. The plugin is not loaded during uninstall, so Action Scheduler
+	// is only available when another plugin (e.g. WooCommerce) ships it;
+	// otherwise the pending rows are deleted directly when its table exists.
+	$utmatra_hooks = array( 'utmatra_prune_events', 'utmatra_weekly_report', 'utmatra_send_order_webhook' );
+	foreach ( $utmatra_hooks as $utmatra_hook ) {
+		wp_clear_scheduled_hook( $utmatra_hook );
+	}
+	if ( function_exists( 'as_unschedule_all_actions' ) ) {
+		// Null args match every action of the hook (queued webhooks carry an
+		// order id); an empty array would match only argument-less actions.
+		foreach ( $utmatra_hooks as $utmatra_hook ) {
+			as_unschedule_all_actions( $utmatra_hook, null, 'utmatra' );
+		}
+	} else {
+		$utmatra_as_table = $wpdb->prefix . 'actionscheduler_actions';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		if ( $utmatra_as_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $utmatra_as_table ) ) ) {
+			$utmatra_as_table = esc_sql( $utmatra_as_table );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- table name is the site prefix plus a fixed string, escaped above.
+			$wpdb->query( $wpdb->prepare( "DELETE FROM `{$utmatra_as_table}` WHERE hook IN ( %s, %s, %s ) AND status = %s", 'utmatra_prune_events', 'utmatra_weekly_report', 'utmatra_send_order_webhook', 'pending' ) );
+		}
+	}
 }
 
 if ( is_multisite() ) {

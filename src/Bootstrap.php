@@ -2,7 +2,9 @@
 /**
  * Class autoloader for Utmatra.
  *
- * Uses explicit require_once calls — no Composer vendor directory required.
+ * Plugin classes load via explicit require_once calls (no Composer
+ * autoloader). The one Composer dependency, Action Scheduler, is loaded
+ * from the main plugin file; without it, recurring jobs fall back to WP-Cron.
  *
  * @package Utmatra
  */
@@ -29,6 +31,7 @@ class Bootstrap {
 
 		require_once $base . 'DB/Schema.php';
 		require_once $base . 'DB/Retention.php';
+		require_once $base . 'Scheduler.php';
 		require_once $base . 'Privacy/PrivacyPolicy.php';
 		require_once $base . 'Tracking/TrafficSource.php';
 		require_once $base . 'Tracking/LinkManager.php';

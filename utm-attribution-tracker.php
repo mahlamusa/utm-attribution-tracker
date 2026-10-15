@@ -9,7 +9,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       utm-attribution-tracker
  * Domain Path:       /languages
- * Requires at least: 6.0
+ * Requires at least: 6.5
  * Tested up to:      7.1
  * Requires PHP:      8.0
  *
@@ -25,7 +25,14 @@ define( 'UTMATRA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'UTMATRA_URL', plugin_dir_url( __FILE__ ) );
 define( 'UTMATRA_BASENAME', plugin_basename( __FILE__ ) );
 
-// Load all classes via bootstrap (no Composer required).
+// Action Scheduler (bundled via Composer) runs the recurring jobs. It must
+// load with the plugin file so it can register itself and use the newest
+// copy among all active plugins (WooCommerce ships one too).
+if ( file_exists( UTMATRA_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+	require_once UTMATRA_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
+
+// Load all classes via bootstrap.
 require_once UTMATRA_PATH . 'src/Bootstrap.php';
 Utmatra\Bootstrap::load();
 
