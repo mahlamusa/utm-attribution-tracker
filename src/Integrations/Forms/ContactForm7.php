@@ -12,13 +12,13 @@
  * defined, checked at `plugins_loaded` priority 20). Without CF7 the class
  * is loaded but completely inert.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 use WPCF7_ContactForm;
 use WPCF7_Submission;
 

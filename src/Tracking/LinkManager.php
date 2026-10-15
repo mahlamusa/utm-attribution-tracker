@@ -2,12 +2,12 @@
 /**
  * LinkManager — CRUD for managed tracked links.
  *
- * Links are stored as a serialised array in the `utmat_links` option.
+ * Links are stored as a serialised array in the `utmatra_links` option.
  *
- * @package UTMAT\Tracking
+ * @package Utmatra\Tracking
  */
 
-namespace UTMAT\Tracking;
+namespace Utmatra\Tracking;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class LinkManager {
 
-	private const OPTION_KEY = 'utmat_links';
+	private const OPTION_KEY = 'utmatra_links';
 
 	/**
 	 * Seed an example link on first activation.
@@ -135,7 +135,7 @@ class LinkManager {
 		if ( get_option( 'permalink_structure' ) ) {
 			return home_url( '/go/' . rawurlencode( $id ) . '/' );
 		}
-		return add_query_arg( 'utmat_track', rawurlencode( $id ), home_url( '/' ) );
+		return add_query_arg( 'utmatra_track', rawurlencode( $id ), home_url( '/' ) );
 	}
 
 	/**

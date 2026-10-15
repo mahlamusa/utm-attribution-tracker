@@ -9,13 +9,13 @@
  * HandL's `Handl_Insight_Engine::analyze()` widget pattern — deterministic
  * PHP, zero AI/network calls.
  *
- * @package UTMAT\Admin
+ * @package Utmatra\Admin
  */
 
-namespace UTMAT\Admin;
+namespace Utmatra\Admin;
 
-use UTMAT\Insights\Insights;
-use UTMAT\Insights\Recorder;
+use Utmatra\Insights\Insights;
+use Utmatra\Insights\Recorder;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,7 +41,7 @@ class DashboardWidget {
 	 * Display label per integration slug.
 	 *
 	 * Public so the dashboard view can expose the same product names to the
-	 * Journeys tab (the `integrationLabels` key of the utmat-i18n block);
+	 * Journeys tab (the `integrationLabels` key of the utmatra-i18n block);
 	 * values are vendor product names and deliberately untranslated.
 	 *
 	 * @since 1.0.0
@@ -71,8 +71,8 @@ class DashboardWidget {
 	 */
 	public static function register(): void {
 		wp_add_dashboard_widget(
-			'utmat-recent-leads',
-			__( 'Recent leads (UTM & Attribution)', 'utm-attribution-tracker' ),
+			'utmatra-recent-leads',
+			__( 'Recent leads (Utmatra)', 'utm-attribution-tracker' ),
 			array( self::class, 'render' ),
 			null,
 			null,
@@ -101,7 +101,7 @@ class DashboardWidget {
 
 		self::render_styles();
 
-		echo '<ul class="utmat-lead-list">';
+		echo '<ul class="utmatra-lead-list">';
 		foreach ( $leads as $integration => $records ) {
 			foreach ( $records as $record ) {
 				self::render_lead_row( (string) $integration, is_array( $record ) ? $record : array() );
@@ -126,11 +126,11 @@ class DashboardWidget {
 		$created_at = isset( $record['created_at'] ) ? (int) $record['created_at'] : 0;
 		$label      = self::INTEGRATION_LABELS[ $integration ] ?? $integration;
 
-		echo '<li class="utmat-lead-row">';
+		echo '<li class="utmatra-lead-row">';
 
-		echo '<div class="utmat-lead-heading">';
-		echo '<span class="utmat-lead-title">' . esc_html( '' !== $form_title ? $form_title : $label ) . '</span>';
-		echo '<span class="utmat-lead-meta">' . esc_html( $label );
+		echo '<div class="utmatra-lead-heading">';
+		echo '<span class="utmatra-lead-title">' . esc_html( '' !== $form_title ? $form_title : $label ) . '</span>';
+		echo '<span class="utmatra-lead-meta">' . esc_html( $label );
 		if ( $created_at > 0 ) {
 			echo ' &middot; ' . esc_html(
 				sprintf(
@@ -143,7 +143,7 @@ class DashboardWidget {
 		echo '</span>';
 		echo '</div>';
 
-		echo '<span class="utmat-lead-badge utmat-lead-badge--' . esc_attr( $result['status'] ) . '">' . esc_html( $result['message'] ) . '</span>';
+		echo '<span class="utmatra-lead-badge utmatra-lead-badge--' . esc_attr( $result['status'] ) . '">' . esc_html( $result['message'] ) . '</span>';
 
 		echo '</li>';
 	}
@@ -163,18 +163,18 @@ class DashboardWidget {
 	 */
 	private static function render_styles(): void {
 		echo '<style>
-			.utmat-lead-list { list-style: none; margin: 0; padding: 0; }
-			.utmat-lead-row { padding: 10px 0; border-bottom: 1px solid #dcdcde; }
-			.utmat-lead-row:last-child { border-bottom: none; padding-bottom: 0; }
-			.utmat-lead-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-bottom: 4px; }
-			.utmat-lead-title { font-weight: 600; color: #1d2327; }
-			.utmat-lead-meta { color: #646970; font-size: 12px; }
-			.utmat-lead-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #fff; }
-			.utmat-lead-badge--google_ads { background: #007017; }
-			.utmat-lead-badge--paid { background: #0d5ea3; }
-			.utmat-lead-badge--organic_referral { background: #2271b1; }
-			.utmat-lead-badge--tagged { background: #996800; }
-			.utmat-lead-badge--direct { background: #646970; }
+			.utmatra-lead-list { list-style: none; margin: 0; padding: 0; }
+			.utmatra-lead-row { padding: 10px 0; border-bottom: 1px solid #dcdcde; }
+			.utmatra-lead-row:last-child { border-bottom: none; padding-bottom: 0; }
+			.utmatra-lead-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+			.utmatra-lead-title { font-weight: 600; color: #1d2327; }
+			.utmatra-lead-meta { color: #646970; font-size: 12px; }
+			.utmatra-lead-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #fff; }
+			.utmatra-lead-badge--google_ads { background: #007017; }
+			.utmatra-lead-badge--paid { background: #0d5ea3; }
+			.utmatra-lead-badge--organic_referral { background: #2271b1; }
+			.utmatra-lead-badge--tagged { background: #996800; }
+			.utmatra-lead-badge--direct { background: #646970; }
 		</style>';
 	}
 }

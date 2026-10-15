@@ -19,10 +19,10 @@
  *
  * @since 1.0.0
  *
- * @package UTMAT\Tracking
+ * @package Utmatra\Tracking
  */
 
-namespace UTMAT\Tracking;
+namespace Utmatra\Tracking;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -432,7 +432,7 @@ class TrafficSource {
 		 *
 		 * @var string[] $hosts
 		 */
-		return (array) apply_filters( 'utmat_search_engine_hosts', self::SEARCH_ENGINE_HOSTS );
+		return (array) apply_filters( 'utmatra_search_engine_hosts', self::SEARCH_ENGINE_HOSTS );
 	}
 
 	/**
@@ -447,7 +447,7 @@ class TrafficSource {
 		 *
 		 * @var string[] $hosts
 		 */
-		return (array) apply_filters( 'utmat_social_network_hosts', self::SOCIAL_NETWORK_HOSTS );
+		return (array) apply_filters( 'utmatra_social_network_hosts', self::SOCIAL_NETWORK_HOSTS );
 	}
 
 	/**
@@ -462,7 +462,7 @@ class TrafficSource {
 		 *
 		 * @var string[] $hosts
 		 */
-		return (array) apply_filters( 'utmat_ai_assistant_hosts', self::AI_ASSISTANT_HOSTS );
+		return (array) apply_filters( 'utmatra_ai_assistant_hosts', self::AI_ASSISTANT_HOSTS );
 	}
 
 	/**
@@ -576,7 +576,7 @@ class TrafficSource {
 	 *     organic_social or referral by host list.
 	 * 12. any campaign data left: other; otherwise direct.
 	 *
-	 * The verdict passes through the `utmat_channel` filter; a value outside
+	 * The verdict passes through the `utmatra_channel` filter; a value outside
 	 * CHANNELS falls back to the computed one.
 	 *
 	 * @since 1.0.0
@@ -653,7 +653,7 @@ class TrafficSource {
 		 * @var string               $channel One of TrafficSource::CHANNELS.
 		 * @var array<string, mixed> $row     The row that was classified.
 		 */
-		$filtered = apply_filters( 'utmat_channel', $channel, $row );
+		$filtered = apply_filters( 'utmatra_channel', $channel, $row );
 
 		return ( is_string( $filtered ) && in_array( $filtered, self::CHANNELS, true ) ) ? $filtered : $channel;
 	}

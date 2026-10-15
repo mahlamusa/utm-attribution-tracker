@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       UTM & Attribution Tracker
+ * Plugin Name:       Utmatra - UTM Attribution and Tracking
  * Plugin URI:        https://github.com/mahlamusa/utm-attribution-tracker
  * Description:       Track UTM-tagged links, click IDs, and first/last-touch attribution across form leads and WooCommerce orders, with a live Chart.js dashboard.
  * Version:           1.0.0
@@ -13,23 +13,23 @@
  * Tested up to:      7.1
  * Requires PHP:      8.0
  *
- * @package UTMAT
+ * @package Utmatra
  */
 
 defined( 'ABSPATH' ) || exit;
 
 // Plugin constants.
-define( 'UTM_ATTRIBUTION_TRACKER_VERSION', '1.0.0' );
-define( 'UTM_ATTRIBUTION_TRACKER_FILE', __FILE__ );
-define( 'UTM_ATTRIBUTION_TRACKER_PATH', plugin_dir_path( __FILE__ ) );
-define( 'UTM_ATTRIBUTION_TRACKER_URL', plugin_dir_url( __FILE__ ) );
-define( 'UTM_ATTRIBUTION_TRACKER_BASENAME', plugin_basename( __FILE__ ) );
+define( 'UTMATRA_VERSION', '1.0.0' );
+define( 'UTMATRA_FILE', __FILE__ );
+define( 'UTMATRA_PATH', plugin_dir_path( __FILE__ ) );
+define( 'UTMATRA_URL', plugin_dir_url( __FILE__ ) );
+define( 'UTMATRA_BASENAME', plugin_basename( __FILE__ ) );
 
 // Load all classes via bootstrap (no Composer required).
-require_once UTM_ATTRIBUTION_TRACKER_PATH . 'src/Bootstrap.php';
-UTMAT\Bootstrap::load();
+require_once UTMATRA_PATH . 'src/Bootstrap.php';
+Utmatra\Bootstrap::load();
 
-use UTMAT\Plugin;
+use Utmatra\Plugin;
 
 /**
  * Returns the main plugin instance.
@@ -37,7 +37,7 @@ use UTMAT\Plugin;
  * @since 1.0.0
  * @return Plugin
  */
-function utmat(): Plugin {
+function utmatra(): Plugin {
 	return Plugin::instance();
 }
 
@@ -47,11 +47,11 @@ function utmat(): Plugin {
  * @since 1.0.0
  * @return void
  */
-function utmat_boot(): void {
-	utmat();
+function utmatra_boot(): void {
+	utmatra();
 }
 
-add_action( 'plugins_loaded', 'utmat_boot' );
+add_action( 'plugins_loaded', 'utmatra_boot' );
 
 register_activation_hook( __FILE__, array( Plugin::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( Plugin::class, 'deactivate' ) );

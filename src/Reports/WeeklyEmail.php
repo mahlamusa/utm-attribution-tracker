@@ -2,21 +2,21 @@
 /**
  * WeeklyEmail — weekly campaign summary sent via wp_mail().
  *
- * Disabled by default (the `utmat_weekly_email` option, default OFF —
+ * Disabled by default (the `utmatra_weekly_email` option, default OFF —
  * no unsolicited mail). When enabled from the dashboard settings card a
- * weekly cron event (`utmat_weekly_report`) emails the site admin a
+ * weekly cron event (`utmatra_weekly_report`) emails the site admin a
  * plain-HTML summary of the past 7 days: total clicks, top 5 campaigns,
  * top 5 sources, and revenue by campaign when WooCommerce is active.
  *
  * The recipient defaults to `admin_email` and is filterable via
- * `utmat_report_recipient`.
+ * `utmatra_report_recipient`.
  *
- * @package UTMAT\Reports
+ * @package Utmatra\Reports
  */
 
-namespace UTMAT\Reports;
+namespace Utmatra\Reports;
 
-use UTMAT\DB\Schema;
+use Utmatra\DB\Schema;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -34,7 +34,7 @@ class WeeklyEmail {
 	 *
 	 * @var string
 	 */
-	public const HOOK = 'utmat_weekly_report';
+	public const HOOK = 'utmatra_weekly_report';
 
 	/**
 	 * Option name holding the weekly email toggle.
@@ -43,7 +43,7 @@ class WeeklyEmail {
 	 *
 	 * @var string
 	 */
-	public const OPTION = 'utmat_weekly_email';
+	public const OPTION = 'utmatra_weekly_email';
 
 	/**
 	 * Whether the weekly email is enabled.
@@ -104,7 +104,7 @@ class WeeklyEmail {
 		 * @since 1.0.0
 		 * @param string $recipient Recipient email address. Defaults to the admin email.
 		 */
-		$recipient = sanitize_email( (string) apply_filters( 'utmat_report_recipient', get_option( 'admin_email' ) ) );
+		$recipient = sanitize_email( (string) apply_filters( 'utmatra_report_recipient', get_option( 'admin_email' ) ) );
 		if ( '' === $recipient ) {
 			$recipient = sanitize_email( (string) get_option( 'admin_email' ) );
 		}
@@ -225,7 +225,7 @@ class WeeklyEmail {
 		$html .= '<p style="color:#646970;font-size:12px;margin-top:24px;">' . sprintf(
 			/* translators: %s: plugin name. */
 			esc_html__( 'Sent by %s. Disable this report from the dashboard settings card.', 'utm-attribution-tracker' ),
-			'UTM & Attribution Tracker'
+			'Utmatra'
 		) . '</p>';
 		$html .= '</div>';
 

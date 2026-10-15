@@ -15,6 +15,7 @@
 /specs/                  export-ignore
 /phpcs.xml               export-ignore
 /.spec-status            export-ignore
+/.design-sync/           export-ignore
 
 # WordPress.org SVN-only assets (banners, icons, screenshots upload to
 # /assets/ in the SVN repo, not bundled inside the install zip).

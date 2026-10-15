@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="UTMAttributionTracker">
-	<description>Coding standard for UTM &amp; Attribution Tracker.</description>
+<ruleset name="Utmatra">
+	<description>Coding standard for Utmatra.</description>
 
 	<file>utm-attribution-tracker.php</file>
 	<file>uninstall.php</file>

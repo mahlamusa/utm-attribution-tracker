@@ -1,13 +1,13 @@
 <?php
 /**
- * DB Schema — creates and upgrades the utmat_events table.
+ * DB Schema — creates and upgrades the utmatra_events table.
  *
  * @since 1.0.0
  *
- * @package UTMAT\DB
+ * @package Utmatra\DB
  */
 
-namespace UTMAT\DB;
+namespace Utmatra\DB;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Schema {
 
-	private const DB_VERSION_OPTION = 'utmat_db_version';
+	private const DB_VERSION_OPTION = 'utmatra_db_version';
 	private const DB_VERSION        = '5';
 
 	/**
@@ -53,7 +53,7 @@ class Schema {
 	 */
 	public static function table(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'utmat_events';
+		return $wpdb->prefix . 'utmatra_events';
 	}
 
 	/**

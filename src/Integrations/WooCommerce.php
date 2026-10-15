@@ -3,26 +3,26 @@
  * WooCommerce integration — order attribution capture and display.
  *
  * Attaches the first/last-touch attribution sets (read from the
- * `utmat_attr` cookie via Attribution) to WooCommerce orders as order
+ * `utmatra_attr` cookie via Attribution) to WooCommerce orders as order
  * meta, records a conversion event row for the revenue-by-campaign report,
  * renders a "Campaign attribution" metabox on the order edit screen, and —
  * when a URL is configured — POSTs the conversion to a webhook (see
- * UTMAT\Reports\ConversionWebhook).
+ * Utmatra\Reports\ConversionWebhook).
  *
  * Every hook in this class is registered only when WooCommerce is active
  * (checked at `plugins_loaded` priority 20, after Woo has loaded). On a site
  * without WooCommerce the class is loaded but completely inert.
  *
- * @package UTMAT\Integrations
+ * @package Utmatra\Integrations
  */
 
-namespace UTMAT\Integrations;
+namespace Utmatra\Integrations;
 
-use UTMAT\Insights\Recorder;
-use UTMAT\Reports\ConversionWebhook;
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
-use UTMAT\Tracking\TrafficSource;
+use Utmatra\Insights\Recorder;
+use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\Tracker;
+use Utmatra\Tracking\TrafficSource;
 use WC_Order;
 use WP_Post;
 
@@ -42,7 +42,7 @@ class WooCommerce {
 	 *
 	 * @var string
 	 */
-	public const META_FIRST = '_utmat_first';
+	public const META_FIRST = '_utmatra_first';
 
 	/**
 	 * Order meta key holding the last-touch attribution set.
@@ -51,7 +51,7 @@ class WooCommerce {
 	 *
 	 * @var string
 	 */
-	public const META_LAST = '_utmat_last';
+	public const META_LAST = '_utmatra_last';
 
 	/**
 	 * Register WooCommerce hooks — only when WooCommerce is active.
@@ -102,11 +102,11 @@ class WooCommerce {
 		foreach ( $columns as $key => $label ) {
 			$out[ $key ] = $label;
 			if ( 'order_status' === $key ) {
-				$out['utmat'] = __( 'Attribution', 'utm-attribution-tracker' );
+				$out['utmatra'] = __( 'Attribution', 'utm-attribution-tracker' );
 			}
 		}
-		if ( ! isset( $out['utmat'] ) ) {
-			$out['utmat'] = __( 'Attribution', 'utm-attribution-tracker' );
+		if ( ! isset( $out['utmatra'] ) ) {
+			$out['utmatra'] = __( 'Attribution', 'utm-attribution-tracker' );
 		}
 
 		return $out;
@@ -121,7 +121,7 @@ class WooCommerce {
 	 * @return void
 	 */
 	public static function render_list_column_hpos( $column, $order ): void {
-		if ( 'utmat' === $column && $order instanceof WC_Order ) {
+		if ( 'utmatra' === $column && $order instanceof WC_Order ) {
 			self::render_list_column( $order );
 		}
 	}
@@ -135,7 +135,7 @@ class WooCommerce {
 	 * @return void
 	 */
 	public static function render_list_column_legacy( $column, $post_id ): void {
-		if ( 'utmat' !== $column ) {
+		if ( 'utmatra' !== $column ) {
 			return;
 		}
 		$order = wc_get_order( $post_id );
@@ -350,7 +350,7 @@ class WooCommerce {
 
 		foreach ( $screens as $screen ) {
 			add_meta_box(
-				'utmat-attribution',
+				'utmatra-attribution',
 				__( 'Campaign attribution (UTM)', 'utm-attribution-tracker' ),
 				array( self::class, 'render_metabox' ),
 				$screen,

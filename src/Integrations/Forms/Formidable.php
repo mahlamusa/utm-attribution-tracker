@@ -6,7 +6,7 @@
  * cannot find an attribution field by name. A Hidden field whose Field Key
  * starts with a recognised attribution field name (`utm_source`,
  * `utm_source2` on a second form, `landing_page_first`, …) is marked with
- * `data-utmat-field="<name>"` at render and the beacon fills it from the
+ * `data-utmatra-field="<name>"` at render and the beacon fills it from the
  * attribution cookie on page load. No value is written by PHP, so cached
  * HTML never carries another visitor's data.
  *
@@ -14,16 +14,16 @@
  * exists, checked at `plugins_loaded` priority 20). Without Formidable the
  * class is loaded but completely inert.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
 use FrmEntry;
 use FrmField;
 use FrmForm;
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -82,7 +82,7 @@ class Formidable {
 		$name = self::field_name_for_key( (string) ( $field['field_key'] ?? '' ) );
 
 		if ( '' !== $name ) {
-			echo ' data-utmat-field="' . esc_attr( $name ) . '"';
+			echo ' data-utmatra-field="' . esc_attr( $name ) . '"';
 		}
 	}
 

@@ -2,7 +2,7 @@
 /**
  * Attribution — first/last-touch attribution cookie reader.
  *
- * The `utmat_attr` cookie is written by the front-end beacon (primary,
+ * The `utmatra_attr` cookie is written by the front-end beacon (primary,
  * cache-proof path) and by Tracker::maybe_set_attribution_cookie() (PHP
  * fallback for no-JS visitors). This class is the read side: it parses the
  * cookie defensively — every value sanitized, unknown keys dropped, malformed
@@ -15,10 +15,10 @@
  *
  * @since 1.0.0
  *
- * @package UTMAT\Tracking
+ * @package Utmatra\Tracking
  */
 
-namespace UTMAT\Tracking;
+namespace Utmatra\Tracking;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -40,7 +40,7 @@ class Attribution {
 	 *
 	 * @var string
 	 */
-	public const COOKIE_NAME = 'utmat_attr';
+	public const COOKIE_NAME = 'utmatra_attr';
 
 	/**
 	 * Option holding the WP Consent API category that gates the cookie.
@@ -49,7 +49,7 @@ class Attribution {
 	 *
 	 * @var string
 	 */
-	public const OPTION_CONSENT_CATEGORY = 'utmat_consent_category';
+	public const OPTION_CONSENT_CATEGORY = 'utmatra_consent_category';
 
 	/**
 	 * Name of the per-browser visitor id cookie.
@@ -62,7 +62,7 @@ class Attribution {
 	 *
 	 * @var string
 	 */
-	public const VISITOR_COOKIE_NAME = 'utmat_vid';
+	public const VISITOR_COOKIE_NAME = 'utmatra_vid';
 
 	/**
 	 * Accepted values of the consent category setting.
@@ -148,7 +148,7 @@ class Attribution {
 	}
 
 	/**
-	 * The validated visitor id from the `utmat_vid` cookie.
+	 * The validated visitor id from the `utmatra_vid` cookie.
 	 *
 	 * Returns the cookie value (unslashed, sanitized) when it is a well-formed
 	 * UUID v4, and an empty string when the cookie is absent or malformed —
@@ -267,7 +267,7 @@ class Attribution {
 	/**
 	 * The attribution cookie lifetime in days.
 	 *
-	 * Reads the `utmat_cookie_days` option (set from the dashboard
+	 * Reads the `utmatra_cookie_days` option (set from the dashboard
 	 * settings card, default 90); the filter of the same name runs last and
 	 * stays authoritative for code-level overrides.
 	 *
@@ -275,7 +275,7 @@ class Attribution {
 	 * @return int
 	 */
 	public static function cookie_days(): int {
-		$days = (int) get_option( 'utmat_cookie_days', 90 );
+		$days = (int) get_option( 'utmatra_cookie_days', 90 );
 		if ( $days < 1 ) {
 			$days = 90;
 		}
@@ -285,7 +285,7 @@ class Attribution {
 		 *
 		 * @var int $days
 		 */
-		return (int) apply_filters( 'utmat_cookie_days', $days );
+		return (int) apply_filters( 'utmatra_cookie_days', $days );
 	}
 
 	/**
@@ -308,13 +308,13 @@ class Attribution {
 		 *
 		 * @var bool $enabled
 		 */
-		return (bool) apply_filters( 'utmat_enable_cookie', true );
+		return (bool) apply_filters( 'utmatra_enable_cookie', true );
 	}
 
 	/**
 	 * The WP Consent API category that gates the attribution cookie.
 	 *
-	 * Reads the `utmat_consent_category` option and falls back to
+	 * Reads the `utmatra_consent_category` option and falls back to
 	 * `marketing` for any value outside CONSENT_CATEGORIES: the cookie
 	 * carries advertising click IDs, which every consent manager files under
 	 * marketing, so the strictest single category is the safe default.
@@ -367,11 +367,11 @@ class Attribution {
 
 		$category = self::consent_category();
 		if ( 'either' === $category ) {
-			return wp_has_consent( 'marketing', UTM_ATTRIBUTION_TRACKER_BASENAME )
-				|| wp_has_consent( 'statistics', UTM_ATTRIBUTION_TRACKER_BASENAME );
+			return wp_has_consent( 'marketing', UTMATRA_BASENAME )
+				|| wp_has_consent( 'statistics', UTMATRA_BASENAME );
 		}
 
-		return wp_has_consent( $category, UTM_ATTRIBUTION_TRACKER_BASENAME );
+		return wp_has_consent( $category, UTMATRA_BASENAME );
 	}
 
 	/**
@@ -391,7 +391,7 @@ class Attribution {
 		 *
 		 * @var bool $gate
 		 */
-		return (bool) apply_filters( 'utmat_consent_gate_events', false );
+		return (bool) apply_filters( 'utmatra_consent_gate_events', false );
 	}
 
 	/**
@@ -418,7 +418,7 @@ class Attribution {
 
 		wp_add_cookie_info(
 			self::COOKIE_NAME,
-			'UTM & Attribution Tracker',
+			'Utmatra',
 			'either' === $category ? 'marketing' : $category,
 			$lifetime,
 			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utm-attribution-tracker' )
@@ -426,7 +426,7 @@ class Attribution {
 
 		wp_add_cookie_info(
 			self::VISITOR_COOKIE_NAME,
-			'UTM & Attribution Tracker',
+			'Utmatra',
 			'either' === $category ? 'marketing' : $category,
 			$lifetime,
 			__( "Random visitor id that links a visitor's tagged visits to their later orders and form submissions.", 'utm-attribution-tracker' )
@@ -437,7 +437,7 @@ class Attribution {
 	 * Decode the raw attribution cookie once per request.
 	 *
 	 * Guards against hostile cookie shapes before decoding: a non-string raw
-	 * value (e.g. a crafted array cookie like `utmat_attr[0]=x`) and an
+	 * value (e.g. a crafted array cookie like `utmatra_attr[0]=x`) and an
 	 * over-long value (> 8192 bytes, a cheap DoS guard) both yield null without
 	 * decoding. The successful decode is memoized so repeated get_first()/
 	 * get_last() calls in the same request parse the JSON only once.
@@ -461,7 +461,7 @@ class Attribution {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$raw = wp_unslash( $_COOKIE[ self::COOKIE_NAME ] );
 
-		// A crafted array cookie (utmat_attr[0]=x) arrives as an array;
+		// A crafted array cookie (utmatra_attr[0]=x) arrives as an array;
 		// bail before the string cast so no Array-to-string warning is raised.
 		// An over-long value is dropped unparsed as a DoS guard.
 		if ( ! is_string( $raw ) || strlen( $raw ) > 8192 ) {
@@ -493,7 +493,7 @@ class Attribution {
 	 *
 	 * The channel (`ch`) is never taken from the cookie: the beacon's value
 	 * comes from host lists baked into possibly cached HTML and never saw
-	 * the `utmat_channel` filter, so it is recomputed here from the touch's
+	 * the `utmatra_channel` filter, so it is recomputed here from the touch's
 	 * parameters and referrer host with the live rule set. Every written
 	 * touch carries parameters or a referrer host (direct visits never
 	 * write), so the recomputation always has its input.

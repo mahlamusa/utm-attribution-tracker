@@ -1,13 +1,13 @@
 <?php
 /**
- * Class autoloader for UTM & Attribution Tracker.
+ * Class autoloader for Utmatra.
  *
  * Uses explicit require_once calls — no Composer vendor directory required.
  *
- * @package UTMAT
+ * @package Utmatra
  */
 
-namespace UTMAT;
+namespace Utmatra;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,7 +25,7 @@ class Bootstrap {
 	 * @return void
 	 */
 	public static function load(): void {
-		$base = UTM_ATTRIBUTION_TRACKER_PATH . 'src/';
+		$base = UTMATRA_PATH . 'src/';
 
 		require_once $base . 'DB/Schema.php';
 		require_once $base . 'DB/Retention.php';

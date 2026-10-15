@@ -2,15 +2,15 @@
 /**
  * Rewrites — pretty short-link rewrite rule for tracked redirects.
  *
- * Maps `/go/{slug}/` onto the existing `utmat_track` query var so the
+ * Maps `/go/{slug}/` onto the existing `utmatra_track` query var so the
  * redirect handler in Tracker is reused untouched. The rule is registered on
  * `init` and must also be registered during activation, before the rewrite
  * flush, so the flushed rules include it.
  *
- * @package UTMAT\Tracking
+ * @package Utmatra\Tracking
  */
 
-namespace UTMAT\Tracking;
+namespace Utmatra\Tracking;
 
 use WP;
 
@@ -33,7 +33,7 @@ class Rewrites {
 	public static function add_rules(): void {
 		add_rewrite_rule(
 			'^go/([a-z0-9_\-]+)/?$',
-			'index.php?utmat_track=$matches[1]',
+			'index.php?utmatra_track=$matches[1]',
 			'top'
 		);
 	}
@@ -52,17 +52,17 @@ class Rewrites {
 	 * @return void
 	 */
 	public static function handle_pretty_request( WP $wp ): void {
-		if ( empty( $wp->query_vars['utmat_track'] ) ) {
+		if ( empty( $wp->query_vars['utmatra_track'] ) ) {
 			return;
 		}
 
 		// Query-string requests were already handled on `init`.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_GET['utmat_track'] ) ) {
+		if ( isset( $_GET['utmatra_track'] ) ) {
 			return;
 		}
 
-		$_GET['utmat_track'] = sanitize_key( (string) $wp->query_vars['utmat_track'] );
+		$_GET['utmatra_track'] = sanitize_key( (string) $wp->query_vars['utmatra_track'] );
 		Tracker::handle_incoming_request();
 	}
 }

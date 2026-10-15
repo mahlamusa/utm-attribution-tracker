@@ -1,19 +1,19 @@
-/* global utmatBeacon */
+/* global utmatraBeacon */
 /**
- * UTM & Attribution Tracker — front-end beacon.
+ * Utmatra — front-end beacon.
  *
  * Enqueued on EVERY front-end page (cached HTML must always contain it) and
  * self-gates here. A URL carrying at least one whitelisted UTM parameter or
  * ad click ID is a tagged visit: the matching params are POSTed to the
  * public collect endpoint via navigator.sendBeacon() (fetch keepalive
  * fallback), so tracking works even when a page cache/CDN serves the HTML
- * without running PHP. When utmatBeacon.visitEnabled is on, an untagged
+ * without running PHP. When utmatraBeacon.visitEnabled is on, an untagged
  * page load that is the first page of the visit (nothing sent yet in this
  * tab, referrer not this site) is reported once as a landing visit with
  * its referrer, classified here into a channel (AI assistant, search
  * engine, social network, referral or direct) from the host lists in
- * utmatBeacon.hosts; later untagged page views send nothing. The whitelist
- * comes from utmatBeacon.params (Tracker::param_whitelist(): built-ins plus
+ * utmatraBeacon.hosts; later untagged page views send nothing. The whitelist
+ * comes from utmatraBeacon.params (Tracker::param_whitelist(): built-ins plus
  * custom parameters); the literal list below is only a fallback for cached
  * HTML without config.
  *
@@ -26,17 +26,17 @@
  * untagged landing writes `{ ch, rh, lp, ts }` unless it is direct, which
  * never writes or updates the cookie.
  *
- * A second first-party cookie, `utmat_vid`, holds a random visitor id
+ * A second first-party cookie, `utmatra_vid`, holds a random visitor id
  * (UUID v4) that ties a visitor's tagged visits to their later orders and
  * form submissions. It is read-or-generated and written by
  * writeVisitorCookie() inside writeTouch(), under exactly the condition
- * that writes `utmat_attr`, so it shares the cookie's consent gate,
+ * that writes `utmatra_attr`, so it shares the cookie's consent gate,
  * lifetime and refresh behaviour; its value is sent as the collect
  * request's `vid` field so the server can stamp it on the event row even
  * through the cookie-less fetch fallback.
  *
  * Consent is decided here, in the browser, so it is correct on cached
- * pages: consentState() returns `off` (the utmatBeacon cookieEnabled
+ * pages: consentState() returns `off` (the utmatraBeacon cookieEnabled
  * master switch is off), `allowed`, `undecided` or `denied`, using the WP
  * Consent API JavaScript (window.wp_has_consent) when a consent plugin
  * provides it and the raw consent cookies to tell "not yet chosen" from
@@ -49,7 +49,7 @@
  * Finally the beacon fills attribution form fields — named after the
  * standard parameters (`utm_source`, `gclid`, `landing_page`, `channel`,
  * `referrer_host`, plus `_first` variants), or carrying a
- * `data-utmat-field="<name>"` marker when a form plugin controls the name
+ * `data-utmatra-field="<name>"` marker when a form plugin controls the name
  * attribute — from the attribution cookie (fillFormFields below) so any
  * form can capture attribution. This runs on every page, after the cookie
  * write, only fills empty fields, and is skipped while consent is
@@ -64,7 +64,7 @@
 
 	// Resolved once at module scope: addTouch(), fieldSelector() and
 	// trackVisit() all read it.
-	var config = window.utmatBeacon || {};
+	var config = window.utmatraBeacon || {};
 	var WHITELIST = ( config.params && config.params.length ) ? config.params : [
 		'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term',
 		'utm_content', 'gclid', 'fbclid', 'msclkid', 'ttclid',
@@ -75,8 +75,8 @@
 	// Attribution::touch_keys().
 	var TOUCH_KEYS = WHITELIST.concat( [ 'lp', 'ch', 'rh' ] );
 
-	var COOKIE_NAME = 'utmat_attr';
-	var VID_COOKIE = 'utmat_vid';
+	var COOKIE_NAME = 'utmatra_attr';
+	var VID_COOKIE = 'utmatra_vid';
 
 	// Shape a visitor id must have to be kept (UUID v4, lowercase).
 	var VID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -255,7 +255,7 @@
 	 */
 	function fieldSelector() {
 		var params = TOUCH_KEYS;
-		var parts = [ '[data-utmat-field]' ];
+		var parts = [ '[data-utmatra-field]' ];
 		var i, name;
 		for ( i = 0; i < params.length; i++ ) {
 			name = fieldName( params[ i ] );
@@ -275,7 +275,7 @@
 	 * Any input/textarea whose name is a tracked parameter (`utm_source` …
 	 * `twclid`) or `landing_page` receives the last-touch value; the
 	 * `_first`-suffixed names receive the first-touch value. A field whose
-	 * name the form plugin controls is matched by its `data-utmat-field`
+	 * name the form plugin controls is matched by its `data-utmatra-field`
 	 * marker instead. Only empty fields are filled — a user-entered or
 	 * server-rendered value is never overwritten. Values are assigned via
 	 * the .value property (no HTML parsing), so no escaping is needed here.
@@ -301,7 +301,7 @@
 
 		nodes = document.querySelectorAll( fieldSelector() );
 		for ( i = 0; i < nodes.length; i++ ) {
-			value = map[ nodes[ i ].getAttribute( 'data-utmat-field' ) || nodes[ i ].name ];
+			value = map[ nodes[ i ].getAttribute( 'data-utmatra-field' ) || nodes[ i ].name ];
 			if ( value && '' === nodes[ i ].value ) {
 				nodes[ i ].value = value;
 			}
@@ -346,11 +346,11 @@
 	}
 
 	/**
-	 * Read-or-generate the visitor id and (re)write the utmat_vid cookie.
+	 * Read-or-generate the visitor id and (re)write the utmatra_vid cookie.
 	 *
-	 * Only ever called from writeTouch()'s utmat_attr write, so the id cookie
+	 * Only ever called from writeTouch()'s utmatra_attr write, so the id cookie
 	 * shares that write's consent gate and lifetime. Rewriting on every
-	 * tagged visit refreshes the expiry in step with utmat_attr; a stored id
+	 * tagged visit refreshes the expiry in step with utmatra_attr; a stored id
 	 * that is not a well-formed UUID v4 is replaced.
 	 */
 	function writeVisitorCookie() {
@@ -480,7 +480,7 @@
 	/**
 	 * POST the collect beacon once per tagged URL per tab.
 	 *
-	 * The per-tab dedup marker (session-scoped `utmat_sent`) lives here so a
+	 * The per-tab dedup marker (session-scoped `utmatra_sent`) lives here so a
 	 * reload of a tagged URL still reaches recordTouch() while the collect
 	 * is sent only once; the marker is set at the moment a collect goes out.
 	 *
@@ -492,7 +492,7 @@
 
 		// Fire once per page load — skip soft reloads and bfcache restores.
 		try {
-			if ( window.sessionStorage.getItem( 'utmat_sent' ) === search ) {
+			if ( window.sessionStorage.getItem( 'utmatra_sent' ) === search ) {
 				return;
 			}
 		} catch ( e ) {
@@ -519,7 +519,7 @@
 		}
 
 		try {
-			window.sessionStorage.setItem( 'utmat_sent', search );
+			window.sessionStorage.setItem( 'utmatra_sent', search );
 		} catch ( e ) {
 			// Ignore — worst case the beacon re-fires and dedup absorbs it.
 		}
@@ -533,7 +533,7 @@
 	 */
 	function markVisit() {
 		try {
-			window.sessionStorage.setItem( 'utmat_visit', '1' );
+			window.sessionStorage.setItem( 'utmatra_visit', '1' );
 		} catch ( e ) {
 			// sessionStorage unavailable — the server-side dedup absorbs repeats.
 		}
@@ -680,7 +680,7 @@
 	 * gated on consent, deferred with the touch until consent is granted.
 	 *
 	 * An untagged load is a landing visit when visit tracking is on, the
-	 * tab has not reported a landing yet (`utmat_visit`) and the referrer
+	 * tab has not reported a landing yet (`utmatra_visit`) and the referrer
 	 * is not this site (so a tab opened from an internal link is never a
 	 * landing). Its touch is { ch, rh, lp, ts }; a direct landing never
 	 * writes the cookie. The visit request waits with the touch when events
@@ -689,7 +689,7 @@
 	 * @param {string} state Result of consentState() at load.
 	 */
 	function trackVisit( state ) {
-		var config = window.utmatBeacon;
+		var config = window.utmatraBeacon;
 		var search = window.location.search;
 		var pairs, fields, touch, found, i, eq, key, value, host, landed;
 
@@ -757,7 +757,7 @@
 		}
 		landed = false;
 		try {
-			landed = !! window.sessionStorage.getItem( 'utmat_visit' );
+			landed = !! window.sessionStorage.getItem( 'utmatra_visit' );
 		} catch ( e ) {
 			// sessionStorage unavailable — rely on the server-side dedup.
 		}

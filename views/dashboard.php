@@ -4,158 +4,161 @@
  *
  * Tabbed admin page (Overview, Links, Journeys, Settings, Diagnostics)
  * rendered by Dashboard::render_page(). All data is loaded by
- * assets/js/dashboard.js through the utmat/v1 REST routes.
+ * assets/js/dashboard.js through the utmatra/v1 REST routes.
  *
  * @since 1.0.0
  *
- * @package UTMAT\Admin
+ * @package Utmatra\Admin
  */
 
-use UTMAT\Admin\DashboardWidget;
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\TrafficSource;
+use Utmatra\Admin\DashboardWidget;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\TrafficSource;
 
 defined( 'ABSPATH' ) || exit;
 
 // Tags allowed inside translated strings that carry inline code or links.
-$utmat_kses = array(
+$utmatra_kses = array(
 	'code' => array(),
 	'a'    => array(
-		'href'                       => array(),
-		'data-utmat-run-diagnostics' => array(),
+		'href'                         => array(),
+		'data-utmatra-run-diagnostics' => array(),
 	),
 );
 ?>
-<div class="wrap utmat-wrap" id="utmat-dashboard">
+<div class="wrap utmatra-wrap" id="utmatra-dashboard">
 
-	<div class="utmat-header">
-		<div class="utmat-header__titles">
-			<h1><?php esc_html_e( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ); ?></h1>
-			<p class="utmat-header__sub"><?php esc_html_e( 'Campaign clicks, conversions and first/last-touch attribution, kept on your own site.', 'utm-attribution-tracker' ); ?></p>
+	<div class="utmatra-header">
+		<div class="utmatra-header__titles">
+			<h1 class="utmatra-brand">
+				<img class="utmatra-brand__logo" src="<?php echo esc_url( UTMATRA_URL . 'assets/images/utmatra-logo.svg' ); ?>" width="161" height="39" alt="Utmatra" />
+				<span class="utmatra-brand__tagline"><?php esc_html_e( 'UTM Attribution and Tracking', 'utm-attribution-tracker' ); ?></span>
+			</h1>
+			<p class="utmatra-header__sub"><?php esc_html_e( 'Campaign clicks, conversions and first/last-touch attribution, kept on your own site.', 'utm-attribution-tracker' ); ?></p>
 		</div>
-		<div class="utmat-header__actions">
-			<button type="button" class="button" id="utmat-export-btn"
+		<div class="utmatra-header__actions">
+			<button type="button" class="button" id="utmatra-export-btn"
 				title="<?php esc_attr_e( 'Download the raw events for the selected period as CSV (up to 10,000 rows).', 'utm-attribution-tracker' ); ?>"><?php esc_html_e( 'Export CSV', 'utm-attribution-tracker' ); ?></button>
-			<button type="button" class="button button-primary" id="utmat-add-link-btn"><?php esc_html_e( 'Add tracked link', 'utm-attribution-tracker' ); ?></button>
+			<button type="button" class="button button-primary" id="utmatra-add-link-btn"><?php esc_html_e( 'Add tracked link', 'utm-attribution-tracker' ); ?></button>
 		</div>
 	</div>
 
 	<hr class="wp-header-end" />
 
-	<div class="nav-tab-wrapper utmat-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Dashboard sections', 'utm-attribution-tracker' ); ?>">
-		<a href="#overview" class="nav-tab nav-tab-active" id="utmat-tab-overview" role="tab" aria-selected="true" aria-controls="utmat-panel-overview" tabindex="0"><?php esc_html_e( 'Overview', 'utm-attribution-tracker' ); ?></a>
-		<a href="#links" class="nav-tab" id="utmat-tab-links" role="tab" aria-selected="false" aria-controls="utmat-panel-links" tabindex="-1"><?php esc_html_e( 'Links', 'utm-attribution-tracker' ); ?></a>
-		<a href="#journeys" class="nav-tab" id="utmat-tab-journeys" role="tab" aria-selected="false" aria-controls="utmat-panel-journeys" tabindex="-1"><?php esc_html_e( 'Journeys', 'utm-attribution-tracker' ); ?></a>
-		<a href="#settings" class="nav-tab" id="utmat-tab-settings" role="tab" aria-selected="false" aria-controls="utmat-panel-settings" tabindex="-1"><?php esc_html_e( 'Settings', 'utm-attribution-tracker' ); ?></a>
-		<a href="#diagnostics" class="nav-tab" id="utmat-tab-diagnostics" role="tab" aria-selected="false" aria-controls="utmat-panel-diagnostics" tabindex="-1"><?php esc_html_e( 'Diagnostics', 'utm-attribution-tracker' ); ?></a>
+	<div class="nav-tab-wrapper utmatra-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Dashboard sections', 'utm-attribution-tracker' ); ?>">
+		<a href="#overview" class="nav-tab nav-tab-active" id="utmatra-tab-overview" role="tab" aria-selected="true" aria-controls="utmatra-panel-overview" tabindex="0"><?php esc_html_e( 'Overview', 'utm-attribution-tracker' ); ?></a>
+		<a href="#links" class="nav-tab" id="utmatra-tab-links" role="tab" aria-selected="false" aria-controls="utmatra-panel-links" tabindex="-1"><?php esc_html_e( 'Links', 'utm-attribution-tracker' ); ?></a>
+		<a href="#journeys" class="nav-tab" id="utmatra-tab-journeys" role="tab" aria-selected="false" aria-controls="utmatra-panel-journeys" tabindex="-1"><?php esc_html_e( 'Journeys', 'utm-attribution-tracker' ); ?></a>
+		<a href="#settings" class="nav-tab" id="utmatra-tab-settings" role="tab" aria-selected="false" aria-controls="utmatra-panel-settings" tabindex="-1"><?php esc_html_e( 'Settings', 'utm-attribution-tracker' ); ?></a>
+		<a href="#diagnostics" class="nav-tab" id="utmatra-tab-diagnostics" role="tab" aria-selected="false" aria-controls="utmatra-panel-diagnostics" tabindex="-1"><?php esc_html_e( 'Diagnostics', 'utm-attribution-tracker' ); ?></a>
 	</div>
 
 	<!-- Error state -->
-	<div id="utmat-error" class="notice notice-error" hidden>
-		<p id="utmat-error-msg"></p>
+	<div id="utmatra-error" class="notice notice-error" hidden>
+		<p id="utmatra-error-msg"></p>
 	</div>
 
 	<!-- Screen reader announcements for copy actions -->
-	<div id="utmat-live" class="screen-reader-text" role="status" aria-live="polite"></div>
+	<div id="utmatra-live" class="screen-reader-text" role="status" aria-live="polite"></div>
 
 	<!-- Overview -->
-	<div class="utmat-panel" id="utmat-panel-overview" role="tabpanel" aria-labelledby="utmat-tab-overview" tabindex="0">
+	<div class="utmatra-panel" id="utmatra-panel-overview" role="tabpanel" aria-labelledby="utmatra-tab-overview" tabindex="0">
 
-		<div class="utmat-filters" id="utmat-filters">
-			<div class="utmat-period-btns utmat-segmented" role="group" aria-label="<?php esc_attr_e( 'Date range', 'utm-attribution-tracker' ); ?>">
-				<button type="button" class="utmat-period-btn active" data-period="7" aria-pressed="true"><?php esc_html_e( '7 days', 'utm-attribution-tracker' ); ?></button>
-				<button type="button" class="utmat-period-btn" data-period="30" aria-pressed="false"><?php esc_html_e( '30 days', 'utm-attribution-tracker' ); ?></button>
-				<button type="button" class="utmat-period-btn" data-period="90" aria-pressed="false"><?php esc_html_e( '90 days', 'utm-attribution-tracker' ); ?></button>
+		<div class="utmatra-filters" id="utmatra-filters">
+			<div class="utmatra-period-btns utmatra-segmented" role="group" aria-label="<?php esc_attr_e( 'Date range', 'utm-attribution-tracker' ); ?>">
+				<button type="button" class="utmatra-period-btn active" data-period="7" aria-pressed="true"><?php esc_html_e( '7 days', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="utmatra-period-btn" data-period="30" aria-pressed="false"><?php esc_html_e( '30 days', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="utmatra-period-btn" data-period="90" aria-pressed="false"><?php esc_html_e( '90 days', 'utm-attribution-tracker' ); ?></button>
 			</div>
 
-			<div class="utmat-daterange">
-				<label for="utmat-date-since" class="utmat-filters__label"><?php esc_html_e( 'Custom', 'utm-attribution-tracker' ); ?></label>
-				<input type="date" id="utmat-date-since" />
+			<div class="utmatra-daterange">
+				<label for="utmatra-date-since" class="utmatra-filters__label"><?php esc_html_e( 'Custom', 'utm-attribution-tracker' ); ?></label>
+				<input type="date" id="utmatra-date-since" />
 				<span aria-hidden="true"><?php esc_html_e( 'to', 'utm-attribution-tracker' ); ?></span>
-				<label for="utmat-date-until" class="screen-reader-text"><?php esc_html_e( 'Custom range end date', 'utm-attribution-tracker' ); ?></label>
-				<input type="date" id="utmat-date-until" />
-				<button type="button" class="button" id="utmat-date-apply"><?php esc_html_e( 'Apply', 'utm-attribution-tracker' ); ?></button>
-				<button type="button" class="button-link" id="utmat-date-clear" hidden><?php esc_html_e( 'Clear', 'utm-attribution-tracker' ); ?></button>
+				<label for="utmatra-date-until" class="screen-reader-text"><?php esc_html_e( 'Custom range end date', 'utm-attribution-tracker' ); ?></label>
+				<input type="date" id="utmatra-date-until" />
+				<button type="button" class="button" id="utmatra-date-apply"><?php esc_html_e( 'Apply', 'utm-attribution-tracker' ); ?></button>
+				<button type="button" class="button-link" id="utmatra-date-clear" hidden><?php esc_html_e( 'Clear', 'utm-attribution-tracker' ); ?></button>
 			</div>
 
-			<div class="utmat-filters__campaign">
-				<label for="utmat-campaign-filter" class="utmat-filters__label"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></label>
-				<select id="utmat-campaign-filter">
+			<div class="utmatra-filters__campaign">
+				<label for="utmatra-campaign-filter" class="utmatra-filters__label"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></label>
+				<select id="utmatra-campaign-filter">
 					<option value=""><?php esc_html_e( 'All campaigns', 'utm-attribution-tracker' ); ?></option>
 				</select>
 			</div>
 
-			<p class="utmat-filters__caption" id="utmat-compare-caption"></p>
+			<p class="utmatra-filters__caption" id="utmatra-compare-caption"></p>
 		</div>
 
 		<!-- Loading state -->
-		<div id="utmat-loading" class="utmat-loading" aria-live="polite">
+		<div id="utmatra-loading" class="utmatra-loading" aria-live="polite">
 			<span class="spinner is-active"></span>
 			<p><?php esc_html_e( 'Loading data…', 'utm-attribution-tracker' ); ?></p>
 		</div>
 
-		<div class="utmat-tiles" id="utmat-tiles">
-			<div class="utmat-tile" id="utmat-tile-clicks">
-				<p class="utmat-tile__label"><?php esc_html_e( 'Total clicks', 'utm-attribution-tracker' ); ?></p>
-				<p class="utmat-tile__value" id="utmat-total-count" aria-live="polite">—</p>
-				<p class="utmat-tile__meta">
-					<span class="utmat-trend" id="utmat-trend" hidden></span>
-					<span id="utmat-clicks-meta"></span>
+		<div class="utmatra-tiles" id="utmatra-tiles">
+			<div class="utmatra-tile" id="utmatra-tile-clicks">
+				<p class="utmatra-tile__label"><?php esc_html_e( 'Total clicks', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-tile__value" id="utmatra-total-count" aria-live="polite">—</p>
+				<p class="utmatra-tile__meta">
+					<span class="utmatra-trend" id="utmatra-trend" hidden></span>
+					<span id="utmatra-clicks-meta"></span>
 				</p>
 			</div>
-			<div class="utmat-tile" id="utmat-tile-conversions" hidden>
-				<p class="utmat-tile__label"><?php esc_html_e( 'Conversions', 'utm-attribution-tracker' ); ?></p>
-				<p class="utmat-tile__value" id="utmat-conv-count">—</p>
-				<p class="utmat-tile__meta" id="utmat-conv"></p>
+			<div class="utmatra-tile" id="utmatra-tile-conversions" hidden>
+				<p class="utmatra-tile__label"><?php esc_html_e( 'Conversions', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-tile__value" id="utmatra-conv-count">—</p>
+				<p class="utmatra-tile__meta" id="utmatra-conv"></p>
 			</div>
-			<div class="utmat-tile" id="utmat-tile-revenue" hidden>
-				<p class="utmat-tile__label"><?php esc_html_e( 'Attributed revenue', 'utm-attribution-tracker' ); ?></p>
-				<p class="utmat-tile__value" id="utmat-revenue-total">—</p>
-				<p class="utmat-tile__meta" id="utmat-revenue-meta"></p>
+			<div class="utmatra-tile" id="utmatra-tile-revenue" hidden>
+				<p class="utmatra-tile__label"><?php esc_html_e( 'Attributed revenue', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-tile__value" id="utmatra-revenue-total">—</p>
+				<p class="utmatra-tile__meta" id="utmatra-revenue-meta"></p>
 			</div>
-			<div class="utmat-tile utmat-tile--text" id="utmat-tile-source">
-				<p class="utmat-tile__label"><?php esc_html_e( 'Top source', 'utm-attribution-tracker' ); ?></p>
-				<p class="utmat-tile__value" id="utmat-top-source">—</p>
-				<p class="utmat-tile__meta" id="utmat-top-source-meta"></p>
+			<div class="utmatra-tile utmatra-tile--text" id="utmatra-tile-source">
+				<p class="utmatra-tile__label"><?php esc_html_e( 'Top source', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-tile__value" id="utmatra-top-source">—</p>
+				<p class="utmatra-tile__meta" id="utmatra-top-source-meta"></p>
 			</div>
-			<div class="utmat-tile utmat-tile--text" id="utmat-tile-campaign">
-				<p class="utmat-tile__label"><?php esc_html_e( 'Top campaign', 'utm-attribution-tracker' ); ?></p>
-				<p class="utmat-tile__value" id="utmat-top-campaign">—</p>
-				<p class="utmat-tile__meta" id="utmat-top-campaign-meta"></p>
+			<div class="utmatra-tile utmatra-tile--text" id="utmatra-tile-campaign">
+				<p class="utmatra-tile__label"><?php esc_html_e( 'Top campaign', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-tile__value" id="utmatra-top-campaign">—</p>
+				<p class="utmatra-tile__meta" id="utmatra-top-campaign-meta"></p>
 			</div>
 		</div>
 
 		<!-- First-run onboarding, shown by JS when no events have ever been recorded -->
-		<div class="utmat-onboarding" id="utmat-onboarding" hidden>
-			<div class="utmat-onboarding__main">
+		<div class="utmatra-onboarding" id="utmatra-onboarding" hidden>
+			<div class="utmatra-onboarding__main">
 				<div>
 					<h2><?php esc_html_e( 'Get your first tracked click', 'utm-attribution-tracker' ); ?></h2>
-					<p class="utmat-onboarding__lead"><?php esc_html_e( 'Tracking is already on. Nothing has been recorded yet because no tagged visit has arrived.', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-onboarding__lead"><?php esc_html_e( 'Tracking is already on. Nothing has been recorded yet because no tagged visit has arrived.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<ol class="utmat-steps">
-					<li class="utmat-step">
-						<span class="utmat-step__num" aria-hidden="true">1</span>
+				<ol class="utmatra-steps">
+					<li class="utmatra-step">
+						<span class="utmatra-step__num" aria-hidden="true">1</span>
 						<div>
 							<h3><?php esc_html_e( 'Open a tagged URL in a private window', 'utm-attribution-tracker' ); ?></h3>
 							<p><?php esc_html_e( 'Visits from logged-in administrators are not tracked, so use a private window or another browser.', 'utm-attribution-tracker' ); ?></p>
-							<div class="utmat-step__copy">
-								<code class="utmat-code" id="utmat-onboarding-url"><?php echo esc_html( home_url( '/' ) . '?utm_source=newsletter&utm_medium=email&utm_campaign=launch' ); ?></code>
-								<button type="button" class="button button-small" id="utmat-onboarding-copy"><?php esc_html_e( 'Copy', 'utm-attribution-tracker' ); ?></button>
+							<div class="utmatra-step__copy">
+								<code class="utmatra-code" id="utmatra-onboarding-url"><?php echo esc_html( home_url( '/' ) . '?utm_source=newsletter&utm_medium=email&utm_campaign=launch' ); ?></code>
+								<button type="button" class="button button-small" id="utmatra-onboarding-copy"><?php esc_html_e( 'Copy', 'utm-attribution-tracker' ); ?></button>
 							</div>
 						</div>
 					</li>
-					<li class="utmat-step">
-						<span class="utmat-step__num" aria-hidden="true">2</span>
+					<li class="utmatra-step">
+						<span class="utmatra-step__num" aria-hidden="true">2</span>
 						<div>
 							<h3><?php esc_html_e( 'Or create a tracked short link', 'utm-attribution-tracker' ); ?></h3>
 							<p><?php esc_html_e( 'A tracked link counts the click before forwarding the visitor, and comes with a QR code.', 'utm-attribution-tracker' ); ?></p>
-							<p class="utmat-step__action">
-								<button type="button" class="button" id="utmat-onboarding-add"><?php esc_html_e( 'Create a tracked link', 'utm-attribution-tracker' ); ?></button>
+							<p class="utmatra-step__action">
+								<button type="button" class="button" id="utmatra-onboarding-add"><?php esc_html_e( 'Create a tracked link', 'utm-attribution-tracker' ); ?></button>
 							</p>
 						</div>
 					</li>
-					<li class="utmat-step">
-						<span class="utmat-step__num" aria-hidden="true">3</span>
+					<li class="utmatra-step">
+						<span class="utmatra-step__num" aria-hidden="true">3</span>
 						<div>
 							<h3><?php esc_html_e( 'Come back in a minute', 'utm-attribution-tracker' ); ?></h3>
 							<p><?php esc_html_e( 'Ad clicks carrying gclid, fbclid, msclkid, ttclid, li_fat_id or twclid are tracked automatically, even without UTM parameters. Bots and repeated reloads are filtered out.', 'utm-attribution-tracker' ); ?></p>
@@ -163,13 +166,13 @@ $utmat_kses = array(
 					</li>
 				</ol>
 			</div>
-			<div class="utmat-onboarding__aside">
+			<div class="utmatra-onboarding__aside">
 				<div>
 					<h3><?php esc_html_e( 'Already sent traffic?', 'utm-attribution-tracker' ); ?></h3>
 					<p><?php esc_html_e( 'If tagged visits should have shown up, a page cache or consent plugin is the usual reason.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<a class="button" href="#diagnostics" data-utmat-run-diagnostics="1"><?php esc_html_e( 'Run diagnostics', 'utm-attribution-tracker' ); ?></a>
-				<div class="utmat-onboarding__tracked">
+				<a class="button" href="#diagnostics" data-utmatra-run-diagnostics="1"><?php esc_html_e( 'Run diagnostics', 'utm-attribution-tracker' ); ?></a>
+				<div class="utmatra-onboarding__tracked">
 					<h3><?php esc_html_e( 'What is tracked', 'utm-attribution-tracker' ); ?></h3>
 					<ul>
 						<li><?php esc_html_e( 'UTM source, medium, campaign, term, content and ID', 'utm-attribution-tracker' ); ?></li>
@@ -181,153 +184,153 @@ $utmat_kses = array(
 			</div>
 		</div>
 
-		<div class="utmat-placeholder" id="utmat-charts-placeholder" hidden>
+		<div class="utmatra-placeholder" id="utmatra-charts-placeholder" hidden>
 			<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><path d="M3 3v18h18"></path><path d="M7 15l4-5 4 3 5-7"></path></svg>
 			<p><?php esc_html_e( 'Clicks over time, traffic breakdown, reach and revenue charts appear here after the first click.', 'utm-attribution-tracker' ); ?></p>
 		</div>
 
-		<div class="utmat-charts" id="utmat-charts" hidden>
+		<div class="utmatra-charts" id="utmatra-charts" hidden>
 
-			<div class="utmat-card utmat-card--chart">
-				<div class="utmat-card__header">
-					<h3 class="utmat-card__title"><?php esc_html_e( 'Clicks over time', 'utm-attribution-tracker' ); ?></h3>
+			<div class="utmatra-card utmatra-card--chart">
+				<div class="utmatra-card__header">
+					<h3 class="utmatra-card__title"><?php esc_html_e( 'Clicks over time', 'utm-attribution-tracker' ); ?></h3>
 				</div>
-				<div class="utmat-card__body utmat-card__body--chart">
-					<canvas id="utmat-chart-line" role="img"
+				<div class="utmatra-card__body utmatra-card__body--chart">
+					<canvas id="utmatra-chart-line" role="img"
 						aria-label="<?php esc_attr_e( 'Clicks over time line chart', 'utm-attribution-tracker' ); ?>"></canvas>
-					<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+					<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 				</div>
 			</div>
 
-			<section class="utmat-group" aria-labelledby="utmat-group-traffic">
-				<div class="utmat-group__header">
-					<h2 class="utmat-group__title" id="utmat-group-traffic"><?php esc_html_e( 'Traffic breakdown', 'utm-attribution-tracker' ); ?></h2>
-					<p class="utmat-group__desc"><?php esc_html_e( 'Where the clicks in this period came from', 'utm-attribution-tracker' ); ?></p>
+			<section class="utmatra-group" aria-labelledby="utmatra-group-traffic">
+				<div class="utmatra-group__header">
+					<h2 class="utmatra-group__title" id="utmatra-group-traffic"><?php esc_html_e( 'Traffic breakdown', 'utm-attribution-tracker' ); ?></h2>
+					<p class="utmatra-group__desc"><?php esc_html_e( 'Where the clicks in this period came from', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-group__grid utmat-group__grid--4">
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-source"><?php esc_html_e( 'By source', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
+				<div class="utmatra-group__grid utmatra-group__grid--4">
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-source"><?php esc_html_e( 'By source', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-source" aria-labelledby="utmat-title-source"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
-						</div>
-					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-campaign"><?php esc_html_e( 'By campaign', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
-						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-campaign" aria-labelledby="utmat-title-campaign"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-source" aria-labelledby="utmatra-title-source"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-medium"><?php esc_html_e( 'By medium', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-campaign"><?php esc_html_e( 'By campaign', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-medium" aria-labelledby="utmat-title-medium"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-campaign" aria-labelledby="utmatra-title-campaign"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-device"><?php esc_html_e( 'By device', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'share', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-medium"><?php esc_html_e( 'By medium', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-device" aria-labelledby="utmat-title-device"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-medium" aria-labelledby="utmatra-title-medium"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+						</div>
+					</div>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-device"><?php esc_html_e( 'By device', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'share', 'utm-attribution-tracker' ); ?></span>
+						</div>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-device" aria-labelledby="utmatra-title-device"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
 				</div>
 			</section>
 
-			<section class="utmat-group" aria-labelledby="utmat-group-reach">
-				<div class="utmat-group__header">
-					<h2 class="utmat-group__title" id="utmat-group-reach"><?php esc_html_e( 'Reach', 'utm-attribution-tracker' ); ?></h2>
-					<p class="utmat-group__desc"><?php esc_html_e( 'Channels, landing pages, referrers and ad platforms', 'utm-attribution-tracker' ); ?></p>
+			<section class="utmatra-group" aria-labelledby="utmatra-group-reach">
+				<div class="utmatra-group__header">
+					<h2 class="utmatra-group__title" id="utmatra-group-reach"><?php esc_html_e( 'Reach', 'utm-attribution-tracker' ); ?></h2>
+					<p class="utmatra-group__desc"><?php esc_html_e( 'Channels, landing pages, referrers and ad platforms', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-group__grid utmat-group__grid--4">
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-channel"><?php esc_html_e( 'Channels', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'visits', 'utm-attribution-tracker' ); ?></span>
+				<div class="utmatra-group__grid utmatra-group__grid--4">
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-channel"><?php esc_html_e( 'Channels', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'visits', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-channel" aria-labelledby="utmat-title-channel"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
-							<p class="utmat-field__hint" id="utmat-channel-hint" hidden><?php esc_html_e( 'Untagged visit tracking is off, so only tagged traffic is classified. Turn it on in Settings to see direct, organic, social, AI-assistant and referral visits.', 'utm-attribution-tracker' ); ?></p>
-						</div>
-					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-landing"><?php esc_html_e( 'Top landing pages', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
-						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-landing" aria-labelledby="utmat-title-landing"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-channel" aria-labelledby="utmatra-title-channel"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmatra-field__hint" id="utmatra-channel-hint" hidden><?php esc_html_e( 'Untagged visit tracking is off, so only tagged traffic is classified. Turn it on in Settings to see direct, organic, social, AI-assistant and referral visits.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-referrer"><?php esc_html_e( 'Top referrers', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-landing"><?php esc_html_e( 'Top landing pages', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-referrer" aria-labelledby="utmat-title-referrer"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No external referrers recorded in this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-landing" aria-labelledby="utmatra-title-landing"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-card utmat-card--bars">
-						<div class="utmat-card__header">
-							<h3 class="utmat-card__title" id="utmat-title-platform"><?php esc_html_e( 'Ad platforms', 'utm-attribution-tracker' ); ?></h3>
-							<span class="utmat-card__caption"><?php esc_html_e( 'click IDs', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-referrer"><?php esc_html_e( 'Top referrers', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'clicks', 'utm-attribution-tracker' ); ?></span>
 						</div>
-						<div class="utmat-card__body">
-							<ol class="utmat-bars" id="utmat-bars-platform" aria-labelledby="utmat-title-platform"></ol>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No ad click IDs recorded in this period.', 'utm-attribution-tracker' ); ?></p>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-referrer" aria-labelledby="utmatra-title-referrer"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No external referrers recorded in this period.', 'utm-attribution-tracker' ); ?></p>
+						</div>
+					</div>
+					<div class="utmatra-card utmatra-card--bars">
+						<div class="utmatra-card__header">
+							<h3 class="utmatra-card__title" id="utmatra-title-platform"><?php esc_html_e( 'Ad platforms', 'utm-attribution-tracker' ); ?></h3>
+							<span class="utmatra-card__caption"><?php esc_html_e( 'click IDs', 'utm-attribution-tracker' ); ?></span>
+						</div>
+						<div class="utmatra-card__body">
+							<ol class="utmatra-bars" id="utmatra-bars-platform" aria-labelledby="utmatra-title-platform"></ol>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No ad click IDs recorded in this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
 				</div>
 			</section>
 
 			<!-- Revenue, shown by JS only when WooCommerce is active -->
-			<section class="utmat-group" id="utmat-card-revenue" aria-labelledby="utmat-group-revenue" hidden>
-				<div class="utmat-group__header">
-					<h2 class="utmat-group__title" id="utmat-group-revenue"><?php esc_html_e( 'Revenue', 'utm-attribution-tracker' ); ?></h2>
-					<p class="utmat-group__desc"><?php esc_html_e( 'WooCommerce orders attributed to tagged campaigns', 'utm-attribution-tracker' ); ?></p>
+			<section class="utmatra-group" id="utmatra-card-revenue" aria-labelledby="utmatra-group-revenue" hidden>
+				<div class="utmatra-group__header">
+					<h2 class="utmatra-group__title" id="utmatra-group-revenue"><?php esc_html_e( 'Revenue', 'utm-attribution-tracker' ); ?></h2>
+					<p class="utmatra-group__desc"><?php esc_html_e( 'WooCommerce orders attributed to tagged campaigns', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card">
-					<div class="utmat-card__header">
-						<h3 class="utmat-card__title"><?php esc_html_e( 'Revenue by campaign', 'utm-attribution-tracker' ); ?></h3>
-						<span class="utmat-card__caption"><?php esc_html_e( 'Tagged campaigns', 'utm-attribution-tracker' ); ?></span>
+				<div class="utmatra-card">
+					<div class="utmatra-card__header">
+						<h3 class="utmatra-card__title"><?php esc_html_e( 'Revenue by campaign', 'utm-attribution-tracker' ); ?></h3>
+						<span class="utmatra-card__caption"><?php esc_html_e( 'Tagged campaigns', 'utm-attribution-tracker' ); ?></span>
 					</div>
-					<div class="utmat-revenue">
-						<div class="utmat-card__body utmat-card__body--chart utmat-revenue__chart">
-							<canvas id="utmat-chart-revenue" role="img"
+					<div class="utmatra-revenue">
+						<div class="utmatra-card__body utmatra-card__body--chart utmatra-revenue__chart">
+							<canvas id="utmatra-chart-revenue" role="img"
 								aria-label="<?php esc_attr_e( 'Revenue by campaign bar chart', 'utm-attribution-tracker' ); ?>"></canvas>
-							<p class="description utmat-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
+							<p class="description utmatra-nodata" hidden><?php esc_html_e( 'No data for this period.', 'utm-attribution-tracker' ); ?></p>
 						</div>
-						<dl class="utmat-revenue__summary" id="utmat-revenue-summary">
+						<dl class="utmatra-revenue__summary" id="utmatra-revenue-summary">
 							<dt><?php esc_html_e( 'Orders', 'utm-attribution-tracker' ); ?></dt>
-							<dd id="utmat-revenue-orders">—</dd>
+							<dd id="utmatra-revenue-orders">—</dd>
 							<dt><?php esc_html_e( 'Average order', 'utm-attribution-tracker' ); ?></dt>
-							<dd id="utmat-revenue-aov">—</dd>
+							<dd id="utmatra-revenue-aov">—</dd>
 						</dl>
 					</div>
 				</div>
 			</section>
 
-		</div><!-- /.utmat-charts -->
+		</div><!-- /.utmatra-charts -->
 
-		<p class="utmat-footnote">
+		<p class="utmatra-footnote">
 			<?php
 			echo wp_kses(
 				sprintf(
@@ -335,128 +338,128 @@ $utmat_kses = array(
 					__( 'Logged-in administrators are not tracked, and bots and repeated reloads are filtered out automatically. Data retention is set under %s.', 'utm-attribution-tracker' ),
 					'<a href="#settings">' . esc_html__( 'Settings', 'utm-attribution-tracker' ) . '</a>'
 				),
-				$utmat_kses
+				$utmatra_kses
 			);
 			?>
 		</p>
-	</div><!-- /#utmat-panel-overview -->
+	</div><!-- /#utmatra-panel-overview -->
 
 	<!-- Links -->
-	<div class="utmat-panel" id="utmat-panel-links" role="tabpanel" aria-labelledby="utmat-tab-links" tabindex="0" hidden>
-		<div class="utmat-section utmat-links" id="utmat-links-section" hidden>
-			<p class="utmat-section__desc"><?php esc_html_e( 'Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?></p>
+	<div class="utmatra-panel" id="utmatra-panel-links" role="tabpanel" aria-labelledby="utmatra-tab-links" tabindex="0" hidden>
+		<div class="utmatra-section utmatra-links" id="utmatra-links-section" hidden>
+			<p class="utmatra-section__desc"><?php esc_html_e( 'Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination.', 'utm-attribution-tracker' ); ?></p>
 
-			<div class="utmat-links-toolbar">
-				<label for="utmat-links-filter" class="screen-reader-text"><?php esc_html_e( 'Search tracked links', 'utm-attribution-tracker' ); ?></label>
-				<input type="search" id="utmat-links-filter" class="utmat-links-toolbar__search"
+			<div class="utmatra-links-toolbar">
+				<label for="utmatra-links-filter" class="screen-reader-text"><?php esc_html_e( 'Search tracked links', 'utm-attribution-tracker' ); ?></label>
+				<input type="search" id="utmatra-links-filter" class="utmatra-links-toolbar__search"
 					placeholder="<?php esc_attr_e( 'Search by label, campaign, source, or medium…', 'utm-attribution-tracker' ); ?>" />
-				<label for="utmat-links-campaign" class="screen-reader-text"><?php esc_html_e( 'Filter links by campaign', 'utm-attribution-tracker' ); ?></label>
-				<select id="utmat-links-campaign">
+				<label for="utmatra-links-campaign" class="screen-reader-text"><?php esc_html_e( 'Filter links by campaign', 'utm-attribution-tracker' ); ?></label>
+				<select id="utmatra-links-campaign">
 					<option value=""><?php esc_html_e( 'All campaigns', 'utm-attribution-tracker' ); ?></option>
 				</select>
-				<span class="utmat-links-toolbar__count" id="utmat-links-count"></span>
-				<span class="utmat-add-form__msg" id="utmat-links-msg" role="status"></span>
-				<div class="utmat-links-toolbar__bulk">
-					<button type="button" class="button utmat-bulk-delete-btn" id="utmat-bulk-delete-btn" hidden><?php esc_html_e( 'Delete selected', 'utm-attribution-tracker' ); ?></button>
+				<span class="utmatra-links-toolbar__count" id="utmatra-links-count"></span>
+				<span class="utmatra-add-form__msg" id="utmatra-links-msg" role="status"></span>
+				<div class="utmatra-links-toolbar__bulk">
+					<button type="button" class="button utmatra-bulk-delete-btn" id="utmatra-bulk-delete-btn" hidden><?php esc_html_e( 'Delete selected', 'utm-attribution-tracker' ); ?></button>
 				</div>
 			</div>
 
-			<table class="wp-list-table widefat fixed striped utmat-links-table" id="utmat-links-table">
+			<table class="wp-list-table widefat fixed striped utmatra-links-table" id="utmatra-links-table">
 				<thead>
 					<tr>
 						<td class="manage-column column-cb check-column">
-							<label for="utmat-select-all" class="screen-reader-text"><?php esc_html_e( 'Select all', 'utm-attribution-tracker' ); ?></label>
-							<input type="checkbox" id="utmat-select-all" />
+							<label for="utmatra-select-all" class="screen-reader-text"><?php esc_html_e( 'Select all', 'utm-attribution-tracker' ); ?></label>
+							<input type="checkbox" id="utmatra-select-all" />
 						</td>
-						<th scope="col" class="utmat-col-label column-primary"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></th>
-						<th scope="col" class="utmat-col-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></th>
-						<th scope="col" class="utmat-col-source"><?php esc_html_e( 'Source / medium', 'utm-attribution-tracker' ); ?></th>
-						<th scope="col" class="utmat-col-clicks" aria-sort="none">
-							<button type="button" class="button-link utmat-col-sortable" id="utmat-sort-clicks"><?php esc_html_e( 'Clicks', 'utm-attribution-tracker' ); ?> <span class="utmat-sort-arrow" aria-hidden="true"></span></button>
+						<th scope="col" class="utmatra-col-label column-primary"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col" class="utmatra-col-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col" class="utmatra-col-source"><?php esc_html_e( 'Source / medium', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col" class="utmatra-col-clicks" aria-sort="none">
+							<button type="button" class="button-link utmatra-col-sortable" id="utmatra-sort-clicks"><?php esc_html_e( 'Clicks', 'utm-attribution-tracker' ); ?> <span class="utmatra-sort-arrow" aria-hidden="true"></span></button>
 						</th>
-						<th scope="col" class="utmat-col-url utmat-col-shortlink"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></th>
-						<th scope="col" class="utmat-col-url utmat-col-destination"><?php esc_html_e( 'Destination', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col" class="utmatra-col-url utmatra-col-shortlink"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></th>
+						<th scope="col" class="utmatra-col-url utmatra-col-destination"><?php esc_html_e( 'Destination', 'utm-attribution-tracker' ); ?></th>
 					</tr>
 				</thead>
-				<tbody id="utmat-links-tbody">
+				<tbody id="utmatra-links-tbody">
 					<!-- Populated by JS -->
 				</tbody>
 			</table>
 
-			<p class="utmat-footnote"><?php esc_html_e( 'Hover over or tab to a row for Edit, Duplicate, QR code, Copy link and Delete. Click counts are all time.', 'utm-attribution-tracker' ); ?></p>
+			<p class="utmatra-footnote"><?php esc_html_e( 'Hover over or tab to a row for Edit, Duplicate, QR code, Copy link and Delete. Click counts are all time.', 'utm-attribution-tracker' ); ?></p>
 		</div>
-	</div><!-- /#utmat-panel-links -->
+	</div><!-- /#utmatra-panel-links -->
 
 	<!-- Journeys -->
-	<div class="utmat-panel" id="utmat-panel-journeys" role="tabpanel" aria-labelledby="utmat-tab-journeys" tabindex="0" hidden>
-		<div class="utmat-journeys-head">
+	<div class="utmatra-panel" id="utmatra-panel-journeys" role="tabpanel" aria-labelledby="utmatra-tab-journeys" tabindex="0" hidden>
+		<div class="utmatra-journeys-head">
 			<div>
 				<h2><?php esc_html_e( 'Journeys', 'utm-attribution-tracker' ); ?></h2>
-				<p class="utmat-section__desc"><?php esc_html_e( 'The last 50 conversions and the tagged visits that led to them. Journeys are built from the visitor id cookie, so they cover traffic recorded after this version.', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-section__desc"><?php esc_html_e( 'The last 50 conversions and the tagged visits that led to them. Journeys are built from the visitor id cookie, so they cover traffic recorded after this version.', 'utm-attribution-tracker' ); ?></p>
 			</div>
-			<span class="utmat-add-form__msg" id="utmat-journeys-msg" role="status"></span>
+			<span class="utmatra-add-form__msg" id="utmatra-journeys-msg" role="status"></span>
 		</div>
 
-		<div id="utmat-journeys-loading" class="utmat-loading" aria-live="polite" hidden>
+		<div id="utmatra-journeys-loading" class="utmatra-loading" aria-live="polite" hidden>
 			<span class="spinner is-active"></span>
 			<p><?php esc_html_e( 'Loading journeys…', 'utm-attribution-tracker' ); ?></p>
 		</div>
 
-		<div class="utmat-placeholder" id="utmat-journeys-empty" hidden>
+		<div class="utmatra-placeholder" id="utmatra-journeys-empty" hidden>
 			<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg>
 			<p><?php esc_html_e( 'No journeys yet. Journeys appear for visitors tracked after this version; earlier events have no visitor id.', 'utm-attribution-tracker' ); ?></p>
 		</div>
 
-		<table class="wp-list-table widefat fixed striped utmat-journeys-table" id="utmat-journeys-table" hidden>
+		<table class="wp-list-table widefat fixed striped utmatra-journeys-table" id="utmatra-journeys-table" hidden>
 			<thead>
 				<tr>
-					<th scope="col" class="utmat-col-when"><?php esc_html_e( 'When', 'utm-attribution-tracker' ); ?></th>
-					<th scope="col" class="utmat-col-conversion column-primary"><?php esc_html_e( 'Conversion', 'utm-attribution-tracker' ); ?></th>
-					<th scope="col" class="utmat-col-first"><?php esc_html_e( 'First touch', 'utm-attribution-tracker' ); ?></th>
-					<th scope="col" class="utmat-col-last"><?php esc_html_e( 'Last touch', 'utm-attribution-tracker' ); ?></th>
-					<th scope="col" class="utmat-col-touches"><?php esc_html_e( 'Touches', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmatra-col-when"><?php esc_html_e( 'When', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmatra-col-conversion column-primary"><?php esc_html_e( 'Conversion', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmatra-col-first"><?php esc_html_e( 'First touch', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmatra-col-last"><?php esc_html_e( 'Last touch', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmatra-col-touches"><?php esc_html_e( 'Touches', 'utm-attribution-tracker' ); ?></th>
 				</tr>
 			</thead>
-			<tbody id="utmat-journeys-tbody">
+			<tbody id="utmatra-journeys-tbody">
 				<!-- Populated by JS -->
 			</tbody>
 		</table>
 
-		<p class="utmat-footnote" id="utmat-journeys-without" hidden></p>
-	</div><!-- /#utmat-panel-journeys -->
+		<p class="utmatra-footnote" id="utmatra-journeys-without" hidden></p>
+	</div><!-- /#utmatra-panel-journeys -->
 
 	<!-- Settings -->
-	<div class="utmat-panel" id="utmat-panel-settings" role="tabpanel" aria-labelledby="utmat-tab-settings" tabindex="0" hidden>
+	<div class="utmatra-panel" id="utmatra-panel-settings" role="tabpanel" aria-labelledby="utmatra-tab-settings" tabindex="0" hidden>
 
 		<!-- Shown by JS when a known full-page cache plugin is detected -->
-		<div class="notice notice-info inline utmat-cache-notice" id="utmat-cache-notice" hidden>
+		<div class="notice notice-info inline utmatra-cache-notice" id="utmatra-cache-notice" hidden>
 			<p></p>
 		</div>
 
-		<form id="utmat-settings-form" class="utmat-settings-form">
+		<form id="utmatra-settings-form" class="utmatra-settings-form">
 
-			<section class="utmat-settings-section" aria-labelledby="utmat-settings-tracking">
-				<div class="utmat-settings-section__intro">
-					<h2 id="utmat-settings-tracking"><?php esc_html_e( 'Tracking', 'utm-attribution-tracker' ); ?></h2>
+			<section class="utmatra-settings-section" aria-labelledby="utmatra-settings-tracking">
+				<div class="utmatra-settings-section__intro">
+					<h2 id="utmatra-settings-tracking"><?php esc_html_e( 'Tracking', 'utm-attribution-tracker' ); ?></h2>
 					<p><?php esc_html_e( 'What the beacon records on each visit.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card utmat-settings-card">
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Untagged visits', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
-							<label class="utmat-switch" for="utmat-track-visits">
-								<input type="checkbox" id="utmat-track-visits" name="track_visits" class="utmat-switch__input" />
-								<span class="utmat-switch__track" aria-hidden="true"></span>
-								<span class="utmat-switch__text"><?php esc_html_e( 'Track the first page of every visit', 'utm-attribution-tracker' ); ?></span>
+				<div class="utmatra-card utmatra-settings-card">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Untagged visits', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
+							<label class="utmatra-switch" for="utmatra-track-visits">
+								<input type="checkbox" id="utmatra-track-visits" name="track_visits" class="utmatra-switch__input" />
+								<span class="utmatra-switch__track" aria-hidden="true"></span>
+								<span class="utmatra-switch__text"><?php esc_html_e( 'Track the first page of every visit', 'utm-attribution-tracker' ); ?></span>
 							</label>
-							<p class="utmat-field__hint"><?php esc_html_e( 'Records the landing page and referrer of visits that arrive without campaign parameters, so organic, social, AI-assistant and referral traffic appear in the Channels report. On by default; about one event per visit.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'Records the landing page and referrer of visits that arrive without campaign parameters, so organic, social, AI-assistant and referral traffic appear in the Channels report. On by default; about one event per visit.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<label class="utmat-field__label" for="utmat-custom-params"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></label>
-						<div class="utmat-field__control">
-							<input type="text" id="utmat-custom-params" name="custom_params" class="regular-text" placeholder="coupon, aff, promo2" />
-							<p class="utmat-field__hint">
+					<div class="utmatra-field">
+						<label class="utmatra-field__label" for="utmatra-custom-params"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmatra-field__control">
+							<input type="text" id="utmatra-custom-params" name="custom_params" class="regular-text" placeholder="coupon, aff, promo2" />
+							<p class="utmatra-field__hint">
 								<?php
 								echo wp_kses(
 									sprintf(
@@ -464,7 +467,7 @@ $utmat_kses = array(
 										__( 'Extra URL parameters to capture alongside UTM tags and click IDs, separated by commas. Up to 10 names that start with a letter and use lowercase letters, digits and underscores. Each one is available to forms under its own name (%1$s) and becomes a CSV column. Do not use the name of a form field or anything that identifies a person.', 'utm-attribution-tracker' ),
 										'<code>coupon</code>'
 									),
-									$utmat_kses
+									$utmatra_kses
 								);
 								?>
 							</p>
@@ -473,44 +476,44 @@ $utmat_kses = array(
 				</div>
 			</section>
 
-			<section class="utmat-settings-section" aria-labelledby="utmat-settings-privacy">
-				<div class="utmat-settings-section__intro">
-					<h2 id="utmat-settings-privacy"><?php esc_html_e( 'Data and privacy', 'utm-attribution-tracker' ); ?></h2>
+			<section class="utmatra-settings-section" aria-labelledby="utmatra-settings-privacy">
+				<div class="utmatra-settings-section__intro">
+					<h2 id="utmatra-settings-privacy"><?php esc_html_e( 'Data and privacy', 'utm-attribution-tracker' ); ?></h2>
 					<p><?php esc_html_e( 'How long events are kept and how long a visitor stays attributed to a campaign.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card utmat-settings-card">
-					<div class="utmat-field">
-						<label class="utmat-field__label" for="utmat-retention-days"><?php esc_html_e( 'Keep events for', 'utm-attribution-tracker' ); ?></label>
-						<div class="utmat-field__control">
-							<div class="utmat-inline">
-								<input type="number" id="utmat-retention-days" name="retention_days" min="0" step="1" class="small-text" />
+				<div class="utmatra-card utmatra-settings-card">
+					<div class="utmatra-field">
+						<label class="utmatra-field__label" for="utmatra-retention-days"><?php esc_html_e( 'Keep events for', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmatra-field__control">
+							<div class="utmatra-inline">
+								<input type="number" id="utmatra-retention-days" name="retention_days" min="0" step="1" class="small-text" />
 								<span><?php esc_html_e( 'days', 'utm-attribution-tracker' ); ?></span>
 							</div>
-							<p class="utmat-field__hint"><?php esc_html_e( 'Events older than this are deleted daily. 0 keeps events forever.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'Events older than this are deleted daily. 0 keeps events forever.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<label class="utmat-field__label" for="utmat-cookie-days"><?php esc_html_e( 'Attribution window', 'utm-attribution-tracker' ); ?></label>
-						<div class="utmat-field__control">
-							<div class="utmat-inline">
-								<input type="number" id="utmat-cookie-days" name="cookie_days" min="1" max="730" step="1" class="small-text" />
+					<div class="utmatra-field">
+						<label class="utmatra-field__label" for="utmatra-cookie-days"><?php esc_html_e( 'Attribution window', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmatra-field__control">
+							<div class="utmatra-inline">
+								<input type="number" id="utmatra-cookie-days" name="cookie_days" min="1" max="730" step="1" class="small-text" />
 								<span><?php esc_html_e( 'days', 'utm-attribution-tracker' ); ?></span>
 							</div>
-							<p class="utmat-field__hint"><?php esc_html_e( 'How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-settings-card__group">
-						<h3 class="utmat-card__title"><?php esc_html_e( 'Consent', 'utm-attribution-tracker' ); ?></h3>
-						<div class="utmat-field">
-							<label class="utmat-field__label" for="utmat-consent-category"><?php esc_html_e( 'Consent category', 'utm-attribution-tracker' ); ?></label>
-							<div class="utmat-field__control">
-								<select id="utmat-consent-category" name="consent_category">
+					<div class="utmatra-settings-card__group">
+						<h3 class="utmatra-card__title"><?php esc_html_e( 'Consent', 'utm-attribution-tracker' ); ?></h3>
+						<div class="utmatra-field">
+							<label class="utmatra-field__label" for="utmatra-consent-category"><?php esc_html_e( 'Consent category', 'utm-attribution-tracker' ); ?></label>
+							<div class="utmatra-field__control">
+								<select id="utmatra-consent-category" name="consent_category">
 									<option value="marketing"><?php esc_html_e( 'Marketing (recommended)', 'utm-attribution-tracker' ); ?></option>
 									<option value="statistics"><?php esc_html_e( 'Statistics', 'utm-attribution-tracker' ); ?></option>
 									<option value="either"><?php esc_html_e( 'Marketing or statistics', 'utm-attribution-tracker' ); ?></option>
 								</select>
-								<p class="utmat-field__hint"><?php esc_html_e( 'The attribution cookie is written only after the visitor grants this consent category. Applies when a plugin implementing the WP Consent API is active.', 'utm-attribution-tracker' ); ?></p>
-								<p class="utmat-field__hint" id="utmat-consent-status">
+								<p class="utmatra-field__hint"><?php esc_html_e( 'The attribution cookie is written only after the visitor grants this consent category. Applies when a plugin implementing the WP Consent API is active.', 'utm-attribution-tracker' ); ?></p>
+								<p class="utmatra-field__hint" id="utmatra-consent-status">
 									<?php
 									// Server-rendered state of the WP Consent API; the two
 									// "missing" states reuse the Tracking Doctor wording.
@@ -543,134 +546,134 @@ $utmat_kses = array(
 				</div>
 			</section>
 
-			<section class="utmat-settings-section" aria-labelledby="utmat-settings-report">
-				<div class="utmat-settings-section__intro">
-					<h2 id="utmat-settings-report"><?php esc_html_e( 'Weekly report', 'utm-attribution-tracker' ); ?></h2>
+			<section class="utmatra-settings-section" aria-labelledby="utmatra-settings-report">
+				<div class="utmatra-settings-section__intro">
+					<h2 id="utmatra-settings-report"><?php esc_html_e( 'Weekly report', 'utm-attribution-tracker' ); ?></h2>
 					<p><?php esc_html_e( 'A short summary email once a week with clicks, top campaigns, top sources and, with WooCommerce, revenue.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card utmat-settings-card">
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Weekly email', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
-							<label class="utmat-switch" for="utmat-weekly-email">
-								<input type="checkbox" id="utmat-weekly-email" name="weekly_email" class="utmat-switch__input" />
-								<span class="utmat-switch__track" aria-hidden="true"></span>
-								<span class="utmat-switch__text"><?php esc_html_e( 'Send a weekly campaign summary email', 'utm-attribution-tracker' ); ?></span>
+				<div class="utmatra-card utmatra-settings-card">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Weekly email', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
+							<label class="utmatra-switch" for="utmatra-weekly-email">
+								<input type="checkbox" id="utmatra-weekly-email" name="weekly_email" class="utmatra-switch__input" />
+								<span class="utmatra-switch__track" aria-hidden="true"></span>
+								<span class="utmatra-switch__text"><?php esc_html_e( 'Send a weekly campaign summary email', 'utm-attribution-tracker' ); ?></span>
 							</label>
-							<p class="utmat-field__hint"><?php esc_html_e( 'Sent through wp_mail(), so your SMTP plugin applies. Off by default.', 'utm-attribution-tracker' ); ?></p>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'Sent through wp_mail(), so your SMTP plugin applies. Off by default.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Recipient', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
-							<p class="utmat-readonly" id="utmat-report-recipient"><?php echo esc_html( get_option( 'admin_email' ) ); ?></p>
-							<p class="utmat-field__hint">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Recipient', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
+							<p class="utmatra-readonly" id="utmatra-report-recipient"><?php echo esc_html( get_option( 'admin_email' ) ); ?></p>
+							<p class="utmatra-field__hint">
 								<?php
 								echo wp_kses(
 									sprintf(
 										/* translators: %s: name of the filter that changes the report recipient. */
 										__( 'The site admin email. Developers can change the recipient with the %s filter.', 'utm-attribution-tracker' ),
-										'<code>utmat_report_recipient</code>'
+										'<code>utmatra_report_recipient</code>'
 									),
-									$utmat_kses
+									$utmatra_kses
 								);
 								?>
 							</p>
 						</div>
 					</div>
-					<div class="utmat-field utmat-field--actions">
-						<span class="utmat-field__label" aria-hidden="true"></span>
-						<div class="utmat-field__control utmat-inline">
-							<button type="button" class="button" id="utmat-test-email"
+					<div class="utmatra-field utmatra-field--actions">
+						<span class="utmatra-field__label" aria-hidden="true"></span>
+						<div class="utmatra-field__control utmatra-inline">
+							<button type="button" class="button" id="utmatra-test-email"
 								title="<?php esc_attr_e( 'Send the weekly summary to the report recipient now, regardless of the toggle.', 'utm-attribution-tracker' ); ?>"><?php esc_html_e( 'Send test email', 'utm-attribution-tracker' ); ?></button>
-							<span class="utmat-add-form__msg" id="utmat-test-email-msg" role="status"></span>
+							<span class="utmatra-add-form__msg" id="utmatra-test-email-msg" role="status"></span>
 						</div>
 					</div>
 				</div>
 			</section>
 
-			<section class="utmat-settings-section" aria-labelledby="utmat-settings-webhook">
-				<div class="utmat-settings-section__intro">
-					<h2 id="utmat-settings-webhook"><?php esc_html_e( 'Webhooks', 'utm-attribution-tracker' ); ?></h2>
+			<section class="utmatra-settings-section" aria-labelledby="utmatra-settings-webhook">
+				<div class="utmatra-settings-section__intro">
+					<h2 id="utmatra-settings-webhook"><?php esc_html_e( 'Webhooks', 'utm-attribution-tracker' ); ?></h2>
 					<p><?php esc_html_e( 'Send each attributed WooCommerce order and form lead, with its attribution data, to your CRM or automation tool.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card utmat-settings-card">
-					<div class="utmat-field">
-						<label class="utmat-field__label" for="utmat-webhook-preset"><?php esc_html_e( 'Preset', 'utm-attribution-tracker' ); ?></label>
-						<div class="utmat-field__control">
-							<select id="utmat-webhook-preset" name="webhook_preset">
+				<div class="utmatra-card utmatra-settings-card">
+					<div class="utmatra-field">
+						<label class="utmatra-field__label" for="utmatra-webhook-preset"><?php esc_html_e( 'Preset', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmatra-field__control">
+							<select id="utmatra-webhook-preset" name="webhook_preset">
 								<option value="generic"><?php esc_html_e( 'Generic JSON', 'utm-attribution-tracker' ); ?></option>
 								<option value="zapier"><?php esc_html_e( 'Zapier', 'utm-attribution-tracker' ); ?></option>
 								<option value="make"><?php esc_html_e( 'Make', 'utm-attribution-tracker' ); ?></option>
 								<option value="hubspot"><?php esc_html_e( 'HubSpot Forms', 'utm-attribution-tracker' ); ?></option>
 								<option value="gohighlevel"><?php esc_html_e( 'GoHighLevel', 'utm-attribution-tracker' ); ?></option>
 							</select>
-							<p class="utmat-field__hint" id="utmat-webhook-preset-help"></p>
+							<p class="utmatra-field__hint" id="utmatra-webhook-preset-help"></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<label class="utmat-field__label" for="utmat-webhook-url"><?php esc_html_e( 'Webhook URL', 'utm-attribution-tracker' ); ?></label>
-						<div class="utmat-field__control">
-							<input type="url" id="utmat-webhook-url" name="webhook_url" class="regular-text" placeholder="https://example.com/webhooks/utm" />
-							<p class="utmat-field__hint"><?php esc_html_e( 'POSTs a JSON payload here for every enabled event. Leave blank to disable.', 'utm-attribution-tracker' ); ?></p>
+					<div class="utmatra-field">
+						<label class="utmatra-field__label" for="utmatra-webhook-url"><?php esc_html_e( 'Webhook URL', 'utm-attribution-tracker' ); ?></label>
+						<div class="utmatra-field__control">
+							<input type="url" id="utmatra-webhook-url" name="webhook_url" class="regular-text" placeholder="https://example.com/webhooks/utm" />
+							<p class="utmatra-field__hint"><?php esc_html_e( 'POSTs a JSON payload here for every enabled event. Leave blank to disable.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Send for', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
-							<label class="utmat-switch" for="utmat-webhook-orders">
-								<input type="checkbox" id="utmat-webhook-orders" name="webhook_orders" class="utmat-switch__input" />
-								<span class="utmat-switch__track" aria-hidden="true"></span>
-								<span class="utmat-switch__text"><?php esc_html_e( 'WooCommerce orders', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Send for', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
+							<label class="utmatra-switch" for="utmatra-webhook-orders">
+								<input type="checkbox" id="utmatra-webhook-orders" name="webhook_orders" class="utmatra-switch__input" />
+								<span class="utmatra-switch__track" aria-hidden="true"></span>
+								<span class="utmatra-switch__text"><?php esc_html_e( 'WooCommerce orders', 'utm-attribution-tracker' ); ?></span>
 							</label>
-							<p class="utmat-field__hint" id="utmat-webhook-orders-hint" hidden><?php esc_html_e( 'Not available for the HubSpot preset', 'utm-attribution-tracker' ); ?></p>
-							<label class="utmat-switch" for="utmat-webhook-leads">
-								<input type="checkbox" id="utmat-webhook-leads" name="webhook_leads" class="utmat-switch__input" />
-								<span class="utmat-switch__track" aria-hidden="true"></span>
-								<span class="utmat-switch__text"><?php esc_html_e( 'Form leads', 'utm-attribution-tracker' ); ?></span>
+							<p class="utmatra-field__hint" id="utmatra-webhook-orders-hint" hidden><?php esc_html_e( 'Not available for the HubSpot preset', 'utm-attribution-tracker' ); ?></p>
+							<label class="utmatra-switch" for="utmatra-webhook-leads">
+								<input type="checkbox" id="utmatra-webhook-leads" name="webhook_leads" class="utmatra-switch__input" />
+								<span class="utmatra-switch__track" aria-hidden="true"></span>
+								<span class="utmatra-switch__text"><?php esc_html_e( 'Form leads', 'utm-attribution-tracker' ); ?></span>
 							</label>
 						</div>
 					</div>
-					<div id="utmat-webhook-secret-row" class="utmat-settings-card__group" hidden>
-						<div class="utmat-field">
-							<label class="utmat-field__label" for="utmat-webhook-secret"><?php esc_html_e( 'Signing secret', 'utm-attribution-tracker' ); ?></label>
-							<div class="utmat-field__control">
-								<div class="utmat-inline">
-									<input type="text" id="utmat-webhook-secret" class="regular-text utmat-mono" readonly />
-									<button type="button" class="button" id="utmat-webhook-secret-copy"><?php esc_html_e( 'Copy', 'utm-attribution-tracker' ); ?></button>
+					<div id="utmatra-webhook-secret-row" class="utmatra-settings-card__group" hidden>
+						<div class="utmatra-field">
+							<label class="utmatra-field__label" for="utmatra-webhook-secret"><?php esc_html_e( 'Signing secret', 'utm-attribution-tracker' ); ?></label>
+							<div class="utmatra-field__control">
+								<div class="utmatra-inline">
+									<input type="text" id="utmatra-webhook-secret" class="regular-text utmatra-mono" readonly />
+									<button type="button" class="button" id="utmatra-webhook-secret-copy"><?php esc_html_e( 'Copy', 'utm-attribution-tracker' ); ?></button>
 								</div>
-								<p class="utmat-field__hint"><?php esc_html_e( 'Every request carries an X-UTMAT-Signature header (sha256=HMAC of the JSON body using this secret) so your receiver can verify it came from this site.', 'utm-attribution-tracker' ); ?></p>
+								<p class="utmatra-field__hint"><?php esc_html_e( 'Every request carries an X-Utmatra-Signature header (sha256=HMAC of the JSON body using this secret) so your receiver can verify it came from this site.', 'utm-attribution-tracker' ); ?></p>
 							</div>
 						</div>
-						<div class="utmat-field">
-							<span class="utmat-field__label"><?php esc_html_e( 'Last delivery', 'utm-attribution-tracker' ); ?></span>
-							<div class="utmat-field__control utmat-inline">
-								<span id="utmat-webhook-last" class="description"></span>
-								<button type="button" class="button" id="utmat-test-webhook" hidden
+						<div class="utmatra-field">
+							<span class="utmatra-field__label"><?php esc_html_e( 'Last delivery', 'utm-attribution-tracker' ); ?></span>
+							<div class="utmatra-field__control utmatra-inline">
+								<span id="utmatra-webhook-last" class="description"></span>
+								<button type="button" class="button" id="utmatra-test-webhook" hidden
 									title="<?php esc_attr_e( 'Send a synthetic payload in the selected preset’s shape to the configured URL now.', 'utm-attribution-tracker' ); ?>"><?php esc_html_e( 'Send test webhook', 'utm-attribution-tracker' ); ?></button>
-								<span class="utmat-add-form__msg" id="utmat-test-webhook-msg" role="status"></span>
+								<span class="utmatra-add-form__msg" id="utmatra-test-webhook-msg" role="status"></span>
 							</div>
 						</div>
 					</div>
 				</div>
 			</section>
 
-			<section class="utmat-settings-section utmat-settings-section--last" aria-labelledby="utmat-settings-embed">
-				<div class="utmat-settings-section__intro">
-					<h2 id="utmat-settings-embed"><?php esc_html_e( 'Embedding', 'utm-attribution-tracker' ); ?></h2>
+			<section class="utmatra-settings-section utmatra-settings-section--last" aria-labelledby="utmatra-settings-embed">
+				<div class="utmatra-settings-section__intro">
+					<h2 id="utmatra-settings-embed"><?php esc_html_e( 'Embedding', 'utm-attribution-tracker' ); ?></h2>
 					<p><?php esc_html_e( 'Put tracked links in content and pass attribution into forms.', 'utm-attribution-tracker' ); ?></p>
 				</div>
-				<div class="utmat-card utmat-settings-card">
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Shortcode', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
-							<code class="utmat-code">[utmat_link id=&quot;example-campaign&quot;]<?php esc_html_e( 'Click here', 'utm-attribution-tracker' ); ?>[/utmat_link]</code>
-							<p class="utmat-field__hint"><?php esc_html_e( 'Enclosed text becomes the link text. You can also pass label="…", or leave both out to use the link’s label. Incoming visits that already carry UTM parameters are tracked automatically, no shortcode required.', 'utm-attribution-tracker' ); ?></p>
+				<div class="utmatra-card utmatra-settings-card">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Shortcode', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
+							<code class="utmatra-code">[utmatra_link id=&quot;example-campaign&quot;]<?php esc_html_e( 'Click here', 'utm-attribution-tracker' ); ?>[/utmatra_link]</code>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'Enclosed text becomes the link text. You can also pass label="…", or leave both out to use the link’s label. Incoming visits that already carry UTM parameters are tracked automatically, no shortcode required.', 'utm-attribution-tracker' ); ?></p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Form fields', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Form fields', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
 							<p>
 								<?php
 								echo wp_kses(
@@ -683,27 +686,27 @@ $utmat_kses = array(
 										'<code>landing_page</code>',
 										'<code>_first</code>'
 									),
-									$utmat_kses
+									$utmatra_kses
 								);
 								?>
 							</p>
-							<p class="utmat-field__hint">
+							<p class="utmatra-field__hint">
 								<?php
 								echo wp_kses(
 									sprintf(
 										/* translators: %s: link to the Diagnostics tab. */
 										__( 'Check which forms are covered under %s.', 'utm-attribution-tracker' ),
-										'<a href="#diagnostics" data-utmat-run-diagnostics="1">' . esc_html__( 'Diagnostics', 'utm-attribution-tracker' ) . '</a>'
+										'<a href="#diagnostics" data-utmatra-run-diagnostics="1">' . esc_html__( 'Diagnostics', 'utm-attribution-tracker' ) . '</a>'
 									),
-									$utmat_kses
+									$utmatra_kses
 								);
 								?>
 							</p>
 						</div>
 					</div>
-					<div class="utmat-field">
-						<span class="utmat-field__label"><?php esc_html_e( 'Privacy policy', 'utm-attribution-tracker' ); ?></span>
-						<div class="utmat-field__control">
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'Privacy policy', 'utm-attribution-tracker' ); ?></span>
+						<div class="utmatra-field__control">
 							<p>
 								<?php
 								echo wp_kses(
@@ -712,7 +715,7 @@ $utmat_kses = array(
 										__( 'Suggested wording is added to the %s.', 'utm-attribution-tracker' ),
 										'<a href="' . esc_url( admin_url( 'privacy-policy-guide.php' ) ) . '">' . esc_html__( 'Privacy Policy Guide', 'utm-attribution-tracker' ) . '</a>'
 									),
-									$utmat_kses
+									$utmatra_kses
 								);
 								?>
 							</p>
@@ -721,65 +724,65 @@ $utmat_kses = array(
 				</div>
 			</section>
 
-			<div class="utmat-savebar" id="utmat-savebar">
-				<span class="utmat-savebar__count" id="utmat-unsaved-count" aria-live="polite"></span>
-				<span class="utmat-add-form__msg" id="utmat-settings-msg" role="status"></span>
-				<div class="utmat-savebar__actions">
-					<button type="button" class="button" id="utmat-settings-discard" disabled><?php esc_html_e( 'Discard', 'utm-attribution-tracker' ); ?></button>
-					<button type="submit" class="button button-primary" id="utmat-settings-save"><?php esc_html_e( 'Save settings', 'utm-attribution-tracker' ); ?></button>
+			<div class="utmatra-savebar" id="utmatra-savebar">
+				<span class="utmatra-savebar__count" id="utmatra-unsaved-count" aria-live="polite"></span>
+				<span class="utmatra-add-form__msg" id="utmatra-settings-msg" role="status"></span>
+				<div class="utmatra-savebar__actions">
+					<button type="button" class="button" id="utmatra-settings-discard" disabled><?php esc_html_e( 'Discard', 'utm-attribution-tracker' ); ?></button>
+					<button type="submit" class="button button-primary" id="utmatra-settings-save"><?php esc_html_e( 'Save settings', 'utm-attribution-tracker' ); ?></button>
 				</div>
 			</div>
 		</form>
-	</div><!-- /#utmat-panel-settings -->
+	</div><!-- /#utmatra-panel-settings -->
 
 	<!-- Diagnostics -->
-	<div class="utmat-panel" id="utmat-panel-diagnostics" role="tabpanel" aria-labelledby="utmat-tab-diagnostics" tabindex="0" hidden>
-		<div class="utmat-diag-header">
-			<div class="utmat-diag-header__text">
+	<div class="utmatra-panel" id="utmatra-panel-diagnostics" role="tabpanel" aria-labelledby="utmatra-tab-diagnostics" tabindex="0" hidden>
+		<div class="utmatra-diag-header">
+			<div class="utmatra-diag-header__text">
 				<h2><?php esc_html_e( 'Tracking Doctor', 'utm-attribution-tracker' ); ?></h2>
-				<p class="utmat-section__desc"><?php esc_html_e( 'Local checks on caching, consent, cookies, forms and WooCommerce attribution. Nothing is sent to any external service.', 'utm-attribution-tracker' ); ?></p>
+				<p class="utmatra-section__desc"><?php esc_html_e( 'Local checks on caching, consent, cookies, forms and WooCommerce attribution. Nothing is sent to any external service.', 'utm-attribution-tracker' ); ?></p>
 			</div>
-			<div class="utmat-diag-header__actions">
-				<span class="utmat-diag-header__last" id="utmat-diagnostics-last"><?php esc_html_e( 'Not run yet', 'utm-attribution-tracker' ); ?></span>
-				<span class="utmat-add-form__msg" id="utmat-diagnostics-msg" role="status"></span>
-				<button type="button" class="button button-primary" id="utmat-run-diagnostics"><?php esc_html_e( 'Run diagnostics', 'utm-attribution-tracker' ); ?></button>
+			<div class="utmatra-diag-header__actions">
+				<span class="utmatra-diag-header__last" id="utmatra-diagnostics-last"><?php esc_html_e( 'Not run yet', 'utm-attribution-tracker' ); ?></span>
+				<span class="utmatra-add-form__msg" id="utmatra-diagnostics-msg" role="status"></span>
+				<button type="button" class="button button-primary" id="utmatra-run-diagnostics"><?php esc_html_e( 'Run diagnostics', 'utm-attribution-tracker' ); ?></button>
 			</div>
 		</div>
 
-		<div class="utmat-placeholder" id="utmat-diagnostics-placeholder">
+		<div class="utmatra-placeholder" id="utmatra-diagnostics-placeholder">
 			<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><path d="M9 11l3 3 8-8"></path><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
 			<p><?php esc_html_e( 'Run the checks to see whether caching, consent, cookies, forms and WooCommerce attribution are set up correctly.', 'utm-attribution-tracker' ); ?></p>
 		</div>
 
-		<div class="utmat-diag-summary" id="utmat-diag-summary" role="list" hidden>
-			<div class="utmat-diag-summary__item is-pass" role="listitem">
+		<div class="utmatra-diag-summary" id="utmatra-diag-summary" role="list" hidden>
+			<div class="utmatra-diag-summary__item is-pass" role="listitem">
 				<span><?php esc_html_e( 'Passed', 'utm-attribution-tracker' ); ?></span>
-				<strong id="utmat-diag-count-pass">0</strong>
+				<strong id="utmatra-diag-count-pass">0</strong>
 			</div>
-			<div class="utmat-diag-summary__item is-warn" role="listitem">
+			<div class="utmatra-diag-summary__item is-warn" role="listitem">
 				<span><?php esc_html_e( 'Warnings', 'utm-attribution-tracker' ); ?></span>
-				<strong id="utmat-diag-count-warn">0</strong>
+				<strong id="utmatra-diag-count-warn">0</strong>
 			</div>
-			<div class="utmat-diag-summary__item is-fail" role="listitem">
+			<div class="utmatra-diag-summary__item is-fail" role="listitem">
 				<span><?php esc_html_e( 'Failed', 'utm-attribution-tracker' ); ?></span>
-				<strong id="utmat-diag-count-fail">0</strong>
+				<strong id="utmatra-diag-count-fail">0</strong>
 			</div>
-			<div class="utmat-diag-summary__item is-skip" role="listitem">
+			<div class="utmatra-diag-summary__item is-skip" role="listitem">
 				<span><?php esc_html_e( 'Skipped', 'utm-attribution-tracker' ); ?></span>
-				<strong id="utmat-diag-count-skip">0</strong>
+				<strong id="utmatra-diag-count-skip">0</strong>
 			</div>
 		</div>
 
-		<ul class="utmat-card utmat-diagnostics-list" id="utmat-diagnostics-list" hidden></ul>
+		<ul class="utmatra-card utmatra-diagnostics-list" id="utmatra-diagnostics-list" hidden></ul>
 
 		<!-- Forms coverage matrix, populated by JS only when the forms check has rows -->
-		<div class="utmat-card utmat-diagnostics-forms" id="utmat-diagnostics-forms" hidden>
-			<div class="utmat-card__header">
-				<h3 class="utmat-card__title"><?php esc_html_e( 'Forms coverage', 'utm-attribution-tracker' ); ?></h3>
-				<span class="utmat-card__caption"><?php esc_html_e( 'Attribution fields found on each form', 'utm-attribution-tracker' ); ?></span>
+		<div class="utmatra-card utmatra-diagnostics-forms" id="utmatra-diagnostics-forms" hidden>
+			<div class="utmatra-card__header">
+				<h3 class="utmatra-card__title"><?php esc_html_e( 'Forms coverage', 'utm-attribution-tracker' ); ?></h3>
+				<span class="utmatra-card__caption"><?php esc_html_e( 'Attribution fields found on each form', 'utm-attribution-tracker' ); ?></span>
 			</div>
-			<div class="utmat-table-scroll">
-				<table class="utmat-table" id="utmat-diagnostics-forms-table">
+			<div class="utmatra-table-scroll">
+				<table class="utmatra-table" id="utmatra-diagnostics-forms-table">
 					<thead>
 						<tr>
 							<th scope="col"><?php esc_html_e( 'Form', 'utm-attribution-tracker' ); ?></th>
@@ -789,117 +792,117 @@ $utmat_kses = array(
 							<th scope="col"><?php esc_html_e( 'Missing', 'utm-attribution-tracker' ); ?></th>
 						</tr>
 					</thead>
-					<tbody id="utmat-diagnostics-forms-tbody">
+					<tbody id="utmatra-diagnostics-forms-tbody">
 						<!-- Populated by JS -->
 					</tbody>
 				</table>
 			</div>
-			<p class="description" id="utmat-diagnostics-unsupported" hidden></p>
+			<p class="description" id="utmatra-diagnostics-unsupported" hidden></p>
 		</div>
-	</div><!-- /#utmat-panel-diagnostics -->
+	</div><!-- /#utmatra-panel-diagnostics -->
 
 	<!-- Add / edit link drawer (outside the panels so loading never hides it) -->
-	<div class="utmat-drawer-backdrop" id="utmat-drawer-backdrop" hidden></div>
-	<aside class="utmat-drawer" id="utmat-drawer" role="dialog" aria-modal="true" aria-labelledby="utmat-drawer-title" tabindex="-1" hidden>
-		<form class="utmat-add-form utmat-drawer__form" id="utmat-add-form">
-			<div class="utmat-drawer__header">
-				<h2 class="utmat-drawer__title" id="utmat-drawer-title"><?php esc_html_e( 'Add tracked link', 'utm-attribution-tracker' ); ?></h2>
-				<button type="button" class="utmat-icon-btn utmat-drawer__close" id="utmat-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'utm-attribution-tracker' ); ?>">
+	<div class="utmatra-drawer-backdrop" id="utmatra-drawer-backdrop" hidden></div>
+	<aside class="utmatra-drawer" id="utmatra-drawer" role="dialog" aria-modal="true" aria-labelledby="utmatra-drawer-title" tabindex="-1" hidden>
+		<form class="utmatra-add-form utmatra-drawer__form" id="utmatra-add-form">
+			<div class="utmatra-drawer__header">
+				<h2 class="utmatra-drawer__title" id="utmatra-drawer-title"><?php esc_html_e( 'Add tracked link', 'utm-attribution-tracker' ); ?></h2>
+				<button type="button" class="utmatra-icon-btn utmatra-drawer__close" id="utmatra-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'utm-attribution-tracker' ); ?>">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"></path></svg>
 				</button>
 			</div>
 
-			<div class="utmat-drawer__body">
-				<div class="utmat-drawer__field" id="utmat-builder-row">
-					<label class="utmat-switch" for="utmat-builder-toggle">
-						<input type="checkbox" id="utmat-builder-toggle" class="utmat-switch__input" />
-						<span class="utmat-switch__track" aria-hidden="true"></span>
-						<span class="utmat-switch__text"><?php esc_html_e( 'Build a URL only', 'utm-attribution-tracker' ); ?></span>
+			<div class="utmatra-drawer__body">
+				<div class="utmatra-drawer__field" id="utmatra-builder-row">
+					<label class="utmatra-switch" for="utmatra-builder-toggle">
+						<input type="checkbox" id="utmatra-builder-toggle" class="utmatra-switch__input" />
+						<span class="utmatra-switch__track" aria-hidden="true"></span>
+						<span class="utmatra-switch__text"><?php esc_html_e( 'Build a URL only', 'utm-attribution-tracker' ); ?></span>
 					</label>
-					<p class="utmat-field__hint"><?php esc_html_e( 'Get a tagged URL to paste anywhere. No short link is created and nothing is saved.', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-field__hint"><?php esc_html_e( 'Get a tagged URL to paste anywhere. No short link is created and nothing is saved.', 'utm-attribution-tracker' ); ?></p>
 				</div>
 
-				<div class="utmat-drawer__field" id="utmat-drawer-label-field">
-					<label for="utmat-new-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></label>
-					<input type="text" id="utmat-new-label" name="label" required
+				<div class="utmatra-drawer__field" id="utmatra-drawer-label-field">
+					<label for="utmatra-new-label"><?php esc_html_e( 'Label', 'utm-attribution-tracker' ); ?></label>
+					<input type="text" id="utmatra-new-label" name="label" required
 						placeholder="<?php esc_attr_e( 'Spring newsletter button', 'utm-attribution-tracker' ); ?>" />
-					<p class="utmat-field__hint"><?php esc_html_e( 'Shown in this table and used as the default link text of the shortcode.', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-field__hint"><?php esc_html_e( 'Shown in this table and used as the default link text of the shortcode.', 'utm-attribution-tracker' ); ?></p>
 				</div>
 
-				<div class="utmat-drawer__field">
-					<label for="utmat-new-destination"><?php esc_html_e( 'Destination URL', 'utm-attribution-tracker' ); ?></label>
-					<input type="url" id="utmat-new-destination" name="destination" required
+				<div class="utmatra-drawer__field">
+					<label for="utmatra-new-destination"><?php esc_html_e( 'Destination URL', 'utm-attribution-tracker' ); ?></label>
+					<input type="url" id="utmatra-new-destination" name="destination" required
 						placeholder="https://example.com/landing-page" />
-					<p class="utmat-field__hint"><?php esc_html_e( 'Where visitors land. The UTM parameters below are added to it on redirect.', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-field__hint"><?php esc_html_e( 'Where visitors land. The UTM parameters below are added to it on redirect.', 'utm-attribution-tracker' ); ?></p>
 				</div>
 
-				<div class="utmat-presets-row">
-					<label for="utmat-preset-select"><?php esc_html_e( 'Preset', 'utm-attribution-tracker' ); ?></label>
-					<select id="utmat-preset-select">
+				<div class="utmatra-presets-row">
+					<label for="utmatra-preset-select"><?php esc_html_e( 'Preset', 'utm-attribution-tracker' ); ?></label>
+					<select id="utmatra-preset-select">
 						<option value=""><?php esc_html_e( 'None', 'utm-attribution-tracker' ); ?></option>
 					</select>
-					<button type="button" class="button-link" id="utmat-preset-delete" hidden><?php esc_html_e( 'Delete preset', 'utm-attribution-tracker' ); ?></button>
-					<button type="button" class="button-link" id="utmat-preset-save"><?php esc_html_e( 'Save current as preset', 'utm-attribution-tracker' ); ?></button>
+					<button type="button" class="button-link" id="utmatra-preset-delete" hidden><?php esc_html_e( 'Delete preset', 'utm-attribution-tracker' ); ?></button>
+					<button type="button" class="button-link" id="utmatra-preset-save"><?php esc_html_e( 'Save current as preset', 'utm-attribution-tracker' ); ?></button>
 				</div>
 
 				<!-- Shown by JS when "Save current as preset" is clicked -->
-				<div class="utmat-preset-name-row" id="utmat-preset-name-row" hidden>
-					<label for="utmat-preset-name" class="screen-reader-text"><?php esc_html_e( 'Preset name', 'utm-attribution-tracker' ); ?></label>
-					<input type="text" id="utmat-preset-name" placeholder="<?php esc_attr_e( 'e.g. Instagram Story', 'utm-attribution-tracker' ); ?>" />
-					<button type="button" class="button button-primary" id="utmat-preset-name-confirm"><?php esc_html_e( 'Save', 'utm-attribution-tracker' ); ?></button>
-					<button type="button" class="button" id="utmat-preset-name-cancel"><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
+				<div class="utmatra-preset-name-row" id="utmatra-preset-name-row" hidden>
+					<label for="utmatra-preset-name" class="screen-reader-text"><?php esc_html_e( 'Preset name', 'utm-attribution-tracker' ); ?></label>
+					<input type="text" id="utmatra-preset-name" placeholder="<?php esc_attr_e( 'e.g. Instagram Story', 'utm-attribution-tracker' ); ?>" />
+					<button type="button" class="button button-primary" id="utmatra-preset-name-confirm"><?php esc_html_e( 'Save', 'utm-attribution-tracker' ); ?></button>
+					<button type="button" class="button" id="utmatra-preset-name-cancel"><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
 				</div>
 
-				<div class="utmat-drawer__grid">
-					<div class="utmat-drawer__field">
-						<label for="utmat-new-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></label>
-						<input type="text" id="utmat-new-campaign" name="utm_campaign" list="utmat-list-campaign" placeholder="spring-sale" />
+				<div class="utmatra-drawer__grid">
+					<div class="utmatra-drawer__field">
+						<label for="utmatra-new-campaign"><?php esc_html_e( 'Campaign', 'utm-attribution-tracker' ); ?></label>
+						<input type="text" id="utmatra-new-campaign" name="utm_campaign" list="utmatra-list-campaign" placeholder="spring-sale" />
 					</div>
-					<div class="utmat-drawer__field">
-						<label for="utmat-new-source"><?php esc_html_e( 'Source', 'utm-attribution-tracker' ); ?></label>
-						<input type="text" id="utmat-new-source" name="utm_source" list="utmat-list-source" placeholder="newsletter" />
+					<div class="utmatra-drawer__field">
+						<label for="utmatra-new-source"><?php esc_html_e( 'Source', 'utm-attribution-tracker' ); ?></label>
+						<input type="text" id="utmatra-new-source" name="utm_source" list="utmatra-list-source" placeholder="newsletter" />
 					</div>
-					<div class="utmat-drawer__field">
-						<label for="utmat-new-medium"><?php esc_html_e( 'Medium', 'utm-attribution-tracker' ); ?></label>
-						<input type="text" id="utmat-new-medium" name="utm_medium" list="utmat-list-medium" placeholder="email" />
+					<div class="utmatra-drawer__field">
+						<label for="utmatra-new-medium"><?php esc_html_e( 'Medium', 'utm-attribution-tracker' ); ?></label>
+						<input type="text" id="utmatra-new-medium" name="utm_medium" list="utmatra-list-medium" placeholder="email" />
 					</div>
 				</div>
 
 				<!-- Suggestion datalists, populated by JS from previously used values -->
-				<datalist id="utmat-list-campaign"></datalist>
-				<datalist id="utmat-list-source"></datalist>
-				<datalist id="utmat-list-medium"></datalist>
+				<datalist id="utmatra-list-campaign"></datalist>
+				<datalist id="utmatra-list-source"></datalist>
+				<datalist id="utmatra-list-medium"></datalist>
 
 				<!-- Shown by JS when a UTM value was normalized on blur/submit -->
-				<div class="utmat-normalize-notice" id="utmat-normalize-notice" hidden>
+				<div class="utmatra-normalize-notice" id="utmatra-normalize-notice" hidden>
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4m0 4h.01"></path></svg>
 					<p><?php esc_html_e( 'Some values were normalized for consistent reporting (lowercase, spaces replaced with "-").', 'utm-attribution-tracker' ); ?></p>
-					<button type="button" class="utmat-normalize-notice__dismiss" id="utmat-normalize-dismiss"
+					<button type="button" class="utmatra-normalize-notice__dismiss" id="utmatra-normalize-dismiss"
 						aria-label="<?php esc_attr_e( 'Dismiss this notice', 'utm-attribution-tracker' ); ?>">&times;</button>
 				</div>
 
-				<details class="utmat-add-form__advanced">
+				<details class="utmatra-add-form__advanced">
 					<summary><?php esc_html_e( 'Advanced: term, content, campaign ID', 'utm-attribution-tracker' ); ?></summary>
-					<div class="utmat-drawer__grid">
-						<div class="utmat-drawer__field">
-							<label for="utmat-new-term"><?php esc_html_e( 'Term', 'utm-attribution-tracker' ); ?></label>
-							<input type="text" id="utmat-new-term" name="utm_term" />
+					<div class="utmatra-drawer__grid">
+						<div class="utmatra-drawer__field">
+							<label for="utmatra-new-term"><?php esc_html_e( 'Term', 'utm-attribution-tracker' ); ?></label>
+							<input type="text" id="utmatra-new-term" name="utm_term" />
 						</div>
-						<div class="utmat-drawer__field">
-							<label for="utmat-new-content"><?php esc_html_e( 'Content', 'utm-attribution-tracker' ); ?></label>
-							<input type="text" id="utmat-new-content" name="utm_content" />
+						<div class="utmatra-drawer__field">
+							<label for="utmatra-new-content"><?php esc_html_e( 'Content', 'utm-attribution-tracker' ); ?></label>
+							<input type="text" id="utmatra-new-content" name="utm_content" />
 						</div>
-						<div class="utmat-drawer__field">
-							<label for="utmat-new-utmid"><?php esc_html_e( 'Campaign ID (utm_id)', 'utm-attribution-tracker' ); ?></label>
-							<input type="text" id="utmat-new-utmid" name="utm_id" />
+						<div class="utmatra-drawer__field">
+							<label for="utmatra-new-utmid"><?php esc_html_e( 'Campaign ID (utm_id)', 'utm-attribution-tracker' ); ?></label>
+							<input type="text" id="utmatra-new-utmid" name="utm_id" />
 						</div>
 					</div>
 				</details>
 
-				<div class="utmat-drawer__field" id="utmat-drawer-custom" hidden>
-					<span class="utmat-field__label"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></span>
-					<div class="utmat-drawer__grid" id="utmat-drawer-custom-grid"></div>
-					<p class="utmat-field__hint">
+				<div class="utmatra-drawer__field" id="utmatra-drawer-custom" hidden>
+					<span class="utmatra-field__label"><?php esc_html_e( 'Custom parameters', 'utm-attribution-tracker' ); ?></span>
+					<div class="utmatra-drawer__grid" id="utmatra-drawer-custom-grid"></div>
+					<p class="utmatra-field__hint">
 						<?php
 						echo wp_kses(
 							sprintf(
@@ -907,34 +910,34 @@ $utmat_kses = array(
 								__( 'Set up under %s.', 'utm-attribution-tracker' ),
 								'<a href="#settings">' . esc_html__( 'Settings', 'utm-attribution-tracker' ) . '</a>'
 							),
-							$utmat_kses
+							$utmatra_kses
 						);
 						?>
 					</p>
 				</div>
 
-				<div class="utmat-drawer__generated">
-					<p class="utmat-field__label" id="utmat-drawer-shortlink-label"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></p>
-					<p class="utmat-readonly" id="utmat-drawer-shortlink"></p>
-					<p class="utmat-field__label" id="utmat-drawer-preview-label"><?php esc_html_e( 'Visitors are forwarded to', 'utm-attribution-tracker' ); ?></p>
-					<p class="utmat-field__label" id="utmat-drawer-preview-label-builder" hidden><?php esc_html_e( 'Tagged URL', 'utm-attribution-tracker' ); ?></p>
-					<p class="utmat-readonly utmat-readonly--wrap" id="utmat-drawer-preview"></p>
+				<div class="utmatra-drawer__generated">
+					<p class="utmatra-field__label" id="utmatra-drawer-shortlink-label"><?php esc_html_e( 'Short link', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-readonly" id="utmatra-drawer-shortlink"></p>
+					<p class="utmatra-field__label" id="utmatra-drawer-preview-label"><?php esc_html_e( 'Visitors are forwarded to', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-field__label" id="utmatra-drawer-preview-label-builder" hidden><?php esc_html_e( 'Tagged URL', 'utm-attribution-tracker' ); ?></p>
+					<p class="utmatra-readonly utmatra-readonly--wrap" id="utmatra-drawer-preview"></p>
 				</div>
 			</div>
 
-			<div class="utmat-drawer__footer">
-				<p class="utmat-drawer__shortcode" id="utmat-drawer-shortcode"></p>
-				<div class="utmat-drawer__actions">
-					<span class="utmat-add-form__msg" id="utmat-add-msg" role="status"></span>
-					<button type="button" class="button" id="utmat-cancel-edit"><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
-					<button type="submit" class="button button-primary" id="utmat-submit-btn"><?php esc_html_e( 'Add link', 'utm-attribution-tracker' ); ?></button>
+			<div class="utmatra-drawer__footer">
+				<p class="utmatra-drawer__shortcode" id="utmatra-drawer-shortcode"></p>
+				<div class="utmatra-drawer__actions">
+					<span class="utmatra-add-form__msg" id="utmatra-add-msg" role="status"></span>
+					<button type="button" class="button" id="utmatra-cancel-edit"><?php esc_html_e( 'Cancel', 'utm-attribution-tracker' ); ?></button>
+					<button type="submit" class="button button-primary" id="utmatra-submit-btn"><?php esc_html_e( 'Add link', 'utm-attribution-tracker' ); ?></button>
 				</div>
 			</div>
 		</form>
 	</aside>
 
 	<!-- Strings exposed to JS for re-use in dynamically rendered content -->
-	<script id="utmat-i18n" type="application/json">
+	<script id="utmatra-i18n" type="application/json">
 	<?php
 	echo wp_json_encode(
 		array(
@@ -950,10 +953,10 @@ $utmat_kses = array(
 			'testWebhookSending'     => __( 'Sending…', 'utm-attribution-tracker' ),
 			'testWebhookSent'        => __( 'Test webhook sent.', 'utm-attribution-tracker' ),
 			'testWebhookFailed'      => __( 'Delivery failed — check the URL and your receiver.', 'utm-attribution-tracker' ),
-			'presetHelpGeneric'      => __( 'JSON POST signed with X-UTMAT-Signature. Events: conversion, lead, test.', 'utm-attribution-tracker' ),
+			'presetHelpGeneric'      => __( 'JSON POST signed with X-Utmatra-Signature. Events: conversion, lead, test.', 'utm-attribution-tracker' ),
 			'presetHelpZapier'       => __( 'Create a Zap with the trigger Webhooks by Zapier → Catch Hook and paste its URL. Zapier parses the JSON and offers every key, including nested first_touch and last_touch values, as fields in later steps. Click Send test so the Zap can pull in a sample.', 'utm-attribution-tracker' ),
 			'presetHelpMake'         => __( 'Add a Webhooks → Custom webhook module and paste its URL. Click Send test while the module is listening so Make can detect the data structure.', 'utm-attribution-tracker' ),
-			'presetHelpHubspot'      => __( 'Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmat-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot.', 'utm-attribution-tracker' ),
+			'presetHelpHubspot'      => __( 'Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmatra-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot.', 'utm-attribution-tracker' ),
 			'presetHelpGohighlevel'  => __( 'In a HighLevel workflow add the Inbound Webhook trigger and paste its URL. Click Send test, then use Fetch sample request in the trigger to map email, phone, first_name and last_name onto Create/Update Contact. Keys are flat and contain no spaces.', 'utm-attribution-tracker' ),
 			/* translators: 1: date and time of the delivery, 2: response detail. */
 			'webhookLastOk'          => __( 'Last delivery: %1$s succeeded (%2$s)', 'utm-attribution-tracker' ),
@@ -1032,8 +1035,8 @@ $utmat_kses = array(
 			'linksCount'             => __( 'Links: %1$s · Clicks (all time): %2$s', 'utm-attribution-tracker' ),
 			'shortlinkPending'       => __( 'Created from the label when you save.', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link ID. */
-			'shortcodeFor'           => __( 'Shortcode: [utmat_link id="%s"]', 'utm-attribution-tracker' ),
-			'shortcodeAfterSave'     => __( 'After saving, embed it with the [utmat_link] shortcode.', 'utm-attribution-tracker' ),
+			'shortcodeFor'           => __( 'Shortcode: [utmatra_link id="%s"]', 'utm-attribution-tracker' ),
+			'shortcodeAfterSave'     => __( 'After saving, embed it with the [utmatra_link] shortcode.', 'utm-attribution-tracker' ),
 			'previewEmpty'           => __( 'Enter a destination URL to see the final link.', 'utm-attribution-tracker' ),
 			/* translators: %s: conversion rate as a percentage, for example 2.0%. */
 			'convRate'               => __( '%s of clicks', 'utm-attribution-tracker' ),
@@ -1076,4 +1079,4 @@ $utmat_kses = array(
 	?>
 	</script>
 
-</div><!-- /.utmat-wrap -->
+</div><!-- /.utmatra-wrap -->

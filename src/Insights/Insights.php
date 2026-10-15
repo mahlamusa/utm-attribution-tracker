@@ -7,12 +7,12 @@
  * detail view classifying a single entry's field values directly, without
  * touching the ring-buffer storage.
  *
- * @package UTMAT\Insights
+ * @package Utmatra\Insights
  */
 
-namespace UTMAT\Insights;
+namespace Utmatra\Insights;
 
-use UTMAT\Tracking\TrafficSource;
+use Utmatra\Tracking\TrafficSource;
 
 defined( 'ABSPATH' ) || exit;
 

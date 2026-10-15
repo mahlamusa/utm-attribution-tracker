@@ -3,7 +3,7 @@
  * Ninja Forms integration — merge-tag attribution auto-fill.
  *
  * Registers one Ninja Forms merge tag per recognised attribution field name
- * (`{utmat:utm_source}` … `{utmat:landing}`, plus `_first` variants) so a
+ * (`{utmatra:utm_source}` … `{utmatra:landing}`, plus `_first` variants) so a
  * user can add a Hidden field whose default value is one of these tags to
  * capture attribution — values are resolved server-side, at form render,
  * from the Attribution cookie reader.
@@ -25,13 +25,13 @@
  * stored field configuration. This adapter only exposes the merge tag —
  * users add the Hidden field themselves.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -159,7 +159,7 @@ class NinjaForms {
 
 		require_once __DIR__ . '/NinjaFormsMergeTags.php';
 
-		Ninja_Forms()->merge_tags['utmat_merge_tags'] = new NinjaFormsMergeTags();
+		Ninja_Forms()->merge_tags['utmatra_merge_tags'] = new NinjaFormsMergeTags();
 	}
 
 	/**
@@ -170,7 +170,7 @@ class NinjaForms {
 	 * recognised field names — e.g. `utm_source` => `utm_source`, `gclid`
 	 * => `gclid`, `landing` => `landing_page`, `channel` => `channel`,
 	 * `referrer_host` => `referrer_host`, plus a `_first`-suffixed variant
-	 * of each for first-touch values. The tag namespace (`{utmat:…}`) and
+	 * of each for first-touch values. The tag namespace (`{utmatra:…}`) and
 	 * tag params are unchanged; only the field names they map to follow the
 	 * standard parameter names. The landing page keeps its historical
 	 * `landing` tag param; the channel and referrer host use the field
@@ -221,7 +221,7 @@ class NinjaForms {
 	 * Report per-form attribution field coverage for Tracking Doctor diagnostics.
 	 *
 	 * For each Ninja Forms form, inspects every field for a `default` setting
-	 * matching one of our `{utmat:<param>}` merge tags — the same mechanism
+	 * matching one of our `{utmatra:<param>}` merge tags — the same mechanism
 	 * register_merge_tags() exposes. Returns an empty array when Ninja Forms
 	 * is inactive.
 	 *
@@ -243,7 +243,7 @@ class NinjaForms {
 
 			foreach ( (array) Ninja_Forms()->form( $form_id )->get_fields() as $field ) {
 				$default = (string) $field->get_setting( 'default' );
-				if ( preg_match( '/^\{utmat:([a-z0-9_]+)\}$/', $default, $matches ) && isset( $params[ $matches[1] ] ) ) {
+				if ( preg_match( '/^\{utmatra:([a-z0-9_]+)\}$/', $default, $matches ) && isset( $params[ $matches[1] ] ) ) {
 					$present[] = $params[ $matches[1] ];
 				}
 			}

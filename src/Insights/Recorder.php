@@ -3,7 +3,7 @@
  * Recorder — lead recording: ring buffer plus conversion event row.
  *
  * Backs the recent-leads dashboard widget. Stores one option,
- * `utmat_recent_leads` (autoload=false — only ever read on the
+ * `utmatra_recent_leads` (autoload=false — only ever read on the
  * wp-admin Dashboard screen), structured as
  * `array<string integration_slug, array<record>>`, capped at
  * MAX_PER_INTEGRATION records per slug (oldest evicted first). Mirrors
@@ -12,20 +12,20 @@
  * Every attributed form submission is also written to the events table as
  * a `link_id = 'lead'` conversion row (WooCommerce orders excepted — they
  * carry their own `order` row) and announced on the
- * `utmat_lead_recorded` action for the lead webhook.
+ * `utmatra_lead_recorded` action for the lead webhook.
  *
  * A record may carry the submitted form field values under `fields`; they
- * are cleaned, handed to the `utmat_lead_recorded` action and dropped
+ * are cleaned, handed to the `utmatra_lead_recorded` action and dropped
  * before the option is written, so no submitted names, emails or messages
  * ever rest in wp_options.
  *
- * @package UTMAT\Insights
+ * @package Utmatra\Insights
  */
 
-namespace UTMAT\Insights;
+namespace Utmatra\Insights;
 
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -66,7 +66,7 @@ class Recorder {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	public const OPTION = 'utmat_recent_leads';
+	public const OPTION = 'utmatra_recent_leads';
 
 	/**
 	 * Maximum records retained per integration slug (oldest evicted first).
@@ -85,7 +85,7 @@ class Recorder {
 	 *
 	 * The optional `fields` key (the form's own submitted values keyed by
 	 * label) is normalised through clean_fields() and handed to the
-	 * `utmat_lead_recorded` action, but stripped from the stored copy: the
+	 * `utmatra_lead_recorded` action, but stripped from the stored copy: the
 	 * widget never reads it and submitted personal data has no place in
 	 * wp_options. Callers that pass no `fields` are unaffected (the action
 	 * receives an empty array).
@@ -94,7 +94,7 @@ class Recorder {
 	 * integration does, because it writes its own `order` conversion row and
 	 * sends its own webhook), the record also becomes a first-class
 	 * conversion: a `link_id = 'lead'` event row is inserted through
-	 * Tracker::record() and the `utmat_lead_recorded` action fires after it,
+	 * Tracker::record() and the `utmatra_lead_recorded` action fires after it,
 	 * carrying the record with its sanitised `page_url` so listeners see the
 	 * same value the row stored.
 	 *
@@ -150,7 +150,7 @@ class Recorder {
 			 * @param string               $integration Integration slug.
 			 * @param array<string, mixed> $record_data The record: form_id, form_title, posted, created_at, page_url and fields (always an array).
 			 */
-			do_action( 'utmat_lead_recorded', $integration, $record_data );
+			do_action( 'utmatra_lead_recorded', $integration, $record_data );
 		}
 	}
 

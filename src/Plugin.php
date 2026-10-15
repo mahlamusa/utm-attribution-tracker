@@ -2,36 +2,36 @@
 /**
  * Plugin singleton — wires all hooks together.
  *
- * @package UTMAT
+ * @package Utmatra
  */
 
-namespace UTMAT;
+namespace Utmatra;
 
-use UTMAT\DB\Schema;
-use UTMAT\DB\Retention;
-use UTMAT\Privacy\PrivacyPolicy;
-use UTMAT\Reports\ConversionWebhook;
-use UTMAT\Reports\WeeklyEmail;
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
-use UTMAT\Tracking\TrafficSource;
-use UTMAT\Tracking\LinkManager;
-use UTMAT\Tracking\Rewrites;
-use UTMAT\Admin\Dashboard;
-use UTMAT\Admin\DashboardWidget;
-use UTMAT\Admin\RestController;
-use UTMAT\Integrations\WooCommerce;
-use UTMAT\Integrations\Forms\Bricks;
-use UTMAT\Integrations\Forms\ContactForm7;
-use UTMAT\Integrations\Forms\Elementor;
-use UTMAT\Integrations\Forms\FluentForms;
-use UTMAT\Integrations\Forms\Formidable;
-use UTMAT\Integrations\Forms\Forminator;
-use UTMAT\Integrations\Forms\GravityForms;
-use UTMAT\Integrations\Forms\NinjaForms;
-use UTMAT\Integrations\Forms\WPForms;
-use UTMAT\Rest\CollectController;
-use UTMAT\Shortcode\TrackedLink;
+use Utmatra\DB\Schema;
+use Utmatra\DB\Retention;
+use Utmatra\Privacy\PrivacyPolicy;
+use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\Tracker;
+use Utmatra\Tracking\TrafficSource;
+use Utmatra\Tracking\LinkManager;
+use Utmatra\Tracking\Rewrites;
+use Utmatra\Admin\Dashboard;
+use Utmatra\Admin\DashboardWidget;
+use Utmatra\Admin\RestController;
+use Utmatra\Integrations\WooCommerce;
+use Utmatra\Integrations\Forms\Bricks;
+use Utmatra\Integrations\Forms\ContactForm7;
+use Utmatra\Integrations\Forms\Elementor;
+use Utmatra\Integrations\Forms\FluentForms;
+use Utmatra\Integrations\Forms\Formidable;
+use Utmatra\Integrations\Forms\Forminator;
+use Utmatra\Integrations\Forms\GravityForms;
+use Utmatra\Integrations\Forms\NinjaForms;
+use Utmatra\Integrations\Forms\WPForms;
+use Utmatra\Rest\CollectController;
+use Utmatra\Shortcode\TrackedLink;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -80,7 +80,7 @@ class Plugin {
 		// itself, so hook `init` (priority 0) rather than `plugins_loaded`.
 		add_action( 'init', array( Schema::class, 'maybe_upgrade' ), 0 );
 
-		// Register utmat_track query var.
+		// Register utmatra_track query var.
 		add_filter( 'query_vars', array( Tracker::class, 'register_query_vars' ) );
 
 		// Track incoming requests at priority 1 (before most other code).
@@ -99,14 +99,14 @@ class Plugin {
 
 		// Lead webhook: deliver every attributed form submission recorded by
 		// the Insights\Recorder to the configured webhook URL.
-		add_action( 'utmat_lead_recorded', array( ConversionWebhook::class, 'send_lead' ), 10, 2 );
+		add_action( 'utmatra_lead_recorded', array( ConversionWebhook::class, 'send_lead' ), 10, 2 );
 
 		// Suggested privacy policy text.
 		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );
 
 		// WP Consent API: declare compliance (the filter is inert without the
 		// API) and describe the attribution cookie so consent banners can list it.
-		add_filter( 'wp_consent_api_registered_' . UTM_ATTRIBUTION_TRACKER_BASENAME, '__return_true' );
+		add_filter( 'wp_consent_api_registered_' . UTMATRA_BASENAME, '__return_true' );
 		add_action( 'init', array( Attribution::class, 'register_cookie_info' ) );
 
 		// REST API.
@@ -145,12 +145,12 @@ class Plugin {
 			// Recent-leads widget on wp-admin → Dashboard → Home.
 			add_action( 'wp_dashboard_setup', array( DashboardWidget::class, 'register' ) );
 
-			// "UTM & Attribution" row link on the Plugins screen.
-			add_filter( 'plugin_action_links_' . UTM_ATTRIBUTION_TRACKER_BASENAME, array( Dashboard::class, 'add_plugin_action_link' ) );
+			// "Utmatra" row link on the Plugins screen.
+			add_filter( 'plugin_action_links_' . UTMATRA_BASENAME, array( Dashboard::class, 'add_plugin_action_link' ) );
 		}
 
-		// Shortcode: [utmat_link].
-		add_shortcode( 'utmat_link', array( TrackedLink::class, 'render' ) );
+		// Shortcode: [utmatra_link].
+		add_shortcode( 'utmatra_link', array( TrackedLink::class, 'render' ) );
 	}
 
 	/**
@@ -175,7 +175,7 @@ class Plugin {
 	 *
 	 * Untagged landing visits (`visitEnabled`) are reported only while the
 	 * setting is on and the viewer is not a logged-in administrator (unless
-	 * `utmat_track_logged_in_users` allows it), mirroring the passive PHP
+	 * `utmatra_track_logged_in_users` allows it), mirroring the passive PHP
 	 * path's exclusion; `hosts` carries the three filtered referrer host
 	 * lists the beacon classifies the landing with.
 	 *
@@ -184,20 +184,20 @@ class Plugin {
 	 */
 	public static function enqueue_beacon(): void {
 		// Version off the file's own mtime so edits always bust browser caches.
-		$js_path     = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/beacon.js';
+		$js_path     = UTMATRA_PATH . 'assets/js/beacon.js';
 		$consent_api = function_exists( 'wp_has_consent' );
 
-		$visit_enabled = 1 === (int) get_option( 'utmat_track_visits', 1 );
+		$visit_enabled = 1 === (int) get_option( 'utmatra_track_visits', 1 );
 		if ( $visit_enabled && is_user_logged_in() && current_user_can( 'manage_options' ) ) {
 			/** This filter is documented in src/Tracking/Tracker.php */
-			$visit_enabled = (bool) apply_filters( 'utmat_track_logged_in_users', false );
+			$visit_enabled = (bool) apply_filters( 'utmatra_track_logged_in_users', false );
 		}
 
 		wp_enqueue_script(
-			'utmat-beacon',
-			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/beacon.js',
+			'utmatra-beacon',
+			UTMATRA_URL . 'assets/js/beacon.js',
 			$consent_api ? array( 'wp-consent-api' ) : array(),
-			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTM_ATTRIBUTION_TRACKER_VERSION,
+			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTMATRA_VERSION,
 			array(
 				'in_footer' => true,
 				'strategy'  => 'defer',
@@ -207,10 +207,10 @@ class Plugin {
 		// wp_localize_script() casts scalars to strings: true → '1' and
 		// false → '' — both read correctly as truthy/falsy in the beacon.
 		wp_localize_script(
-			'utmat-beacon',
-			'utmatBeacon',
+			'utmatra-beacon',
+			'utmatraBeacon',
 			array(
-				'endpoint'        => rest_url( 'utmat/v1/collect' ),
+				'endpoint'        => rest_url( 'utmatra/v1/collect' ),
 				'params'          => Tracker::param_whitelist(),
 				'cookieDays'      => Attribution::cookie_days(),
 				'cookieEnabled'   => Attribution::enabled(),
@@ -240,8 +240,8 @@ class Plugin {
 	 */
 	public static function activate(): void {
 		Schema::install();
-		if ( ! get_option( 'utmat_salt' ) ) {
-			add_option( 'utmat_salt', wp_generate_password( 64, true, true ) );
+		if ( ! get_option( 'utmatra_salt' ) ) {
+			add_option( 'utmatra_salt', wp_generate_password( 64, true, true ) );
 		}
 		LinkManager::seed_defaults();
 		Retention::schedule();

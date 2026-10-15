@@ -2,14 +2,14 @@
 /**
  * Retention — prunes old event rows on a daily cron.
  *
- * The retention window comes from the `utmat_retention_days` option
- * (default 180), filterable via the `utmat_retention_days` filter.
+ * The retention window comes from the `utmatra_retention_days` option
+ * (default 180), filterable via the `utmatra_retention_days` filter.
  * A value of 0 keeps events forever.
  *
- * @package UTMAT\DB
+ * @package Utmatra\DB
  */
 
-namespace UTMAT\DB;
+namespace Utmatra\DB;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,14 +23,14 @@ class Retention {
 	 *
 	 * @var string
 	 */
-	public const HOOK = 'utmat_prune_events';
+	public const HOOK = 'utmatra_prune_events';
 
 	/**
 	 * Option name holding the retention window in days.
 	 *
 	 * @var string
 	 */
-	private const OPTION = 'utmat_retention_days';
+	private const OPTION = 'utmatra_retention_days';
 
 	/**
 	 * Default retention window in days.
@@ -76,7 +76,7 @@ class Retention {
 		 * @since 1.0.0
 		 * @param int $days Retention window in days. 0 keeps events forever.
 		 */
-		return (int) apply_filters( 'utmat_retention_days', (int) get_option( self::OPTION, self::DEFAULT_DAYS ) );
+		return (int) apply_filters( 'utmatra_retention_days', (int) get_option( self::OPTION, self::DEFAULT_DAYS ) );
 	}
 
 	/**
@@ -125,8 +125,8 @@ class Retention {
 			return;
 		}
 
-		// Deletes each expired _transient_timeout_utmat_* row together
-		// with its matching _transient_utmat_* value row (the timeout
+		// Deletes each expired _transient_timeout_utmatra_* row together
+		// with its matching _transient_utmatra_* value row (the timeout
 		// prefix is 19 characters, so the shared suffix starts at 20).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
@@ -135,7 +135,7 @@ class Retention {
 				 INNER JOIN {$wpdb->options} b
 				         ON b.option_name = CONCAT( '_transient_', SUBSTRING( a.option_name, 20 ) )
 				 WHERE a.option_name LIKE %s AND a.option_value < %d",
-				$wpdb->esc_like( '_transient_timeout_utmat_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_utmatra_' ) . '%',
 				time()
 			)
 		);
