@@ -39,6 +39,14 @@
 	color:     var(--utmat-text);
 }
 
+/* Centre the page in wide screens; below 1400px keep core's 22px of
+   side gutter (2px + 20px on .wrap), split evenly. */
+.wrap.utmat-wrap {
+	max-width:    min(1400px, calc(100% - 22px));
+	margin-left:  auto;
+	margin-right: auto;
+}
+
 /* Some components set display explicitly; [hidden] must always win. */
 .utmat-wrap [hidden] {
 	display: none !important;
