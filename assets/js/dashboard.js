@@ -338,7 +338,10 @@
 	}
 
 	function apiFetch( path, options ) {
-		return fetch( apiBase + path, Object.assign( {
+		// On plain permalinks the base is index.php?rest_route=..., so the
+		// path's own query string must join with & instead of a second ?.
+		const url = -1 !== apiBase.indexOf( '?' ) ? apiBase + path.replace( '?', '&' ) : apiBase + path;
+		return fetch( url, Object.assign( {
 			credentials: 'same-origin',
 			headers: { 'X-WP-Nonce': nonce },
 		}, options || {} ) ).then( function ( res ) {
