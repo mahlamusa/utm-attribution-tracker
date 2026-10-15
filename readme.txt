@@ -1,7 +1,7 @@
 === Utmatra - UTM Attribution and Tracking ===
 Contributors:      mahlamusa
 Tags:              utm, analytics, attribution, woocommerce, tracking
-Requires at least: 6.0
+Requires at least: 6.5
 Tested up to:      7.1
 Requires PHP:      8.0
 Stable tag:        1.0.0
@@ -34,7 +34,7 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 **Reporting:**
 
 * **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, channel (direct, organic search, paid search, paid social, organic social, email, referral, AI assistant, display, affiliate), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign. The Conversions tile counts WooCommerce orders **and** attributed form leads.
-* **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn. Revenue counts orders only; form leads are conversions without a total.
+* **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data at checkout (visible in a metabox on the order screen), the conversion is recorded once the order is paid, and a revenue-by-campaign chart shows what your campaigns actually earn. Revenue counts orders only; form leads are conversions without a total.
 * **Customer journeys** — a Journeys tab lists recent orders and form leads with every tagged visit that preceded them, built from a random first-party visitor id.
 * **Lead webhooks** — every attributed form submission is recorded as a conversion and can be POSTed, with its attribution data and submitted field values, to Zapier, Make, HubSpot or GoHighLevel (see the webhook FAQ).
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows), each row with its channel. Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
@@ -53,7 +53,7 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 * **Data retention** — events are pruned automatically after a configurable retention window (180 days by default, 0 = keep forever) from the dashboard settings card.
 * **Suggested privacy policy text** — provided under Settings → Privacy → Policy Guide.
 * **No external services** — no CDN calls and no third-party analytics. Chart.js, the QR library and Action Scheduler ship bundled with the plugin.
-* **Reliable background jobs** — retention pruning and the weekly report run on Action Scheduler (the job queue WooCommerce uses), listed under Tools → Scheduled Actions in the `utmatra` group, and they reschedule themselves if they go missing (after a reactivation, or on a multisite subsite).
+* **Reliable background jobs** — retention pruning and the weekly report run on Action Scheduler (the job queue WooCommerce uses), listed under Tools → Scheduled Actions in the `utmatra` group, and they reschedule themselves if they go missing (after a reactivation, or on a multisite subsite). Action Scheduler keeps its own `actionscheduler_*` tables and a once-a-minute WP-Cron queue runner; they are shared with any other plugin that uses it (such as WooCommerce) and are left in place on uninstall.
 
 == Installation ==
 
@@ -121,7 +121,7 @@ Two notes for sites with a full-page cache:
 
 = How does WooCommerce order attribution work? =
 
-When a visitor who previously arrived through a tracked campaign or from another site places an order, the order is stamped with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen), and a conversion event with the order total is recorded. Each touch carries `ch` (the channel) and, when known, `rh` (the referrer host) alongside the campaign parameters, in the order meta and in the conversion webhook payload. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
+When a visitor who previously arrived through a tracked campaign or from another site places an order, the order is stamped at checkout with their first- and last-touch attribution sets (order meta, shown in a "Campaign attribution" metabox on the order edit screen). The conversion event with the order total is recorded, and the conversion webhook sent, once the order is paid: when the gateway completes payment, or when the order moves to a paid status such as processing or completed (cash on delivery, or bank transfer once marked paid). Declined, abandoned and unpaid orders are never counted, and each order is counted once. Each touch carries `ch` (the channel) and, when known, `rh` (the referrer host) alongside the campaign parameters, in the order meta and in the conversion webhook payload. The dashboard then shows a revenue-by-campaign chart, and the weekly email includes a revenue table. No configuration needed — it activates automatically when WooCommerce is present.
 
 = How are channels classified? =
 

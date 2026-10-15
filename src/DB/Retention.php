@@ -84,7 +84,7 @@ class Retention {
 	/**
 	 * Delete event rows older than the retention window.
 	 *
-	 * Cron callback for the daily prune event. Expired plugin transients are
+	 * Scheduled-action callback for the daily prune job. Expired plugin transients are
 	 * always swept; the event-row delete does nothing when the retention
 	 * window is 0 (keep forever).
 	 *

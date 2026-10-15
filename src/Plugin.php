@@ -73,6 +73,7 @@ class Plugin {
 	 * Register all WordPress hooks.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the schedule-heal hook.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -97,8 +98,10 @@ class Plugin {
 		// Weekly email report (only scheduled while the toggle is on).
 		add_action( WeeklyEmail::HOOK, array( WeeklyEmail::class, 'send' ) );
 
-		// Recreate any missing recurring job (throttled to twice a day).
-		add_action( 'action_scheduler_init', array( Scheduler::class, 'heal' ) );
+		// Recreate any missing recurring job (throttled to twice a day). On
+		// `init`, so the WP-Cron fallback heals too when Action Scheduler is
+		// not loaded; Scheduler::ensure() defers until it has initialised.
+		add_action( 'init', array( Scheduler::class, 'heal' ), 20 );
 
 		// Lead webhook: deliver every attributed form submission recorded by
 		// the Insights\Recorder to the configured webhook URL.
@@ -239,6 +242,7 @@ class Plugin {
 	 * flushed rules include it (activation runs before our `init` hook).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Resets the schedule-heal throttle.
 	 * @return void
 	 */
 	public static function activate(): void {
@@ -249,7 +253,7 @@ class Plugin {
 		LinkManager::seed_defaults();
 		// Heal on the next request too, so a reactivation restores the
 		// weekly report (deactivation removed it) without a settings save.
-		delete_transient( Scheduler::HEAL_TRANSIENT );
+		delete_option( Scheduler::HEAL_OPTION );
 		Retention::schedule();
 		Rewrites::add_rules();
 		flush_rewrite_rules();

@@ -9,11 +9,13 @@
  * when another active plugin (e.g. WooCommerce) ships a newer copy, that
  * copy is used instead.
  *
- * Schedules heal themselves: heal() runs on `action_scheduler_init` at most
- * every 12 hours and recreates any job whose setting is on but whose
- * action is missing (after a deactivate/reactivate, or on a multisite
- * subsite that never ran the activation hook). Each call also clears the
- * matching legacy WP-Cron event from builds that used WP-Cron.
+ * Schedules heal themselves: heal() runs on `init` at most every 12 hours
+ * and recreates any job whose setting is on but whose action is missing
+ * (after a deactivate/reactivate, or on a multisite subsite that never ran
+ * the activation hook). Scheduling clears the matching legacy WP-Cron event
+ * from builds that used WP-Cron. When Action Scheduler is not loaded (a dev
+ * checkout without `composer install`), jobs fall back to WP-Cron so
+ * pruning and the weekly report never silently stop.
  *
  * @package Utmatra
  */
@@ -42,30 +44,37 @@ class Scheduler {
 	public const GROUP = 'utmatra';
 
 	/**
-	 * Transient that throttles heal() to one check per 12 hours.
+	 * Autoloaded option holding the next time heal() checks the schedules.
+	 *
+	 * Autoloaded (unlike a transient with an expiry), so the throttle check
+	 * costs no query on ordinary requests.
 	 *
 	 * @since 1.0.0
 	 *
 	 * @var string
 	 */
-	public const HEAL_TRANSIENT = 'utmatra_schedules_checked';
+	public const HEAL_OPTION = 'utmatra_schedules_next_check';
 
 	/**
 	 * Ensure a recurring action exists for a hook.
 	 *
-	 * A no-op when one is already scheduled. Called before Action Scheduler
-	 * has initialised (e.g. from the activation hook), the call is deferred
-	 * to `action_scheduler_init`. Without Action Scheduler (a dev checkout
-	 * without `composer install`) nothing is scheduled.
+	 * A no-op when one is already scheduled; scheduled as unique, so two
+	 * concurrent calls cannot create a duplicate. Called before Action
+	 * Scheduler has initialised (e.g. from the activation hook), the call is
+	 * deferred to `action_scheduler_init`. Without Action Scheduler the job
+	 * falls back to a WP-Cron event (daily, or weekly for a week interval).
 	 *
 	 * @since 1.0.0
 	 * @param string $hook        Action hook name.
-	 * @param int    $interval    Recurrence interval in seconds.
+	 * @param int    $interval    Recurrence interval in seconds (DAY_IN_SECONDS or WEEK_IN_SECONDS).
 	 * @param int    $first_delay Seconds from now until the first run.
 	 * @return void
 	 */
 	public static function ensure( string $hook, int $interval, int $first_delay = 0 ): void {
 		if ( ! function_exists( 'as_has_scheduled_action' ) ) {
+			if ( ! wp_next_scheduled( $hook ) ) {
+				wp_schedule_event( time() + $first_delay, WEEK_IN_SECONDS === $interval ? 'weekly' : 'daily', $hook );
+			}
 			return;
 		}
 		if ( ! did_action( 'action_scheduler_init' ) ) {
@@ -78,10 +87,12 @@ class Scheduler {
 			return;
 		}
 
-		wp_clear_scheduled_hook( $hook );
+		if ( wp_next_scheduled( $hook ) ) {
+			wp_clear_scheduled_hook( $hook );
+		}
 
 		if ( ! as_has_scheduled_action( $hook, array(), self::GROUP ) ) {
-			as_schedule_recurring_action( time() + $first_delay, $interval, $hook, array(), self::GROUP );
+			as_schedule_recurring_action( time() + $first_delay, $interval, $hook, array(), self::GROUP, true );
 		}
 	}
 
@@ -101,20 +112,20 @@ class Scheduler {
 	}
 
 	/**
-	 * Recreate any missing recurring job — hooked on `action_scheduler_init`.
+	 * Recreate any missing recurring job — hooked on `init`.
 	 *
-	 * Runs at most once per 12 hours (HEAL_TRANSIENT), so it adds no query
-	 * to ordinary requests. Activation deletes the transient so the next
-	 * request heals immediately.
+	 * Runs at most once per 12 hours: the next-check time lives in an
+	 * autoloaded option (HEAL_OPTION), so ordinary requests pay no query.
+	 * Activation deletes the option so the next request heals immediately.
 	 *
 	 * @since 1.0.0
 	 * @return void
 	 */
 	public static function heal(): void {
-		if ( false !== get_transient( self::HEAL_TRANSIENT ) ) {
+		if ( (int) get_option( self::HEAL_OPTION, 0 ) > time() ) {
 			return;
 		}
-		set_transient( self::HEAL_TRANSIENT, 1, 12 * HOUR_IN_SECONDS );
+		update_option( self::HEAL_OPTION, time() + 12 * HOUR_IN_SECONDS, true );
 
 		Retention::schedule();
 		if ( WeeklyEmail::enabled() ) {

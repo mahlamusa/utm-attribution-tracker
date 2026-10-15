@@ -29,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 class WeeklyEmail {
 
 	/**
-	 * Cron hook name for the weekly report event.
+	 * Action hook name for the weekly report job.
 	 *
 	 * @since 1.0.0
 	 *
@@ -85,9 +85,9 @@ class WeeklyEmail {
 	}
 
 	/**
-	 * Cron callback — build and send the weekly summary email.
+	 * Scheduled-action callback — build and send the weekly summary email.
 	 *
-	 * No-ops when the toggle is off (a stale cron event never mails) or when
+	 * No-ops when the toggle is off (a stale scheduled action never mails) or when
 	 * the resolved recipient is empty. Pass `$force` to send regardless of
 	 * the toggle — used by the dashboard's "Send test email" button.
 	 *

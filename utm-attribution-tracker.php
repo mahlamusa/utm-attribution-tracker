@@ -9,7 +9,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       utm-attribution-tracker
  * Domain Path:       /languages
- * Requires at least: 6.0
+ * Requires at least: 6.5
  * Tested up to:      7.1
  * Requires PHP:      8.0
  *
