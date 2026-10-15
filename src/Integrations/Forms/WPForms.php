@@ -151,7 +151,7 @@ class WPForms {
 		// values are ignored and the value is capped like the cookie writers.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		if ( isset( $_POST[ $tag_name ] ) && is_string( $_POST[ $tag_name ] ) && '' !== $_POST[ $tag_name ] ) {
-			return substr( sanitize_text_field( wp_unslash( $_POST[ $tag_name ] ) ), 0, 255 );
+			return mb_substr( sanitize_text_field( wp_unslash( $_POST[ $tag_name ] ) ), 0, 255 );
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 

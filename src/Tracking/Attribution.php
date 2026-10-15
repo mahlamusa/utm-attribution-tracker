@@ -516,7 +516,7 @@ class Attribution {
 			if ( ! is_string( $key ) || 'ch' === $key || ! in_array( $key, $allowed, true ) || ! is_scalar( $value ) ) {
 				continue;
 			}
-			$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+			$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
 			if ( 'rh' === $key ) {
 				$value = (string) preg_replace( '/[^a-z0-9.-]/', '', strtolower( $value ) );
 			}

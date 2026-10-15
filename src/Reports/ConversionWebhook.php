@@ -253,7 +253,7 @@ class ConversionWebhook {
 			array(
 				'time'   => time(),
 				'ok'     => $ok,
-				'detail' => substr( $detail, 0, 200 ),
+				'detail' => mb_substr( $detail, 0, 200 ),
 			)
 		);
 	}

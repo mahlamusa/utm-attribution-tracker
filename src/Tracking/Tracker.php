@@ -372,16 +372,16 @@ class Tracker {
 
 		$touch = array();
 		foreach ( $params as $key => $value ) {
-			$touch[ $key ] = substr( $value, 0, 255 );
+			$touch[ $key ] = mb_substr( $value, 0, 255 );
 		}
-		$touch['lp'] = substr( $landing, 0, 255 );
+		$touch['lp'] = mb_substr( $landing, 0, 255 );
 
 		$referrer_host = isset( $_SERVER['HTTP_REFERER'] )
 			? strtolower( (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ), PHP_URL_HOST ) )
 			: '';
 		$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 		if ( '' !== $referrer_host && $referrer_host !== $site_host ) {
-			$touch['rh'] = substr( $referrer_host, 0, 255 );
+			$touch['rh'] = mb_substr( $referrer_host, 0, 255 );
 		}
 		$touch['ts'] = time();
 
@@ -592,7 +592,7 @@ class Tracker {
 		global $wpdb;
 
 		$ip  = self::client_ip();
-		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
+		$ua  = isset( $_SERVER['HTTP_USER_AGENT'] ) ? mb_substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ), 0, 500 ) : '';
 		$ref = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
 		if ( array_key_exists( 'referrer', $data ) ) {
 			$ref = esc_url_raw( (string) $data['referrer'] );
@@ -604,29 +604,29 @@ class Tracker {
 		$vid = (string) ( $data['visitor_id'] ?? Attribution::visitor_id() );
 
 		$row = array(
-			'link_id'       => substr( $data['link_id'] ?? '', 0, 64 ),
-			'utm_source'    => substr( $data['utm_source'] ?? '', 0, 100 ),
-			'utm_medium'    => substr( $data['utm_medium'] ?? '', 0, 100 ),
-			'utm_campaign'  => substr( $data['utm_campaign'] ?? '', 0, 100 ),
-			'utm_id'        => substr( $data['utm_id'] ?? '', 0, 100 ),
-			'utm_term'      => substr( $data['utm_term'] ?? '', 0, 100 ),
-			'utm_content'   => substr( $data['utm_content'] ?? '', 0, 255 ),
-			'destination'   => substr( $data['destination'] ?? '', 0, 2083 ),
-			'gclid'         => substr( $data['gclid'] ?? '', 0, 255 ),
-			'fbclid'        => substr( $data['fbclid'] ?? '', 0, 255 ),
-			'msclkid'       => substr( $data['msclkid'] ?? '', 0, 255 ),
-			'ttclid'        => substr( $data['ttclid'] ?? '', 0, 255 ),
-			'li_fat_id'     => substr( $data['li_fat_id'] ?? '', 0, 255 ),
-			'twclid'        => substr( $data['twclid'] ?? '', 0, 255 ),
+			'link_id'       => mb_substr( $data['link_id'] ?? '', 0, 64 ),
+			'utm_source'    => mb_substr( $data['utm_source'] ?? '', 0, 100 ),
+			'utm_medium'    => mb_substr( $data['utm_medium'] ?? '', 0, 100 ),
+			'utm_campaign'  => mb_substr( $data['utm_campaign'] ?? '', 0, 100 ),
+			'utm_id'        => mb_substr( $data['utm_id'] ?? '', 0, 100 ),
+			'utm_term'      => mb_substr( $data['utm_term'] ?? '', 0, 100 ),
+			'utm_content'   => mb_substr( $data['utm_content'] ?? '', 0, 255 ),
+			'destination'   => mb_substr( $data['destination'] ?? '', 0, 2083 ),
+			'gclid'         => mb_substr( $data['gclid'] ?? '', 0, 255 ),
+			'fbclid'        => mb_substr( $data['fbclid'] ?? '', 0, 255 ),
+			'msclkid'       => mb_substr( $data['msclkid'] ?? '', 0, 255 ),
+			'ttclid'        => mb_substr( $data['ttclid'] ?? '', 0, 255 ),
+			'li_fat_id'     => mb_substr( $data['li_fat_id'] ?? '', 0, 255 ),
+			'twclid'        => mb_substr( $data['twclid'] ?? '', 0, 255 ),
 			'is_conversion' => empty( $data['is_conversion'] ) ? 0 : 1,
-			'touch'         => substr( $data['touch'] ?? '', 0, 10 ),
+			'touch'         => mb_substr( $data['touch'] ?? '', 0, 10 ),
 			'device'        => self::device_type( $ua ),
 			'ip_hash'       => self::hash_ip( $ip ),
 			'user_agent'    => $ua,
-			'referrer'      => substr( $ref, 0, 2083 ),
+			'referrer'      => mb_substr( $ref, 0, 2083 ),
 			'clicked_at'    => current_time( 'mysql', true ),
-			'channel'       => substr( $data['channel'] ?? '', 0, 20 ),
-			'visitor_id'    => substr( $vid, 0, 36 ),
+			'channel'       => mb_substr( $data['channel'] ?? '', 0, 20 ),
+			'visitor_id'    => mb_substr( $vid, 0, 36 ),
 		);
 
 		// Classify after the row is assembled so the resolved referrer is
@@ -653,7 +653,7 @@ class Tracker {
 			if ( ! is_scalar( $value ) ) {
 				continue;
 			}
-			$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+			$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
 			if ( '' !== $value ) {
 				$custom[ $name ] = $value;
 			}

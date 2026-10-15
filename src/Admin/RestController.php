@@ -1764,7 +1764,7 @@ class RestController {
 			foreach ( Tracker::custom_params() as $name ) {
 				$value = $custom_in[ $name ] ?? '';
 				if ( is_scalar( $value ) ) {
-					$value = substr( sanitize_text_field( (string) $value ), 0, 255 );
+					$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
 					if ( '' !== $value ) {
 						$custom[ $name ] = $value;
 					}

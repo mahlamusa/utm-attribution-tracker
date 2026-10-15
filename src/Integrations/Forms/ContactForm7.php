@@ -139,7 +139,7 @@ class ContactForm7 {
 		// 255 chars to match the attribution writers.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing
 		$value = isset( $_POST[ $field ] ) && is_string( $_POST[ $field ] )
-			? substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
+			? mb_substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
 			: '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
