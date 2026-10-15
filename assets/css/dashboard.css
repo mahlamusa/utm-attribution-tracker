@@ -848,6 +848,52 @@ body.utmat-drawer-open {
 	gap:     var(--utmat-space-2);
 }
 
+/* Journeys table
+   ========================================================================== */
+.utmat-journeys-head {
+	display:        flex;
+	flex-wrap:      wrap;
+	align-items:    baseline;
+	justify-content: space-between;
+	gap:            var(--utmat-space-2);
+	margin-bottom:  var(--utmat-space-3);
+}
+
+.utmat-journeys-table {
+	border-color: var(--utmat-border-strong);
+}
+
+.utmat-journeys-table td {
+	vertical-align: top;
+}
+
+.utmat-journeys-table .utmat-col-when {
+	width:            170px;
+	white-space:      nowrap;
+	color:            var(--utmat-text-soft);
+}
+
+.utmat-journeys-table .utmat-col-touches {
+	white-space: nowrap;
+}
+
+.utmat-journey-details td {
+	background: #f6f7f7;
+}
+
+.utmat-journey-touches {
+	margin: 8px 0 8px 20px;
+}
+
+.utmat-journey-touches li {
+	margin:    4px 0;
+	font-size: 12px;
+}
+
+.utmat-journey-touches .utmat-chip {
+	margin-right: 6px;
+}
+
 /* Links: add / edit drawer
    ========================================================================== */
 .utmat-drawer-backdrop {

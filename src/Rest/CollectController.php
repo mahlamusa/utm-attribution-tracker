@@ -70,6 +70,11 @@ class CollectController {
 			'default'           => false,
 			'sanitize_callback' => 'rest_sanitize_boolean',
 		);
+		$args['vid']      = array(
+			'type'              => 'string',
+			'default'           => '',
+			'sanitize_callback' => 'sanitize_text_field',
+		);
 
 		register_rest_route(
 			'utmat/v1',
@@ -91,7 +96,9 @@ class CollectController {
 	 * untagged landing visit (`visit=1`) while visit tracking is on and the
 	 * referrer is external, which records a `visit` row. Bot user agents
 	 * get a 200 with `recorded: false` so they learn nothing; duplicates
-	 * within the dedup window respond the same way.
+	 * within the dedup window respond the same way. The optional `vid` field
+	 * (the beacon's `utmat_vid` cookie value) stamps the row's visitor id,
+	 * and is dropped when it is not a well-formed UUID v4.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -154,6 +161,14 @@ class CollectController {
 				)
 			);
 		}
+
+		// The visitor id from the beacon's utmat_vid cookie. The fetch
+		// fallback sends no cookies (credentials: omit), so this body field
+		// is the only carrier on that path; an invalid value is dropped,
+		// never stored.
+		$vid = (string) $request->get_param( 'vid' );
+
+		$data['visitor_id'] = wp_is_uuid( $vid, 4 ) ? $vid : '';
 
 		if ( Tracker::is_duplicate( $data ) ) {
 			return new WP_REST_Response( array( 'recorded' => false ), 200 );

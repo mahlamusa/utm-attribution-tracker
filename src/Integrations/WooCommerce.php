@@ -229,7 +229,10 @@ class WooCommerce {
 	 *
 	 * The conversion row is built from the last-touch set and inserted via
 	 * Tracker::record() directly, bypassing is_duplicate() — each order is a
-	 * distinct conversion and must never be deduplicated away.
+	 * distinct conversion and must never be deduplicated away. The row's
+	 * meta carries the order id, order number and currency; on the classic
+	 * checkout path the order has no id yet, so only the currency survives
+	 * and the dashboard label degrades to the plain order total.
 	 *
 	 * @since 1.0.0
 	 * @param WC_Order $order The order to attach attribution to.
@@ -271,6 +274,17 @@ class WooCommerce {
 			// The checkout's own referrer is the site, so the row inherits
 			// the last touch's channel instead of being classified fresh.
 			'channel'       => (string) ( $last['ch'] ?? '' ),
+			// Conversion metadata for the Journeys labels. On the classic
+			// checkout path the order has no id yet (see the $destination
+			// fallback above), so array_filter() leaves only the currency
+			// and the label degrades to "Order · total".
+			'meta'          => array_filter(
+				array(
+					'order_id'     => $order->get_id(),
+					'order_number' => $order->get_id() ? (string) $order->get_order_number() : '',
+					'currency'     => $order->get_currency(),
+				)
+			),
 		);
 		foreach ( Tracker::param_whitelist() as $key ) {
 			$event[ $key ] = isset( $last[ $key ] ) ? (string) $last[ $key ] : '';

@@ -7,6 +7,11 @@
  *  2. Passive incoming: any page load with a whitelisted UTM param or ad
  *     click ID present is recorded (no-JS fallback to the front-end beacon).
  *
+ * The passive path also resolves the per-browser visitor id: when the cookie
+ * gate is open, maybe_set_visitor_cookie() issues or refreshes the `utmat_vid`
+ * cookie (the beacon writes it for JS visitors) and record() stamps the id on
+ * the row, so conversions can be shown with the touches that preceded them.
+ *
  * Filter `utmat_track_logged_in_users` (bool, default false) controls whether
  * administrator clicks are recorded.
  *
@@ -317,6 +322,11 @@ class Tracker {
 					'destination' => esc_url_raw( ( is_ssl() ? 'https' : 'http' ) . '://' . sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ?? '' ) ) . sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '/' ) ) ),
 				)
 			);
+			// Resolve the visitor id BEFORE the record call so a first visit's
+			// row already carries the id this same response is about to set.
+			// Runs regardless of dedup, like the cookie write below, so repeat
+			// visits still refresh the cookie expiry; a closed gate returns ''.
+			$data['visitor_id'] = self::maybe_set_visitor_cookie();
 			// The event gate is off by default (an event carries no cookie);
 			// when a site opts in, the passive record waits for consent too.
 			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data ) ) {
@@ -341,8 +351,8 @@ class Tracker {
 	 * at the call site), when headers are not yet sent, when the
 	 * `utmat_enable_cookie` master switch allows it, and when the visitor has
 	 * granted the configured consent category (always true without a WP
-	 * Consent API). That pair of checks is the only permitted gate for a
-	 * server-side cookie write.
+	 * Consent API). Those checks live in cookie_gate_open(), the single gate
+	 * both server-side cookie writers share.
 	 *
 	 * The touch also carries the external referrer host (`rh`) when the
 	 * request has one; the channel is derived by the reader and never written
@@ -356,7 +366,7 @@ class Tracker {
 	 * @return void
 	 */
 	private static function maybe_set_attribution_cookie( array $params, string $landing ): void {
-		if ( headers_sent() || ! Attribution::enabled() || ! Attribution::consented() ) {
+		if ( ! self::cookie_gate_open() ) {
 			return;
 		}
 
@@ -426,6 +436,62 @@ class Tracker {
 				'samesite' => 'Lax',
 			)
 		);
+	}
+
+	/**
+	 * Whether a server-side cookie write is permitted right now.
+	 *
+	 * The single gate both server-side cookie writers share: headers must not
+	 * have been sent, the `utmat_enable_cookie` master switch must allow the
+	 * attribution cookies, and — when a WP Consent API implementation is
+	 * present — the visitor must have granted the configured consent
+	 * category. `utmat_attr` and `utmat_vid` can therefore never be issued to
+	 * a visitor who has not consented.
+	 *
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	private static function cookie_gate_open(): bool {
+		return ! headers_sent() && Attribution::enabled() && Attribution::consented();
+	}
+
+	/**
+	 * PHP fallback writer for the per-browser visitor id cookie.
+	 *
+	 * The no-JS counterpart of the beacon's write: keeps the existing
+	 * `utmat_vid` when it holds a valid UUID v4 and generates one otherwise,
+	 * then always re-sets the cookie with the same options as `utmat_attr` so
+	 * an existing id gets a fresh expiry on every tagged visit — without the
+	 * rewrite the two cookies would drift apart and split a no-JS visitor's
+	 * journey in two. Returns the resolved id, or '' when the gate is closed
+	 * (no id is ever generated for a visitor who has not consented).
+	 *
+	 * @since 1.0.0
+	 * @return string The visitor id that was written, or ''.
+	 */
+	private static function maybe_set_visitor_cookie(): string {
+		if ( ! self::cookie_gate_open() ) {
+			return '';
+		}
+
+		$vid = Attribution::visitor_id();
+		if ( '' === $vid ) {
+			$vid = wp_generate_uuid4();
+		}
+
+		setcookie(
+			Attribution::VISITOR_COOKIE_NAME,
+			$vid,
+			array(
+				'expires'  => time() + Attribution::cookie_days() * DAY_IN_SECONDS,
+				'path'     => '/',
+				'secure'   => is_ssl(),
+				'httponly' => false,
+				'samesite' => 'Lax',
+			)
+		);
+
+		return $vid;
 	}
 
 	/**
@@ -509,7 +575,9 @@ class Tracker {
 	 *
 	 * `channel` is written from $data when given, else computed by
 	 * TrafficSource::channel() from the assembled row; `visitor_id` is
-	 * written from $data (empty when absent).
+	 * written from $data and, when absent, falls back to the `utmat_vid`
+	 * cookie (Attribution::visitor_id()) so short-link clicks, order rows
+	 * and lead rows are stamped without their call sites changing.
 	 * `custom` is built from a `custom` array in $data plus any configured
 	 * custom parameter passed flat (the incoming, collect and order paths
 	 * pass params that way) and stored as a JSON object; `meta` is a `meta`
@@ -529,6 +597,11 @@ class Tracker {
 		if ( array_key_exists( 'referrer', $data ) ) {
 			$ref = esc_url_raw( (string) $data['referrer'] );
 		}
+
+		// Passed explicitly by the paths that resolved it (the passive PHP
+		// path before recording, the collect endpoint from the beacon's vid
+		// field); every other caller falls back to the `utmat_vid` cookie.
+		$vid = (string) ( $data['visitor_id'] ?? Attribution::visitor_id() );
 
 		$row = array(
 			'link_id'       => substr( $data['link_id'] ?? '', 0, 64 ),
@@ -553,7 +626,7 @@ class Tracker {
 			'referrer'      => substr( $ref, 0, 2083 ),
 			'clicked_at'    => current_time( 'mysql', true ),
 			'channel'       => substr( $data['channel'] ?? '', 0, 20 ),
-			'visitor_id'    => substr( $data['visitor_id'] ?? '', 0, 36 ),
+			'visitor_id'    => substr( $vid, 0, 36 ),
 		);
 
 		// Classify after the row is assembled so the resolved referrer is

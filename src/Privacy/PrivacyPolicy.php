@@ -23,7 +23,9 @@ class PrivacyPolicy {
 	 * Register suggested privacy policy text with WordPress.
 	 *
 	 * Hooked on `admin_init`. Describes what the plugin stores (salted IP
-	 * hash, user agent, referrer, UTM values), why, and the retention period.
+	 * hash, user agent, referrer, UTM values, and — only with cookie
+	 * consent — the random visitor identifier cookie), why, and the
+	 * retention period.
 	 * The opening sentence depends on the untagged-visit tracking setting:
 	 * on (the default) it says the first page of every visit is recorded,
 	 * off it covers campaign links only. The closing sentence depends on the
@@ -56,7 +58,7 @@ class PrivacyPolicy {
 			$opening = __( 'This site uses UTM & Attribution Tracker to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
 		}
 
-		$content  = '<p>' . $opening . ' ' . __( 'The same data is recorded when you submit a form after arriving through a campaign link.', 'utm-attribution-tracker' ) . ' ' . __( 'The raw IP address is never stored, and the hash cannot be linked to you across other websites.', 'utm-attribution-tracker' ) . '</p>';
+		$content  = '<p>' . $opening . ' ' . __( 'The same data is recorded when you submit a form after arriving through a campaign link.', 'utm-attribution-tracker' ) . ' ' . __( 'When a consent solution is active and you consent to cookies, a random visitor identifier (not derived from your IP address or any personal data) is stored in a first-party cookie so that your later orders or form submissions can be linked to the campaign that brought you here.', 'utm-attribution-tracker' ) . ' ' . __( 'The raw IP address is never stored, and the hash cannot be linked to you across other websites.', 'utm-attribution-tracker' ) . '</p>';
 		$content .= '<p>' . __( 'This data is used for aggregate campaign statistics.', 'utm-attribution-tracker' ) . ' ';
 
 		if ( '' !== ConversionWebhook::url() ) {

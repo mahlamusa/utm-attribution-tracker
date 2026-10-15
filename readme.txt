@@ -35,8 +35,10 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 * **Chart.js dashboard** — clicks over time, breakdowns by source, campaign, medium, device type, channel (direct, organic search, paid search, paid social, organic social, email, referral, AI assistant, display, affiliate), top landing pages, top referrers, and ad platform, filterable by date range (7/30/90 days) and campaign. The Conversions tile counts WooCommerce orders **and** attributed form leads.
 * **WooCommerce revenue attribution** — orders are stamped with the buyer's first- and last-touch campaign data (visible in a metabox on the order screen), and a revenue-by-campaign chart shows what your campaigns actually earn. Revenue counts orders only; form leads are conversions without a total.
+* **Customer journeys** — a Journeys tab lists recent orders and form leads with every tagged visit that preceded them, built from a random first-party visitor id.
 * **Lead webhooks** — every attributed form submission is recorded as a conversion and can be POSTed, with its attribution data and submitted field values, to Zapier, Make, HubSpot or GoHighLevel (see the webhook FAQ).
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows), each row with its channel. Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
+* **Read-only REST API** — every dashboard dataset (stats, links, events, journeys, export, diagnostics) is available over `utmat/v1` to administrators using WordPress Application Passwords (see the REST API section).
 * **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active.
 * **Tracking Doctor diagnostics** — a "Run diagnostics" panel on the settings card runs five rule-based local checks (caching, consent, cookies, per-form attribution coverage, WooCommerce order attribution) and reports pass/warn/fail/skip with a plain-language explanation for each. No AI, no external calls — every check inspects local plugin/site state only.
 
@@ -95,6 +97,8 @@ No. Requests whose user agent looks like a crawler, link-preview unfurler (Slack
 When a visitor arrives with a UTM parameter or ad click ID, or lands from another site (a search engine, social network, AI assistant or any other referrer), the plugin sets a first-party cookie named `utmat_attr` containing two sets of campaign data: the visitor's **first touch** (preserved once written) and **last touch** (updated on every tagged or referred visit). Each set holds the whitelisted UTM/click-ID parameters present on that visit, or the channel and referrer host of an untagged landing, plus the landing page URL and a timestamp. A direct visit without parameters never writes or updates the cookie. The cookie does not store names, email addresses, or IP addresses.
 
 The cookie lives for 90 days (`path=/`, `SameSite=Lax`, `Secure` on https sites). Change the lifetime with `utmat_cookie_days` or disable the cookie entirely with `utmat_enable_cookie` (see the filter reference below).
+
+A second cookie, `utmat_vid`, holds a random visitor id (UUID v4) generated in the browser — from the browser's cryptographically secure random source, falling back to JavaScript's `Math.random()` only in browsers that lack it — or by the server-side fallback for visitors without JavaScript. It is not derived from your IP address or any personal data, and it is written, refreshed and deleted under exactly the same conditions and lifetime as `utmat_attr`. It links a visitor's tagged visits to their later orders and form submissions for the Journeys report. On sites with a consent banner, visits recorded before the visitor consents carry no visitor id, so a journey begins with the first tagged visit after consent.
 
 = How does the plugin handle cookie consent? =
 
@@ -160,7 +164,7 @@ The Generic JSON preset (also used by Zapier and Make, whose receivers parse nes
 
 = How do I export my data? =
 
-Click **Export CSV** on the dashboard to download the raw events for the selected period and campaign filter (the newest 10,000 rows are exported). The CSV contains the click date, link slug, channel, all UTM parameters, ad click IDs, destination, referrer, conversion flag, and order total — but never IP hashes or user agents. Because the export also includes conversion rows (flagged in the `is_conversion` column) — WooCommerce orders (`link_id` order) and form leads (`link_id` lead`) — alongside click rows, its total row count can exceed the click total shown on the dashboard. Untagged landing visits are left out unless the REST call to `utmat/v1/export` passes `include_visits=1`. Values that could be interpreted as spreadsheet formulas are prefixed with `'` for safety.
+Click **Export CSV** on the dashboard to download the raw events for the selected period and campaign filter (the newest 10,000 rows are exported). The columns, in order: `clicked_at`, `link_id`, `channel`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_id`, `utm_term`, `utm_content`, `gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`, `destination`, `referrer`, `is_conversion`, `order_total`, `visitor_id`, then one column per configured custom parameter (in saved order). The `channel` column and the custom-parameter columns carry values only once those features are active; `visitor_id` is empty on events recorded before this version. The export never includes IP hashes or user agents. Because the export also includes conversion rows (flagged in the `is_conversion` column) — WooCommerce orders (`link_id` order) and form leads (`link_id` lead`) — alongside click rows, its total row count can exceed the click total shown on the dashboard. Untagged landing visits are left out unless the REST call to `utmat/v1/export` passes `include_visits=1`. Values that could be interpreted as spreadsheet formulas are prefixed with `'` for safety.
 
 = How do I get a weekly report by email? =
 
@@ -185,14 +189,38 @@ All filters shipped by the plugin:
 * **`utmat_dedup_window`** *(int, seconds, default 1800)* — the window within which an identical click from the same visitor is recorded once. Return `0` to disable deduplication.
 * **`utmat_rate_limit`** *(int, requests/minute/IP, default 15)* — the collect endpoint's rate limit. Raise it when many visitors share one IP (see the reverse proxy FAQ above).
 * **`utmat_retention_days`** *(int, days, default from the settings card / 180)* — the event retention window. `0` keeps events forever.
-* **`utmat_cookie_days`** *(int, days, default 90)* — the attribution cookie lifetime. Defaults to the Attribution window setting on the dashboard; the filter overrides it.
-* **`utmat_enable_cookie`** *(bool, receives `true`)* — site-wide master switch for the attribution cookie; return `false` to never set it. Per-visitor consent is handled separately through the WP Consent API (see the consent FAQ).
+* **`utmat_cookie_days`** *(int, days, default 90)* — the lifetime of both attribution cookies (`utmat_attr`, `utmat_vid`). Defaults to the Attribution window setting on the dashboard; the filter overrides it.
+* **`utmat_enable_cookie`** *(bool, receives `true`)* — site-wide master switch for both attribution cookies (`utmat_attr`, `utmat_vid`); return `false` to never set them. Per-visitor consent is handled separately through the WP Consent API (see the consent FAQ).
 * **`utmat_consent_gate_events`** *(bool, default `false`)* — return `true` to also withhold event recording for tagged visits and untagged landing visits (the collect request and the PHP fallback) until the visitor grants the configured consent category.
 * **`utmat_report_recipient`** *(string, default the admin email)* — the recipient address of the weekly summary email.
 * **`utmat_channel`** *(string, receives the computed channel slug and the event row)* — override the channel a visit, click or conversion is filed under; return one of `direct`, `organic_search`, `paid_search`, `paid_social`, `organic_social`, `email`, `referral`, `ai_assistant`, `display`, `affiliate`, `paid_other` or `other` (anything else keeps the computed value).
 * **`utmat_search_engine_hosts`** *(string[])* — the referrer hosts classified as search engines. An entry with a dot matches the host and its subdomains; an entry without a dot (`google`) matches any label of the host.
 * **`utmat_social_network_hosts`** *(string[])* — the referrer hosts classified as social networks, same matching rule.
 * **`utmat_ai_assistant_hosts`** *(string[])* — the referrer hosts classified as AI assistants, same matching rule; checked before the search-engine list.
+
+== REST API ==
+
+Every dataset the dashboard shows is available read-only over the `utmat/v1` REST namespace. All routes are GET, require an administrator (`manage_options`), and work with [Application Passwords](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/): create one under **Users → Profile → Application Passwords** (needs HTTPS, or `WP_ENVIRONMENT_TYPE=local` on a development site), then authenticate with it as the user:
+
+`curl -u "admin:xxxx xxxx xxxx xxxx xxxx xxxx" "https://example.com/wp-json/utmat/v1/events?period=30&kind=order&per_page=100"`
+
+Logged-in administrators can also call the routes from the dashboard (cookie plus nonce authentication) — that is how the plugin's own JS loads its data.
+
+**Conventions.** All timestamps are UTC `YYYY-MM-DD HH:MM:SS`. The `custom` and `meta` columns are always JSON objects (`{}` when empty). `ip_hash` and `user_agent` are never returned by any route. Invalid arguments return HTTP 400 with WordPress's standard envelope, e.g. `{ "code": "rest_invalid_param", "message": "Invalid parameter(s): kind", "data": { "status": 400, "params": { "kind": "…" } } }`. Unauthenticated requests get 401; authenticated non-administrators get 403. `visit` rows appear only while "Track the first page of every visit" is on; `channel` values and `custom` parameter keys appear on rows recorded since those features were configured.
+
+**`GET /stats`** — args `period` (days, default 30), `campaign`, `since`/`until` (`Y-m-d`, a custom range overriding `period`). Response: `clicks_by_day[]` (`date`, `count`, `conversions`), `by_source[]`, `by_campaign[]`, `by_medium[]`, `by_device[]`, `by_channel[]`, `by_landing[]`, `by_platform[]`, `by_referrer[]` (each `label` + `count`), `revenue_by_campaign[]` (`label`, `orders`, `revenue`), `total`, `previous_total`, `previous_clicks_by_day[]`, `conversions`, `all_time_total`, `campaigns[]`.
+
+**`GET /links`** — response `links[]` (`id`, `label`, `destination`, `destination_raw`, `redirect_url`, `clicks`, `utm_campaign`, `utm_source`, `utm_medium`, `utm_id`, `utm_term`, `utm_content`, `custom` object), `suggestions` (`sources`, `mediums`, `campaigns`), `presets[]`.
+
+**`GET /export`** — args `period`, `campaign`, `since`, `until`, `include_visits` (bool, default false). Response `rows[]` with the CSV column set listed in the export FAQ (plus one key per configured custom parameter), capped at the newest 10,000 rows.
+
+**`GET /diagnostics`** — response `checks[]`: `id`, `label`, `status` (one of pass/warn/fail/skip), `message`, `details`.
+
+**`GET /events`** — args `page` (default 1), `per_page` (default 50, capped at 200), `period`, `campaign`, `since`, `until`, `channel` (matches the stored channel slug only), `kind` (one of click, visit, order, lead), `visitor_id` (UUID format; any version — a non-v4 value simply matches no rows). Response `events[]` (newest first), `total`, `page`, `per_page`, `total_pages`. Each event carries `id`, `link_id`, `visitor_id`, `clicked_at`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_id`, `utm_term`, `utm_content`, `gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`, `destination`, `referrer`, `is_conversion` (bool), `touch`, `order_total` (number or null), `device`, `channel`, `custom` (object), `meta` (object) and the derived `kind` (click, visit, order or lead — `link_id` `lead` is a form submission, `order` or any legacy conversion row is an order, `visit` is an untagged landing, everything else is a click).
+
+**`GET /journeys`** — args `page` (default 1), `per_page` (default 50, capped at 100), `period`, `since`, `until`. Response `journeys[]` (newest conversion first), `total`, `page`, `per_page`, `total_pages`, `without_visitor` (conversions in range with no visitor id). Each journey: `conversion` (an event object), `visitor_id`, `first_touch` and `last_touch` (event objects or null), `touch_count` (clicks and visits only), `touches[]` (the most recent 100 preceding events, ascending, earlier conversions included as steps) and `touches_truncated`.
+
+**`GET /journeys/{visitor_id}`** — the path parameter is a UUID v4 (anything else misses the route and 404s at the router). Response `visitor_id`, `events[]` (ascending, at most 500), `conversions`, `first_seen`, `last_seen`, `truncated`. An unknown visitor id returns HTTP 404 with `code: utmat_not_found`.
 
 == Changelog ==
 

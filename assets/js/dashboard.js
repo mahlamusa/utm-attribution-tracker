@@ -5,10 +5,11 @@
  * Drives the tabbed dashboard: the Overview tab (stat tiles, Chart.js line
  * and revenue charts, breakdown bar lists, first-run empty state), the Links
  * tab (tracked-links table with row actions, QR codes, bulk delete and the
- * add/edit drawer), the Settings tab (save bar, test email and webhook) and
- * the Diagnostics tab. Also handles the CSV export. All user-visible strings
- * come from the utmat-i18n JSON block so they pass through WordPress i18n on
- * the PHP side.
+ * add/edit drawer), the Journeys tab (conversions with their touch
+ * sequences, loaded lazily on first activation), the Settings tab (save
+ * bar, test email and webhook) and the Diagnostics tab. Also handles the
+ * CSV export. All user-visible strings come from the utmat-i18n JSON block
+ * so they pass through WordPress i18n on the PHP side.
  *
  * @since 1.0.0
  */
@@ -44,13 +45,20 @@
 	let drawerReturnFocus = null;
 	let settingsBaseline  = null;
 
-	const TAB_NAMES = [ 'overview', 'links', 'settings', 'diagnostics' ];
+	const TAB_NAMES = [ 'overview', 'links', 'journeys', 'settings', 'diagnostics' ];
 	const LINK_COLS = 7; // Checkbox, Label, Campaign, Source / medium, Clicks, Short link, Destination.
+	const JOURNEY_COLS = 5; // When, Conversion, First touch, Last touch, Touches.
 
 	// Column names for core's mobile list-table view (data-colname). The
 	// checkbox header is a td, so index 0 is Label.
 	const LINK_COL_NAMES = Array.prototype.map.call(
 		document.querySelectorAll( '#utmat-links-table thead th' ),
+		function ( th ) { return th.textContent.trim(); }
+	);
+
+	// Same for the Journeys table (no checkbox column; index 0 is When).
+	const JOURNEY_COL_NAMES = Array.prototype.map.call(
+		document.querySelectorAll( '#utmat-journeys-table thead th' ),
 		function ( th ) { return th.textContent.trim(); }
 	);
 
@@ -99,6 +107,11 @@
 	const elLinksMsg        = document.getElementById( 'utmat-links-msg' );
 	let linksMsgTimer       = null;
 
+	// Journeys tab state: loaded lazily on first activation (never part of
+	// loadDashboard()'s Promise.all, so a failing /journeys request can never
+	// blank the overview).
+	let journeysLoaded = false;
+
 	// Success text in the Links toolbar clears itself so it never outlives the
 	// action it confirms.
 	function flashLinksMsg( text ) {
@@ -134,6 +147,12 @@
 	const elSecretCopy      = document.getElementById( 'utmat-webhook-secret-copy' );
 	const elDiagLast        = document.getElementById( 'utmat-diagnostics-last' );
 	const elDiagSummary     = document.getElementById( 'utmat-diag-summary' );
+	const elJourneysMsg     = document.getElementById( 'utmat-journeys-msg' );
+	const elJourneysLoading = document.getElementById( 'utmat-journeys-loading' );
+	const elJourneysEmpty   = document.getElementById( 'utmat-journeys-empty' );
+	const elJourneysTable   = document.getElementById( 'utmat-journeys-table' );
+	const elJourneysTbody   = document.getElementById( 'utmat-journeys-tbody' );
+	const elJourneysWithout = document.getElementById( 'utmat-journeys-without' );
 
 	// ── Chart.js global defaults (light theme) ───────────────────────────────
 	Chart.defaults.color       = '#646970';
@@ -388,6 +407,11 @@
 		}
 		if ( 'overview' === name ) {
 			resizeCharts();
+		}
+		// The Journeys data loads on first activation only — click, hash
+		// change and the initial tabFromHash() activation all pass here.
+		if ( 'journeys' === name && ! journeysLoaded ) {
+			loadJourneys();
 		}
 	}
 
@@ -1378,6 +1402,291 @@
 			} );
 	}
 
+	// ── Journeys ───────────────────────────────────────────────────────────────
+	// One row per conversion carrying a visitor id; "Show touches" expands a
+	// details row listing the visitor's preceding events plus the conversion
+	// itself as the terminal step. Errors go to the Journeys message slot —
+	// never showError(), which hides the Links section as a side effect.
+
+	// clicked_at is stored as UTC "Y-m-d H:i:s"; the space-separated form is
+	// not an ECMAScript date string (WebKit rejects it), so swap in the T and
+	// mark the string UTC before handing it to the Date constructor.
+	function formatEventTime( s ) {
+		return new Date( String( s ).replace( ' ', 'T' ) + 'Z' ).toLocaleString();
+	}
+
+	const KIND_LABELS = {
+		order: i18n.kindOrder || 'Order',
+		lead:  i18n.kindLead || 'Lead',
+		click: i18n.kindClick || 'Click',
+		visit: i18n.kindVisit || 'Visit',
+	};
+
+	// Vendor product names (untranslated), shared with the wp-admin
+	// Dashboard widget; unknown slugs render verbatim.
+	const INTEGRATION_LABELS = i18n.integrationLabels || {};
+
+	function makeKindChip( kind ) {
+		const chip = document.createElement( 'span' );
+		chip.className   = 'utmat-chip utmat-kind-chip';
+		chip.textContent = KIND_LABELS[ kind ] || kind;
+		return chip;
+	}
+
+	// "Order #123 · $45.00" / "Order · $45.00" / "Lead · Contact · WPForms".
+	function journeyLabel( event ) {
+		const meta = event.meta || {};
+
+		if ( 'lead' === event.kind ) {
+			return fmt(
+				i18n.journeyLead || 'Lead · %1$s · %2$s',
+				meta.form_title || '—',
+				INTEGRATION_LABELS[ meta.integration ] || meta.integration || '—'
+			);
+		}
+		const total = ( null === event.order_total || undefined === event.order_total )
+			? '—'
+			: formatCurrency( event.order_total );
+		return meta.order_number
+			? fmt( i18n.journeyOrder || 'Order #%1$s · %2$s', meta.order_number, total )
+			: fmt( i18n.journeyOrderNoNumber || 'Order · %s', total );
+	}
+
+	// A first/last-touch cell: "source / medium" plus a campaign chip, or —.
+	function renderTouchCell( cell, event ) {
+		if ( ! event ) {
+			cell.textContent = '—';
+			return;
+		}
+		const line = document.createElement( 'span' );
+		line.textContent = ( event.utm_source || event.utm_medium )
+			? ( event.utm_source || '—' ) + ' / ' + ( event.utm_medium || '—' )
+			: '—';
+		line.title = line.textContent;
+		cell.appendChild( line );
+		if ( event.utm_campaign ) {
+			cell.appendChild( document.createTextNode( ' ' ) );
+			const chip = document.createElement( 'span' );
+			chip.className   = 'utmat-chip';
+			chip.textContent = event.utm_campaign;
+			chip.title       = event.utm_campaign;
+			cell.appendChild( chip );
+		}
+	}
+
+	// One touch <li>: time, kind chip, channel, campaign detail (or the
+	// click ID), landing page path and custom parameters as key=value pairs.
+	function renderJourneyTouchItem( event ) {
+		const li = document.createElement( 'li' );
+
+		const time = document.createElement( 'span' );
+		time.className   = 'utmat-journey-time';
+		time.textContent = formatEventTime( event.clicked_at );
+		li.appendChild( time );
+		li.appendChild( document.createTextNode( ' ' ) );
+		li.appendChild( makeKindChip( event.kind ) );
+
+		if ( event.channel ) {
+			li.appendChild( document.createTextNode( ' ' + ( CHANNEL_NAMES[ event.channel ] || event.channel ) ) );
+		}
+
+		let detail = '';
+		if ( event.utm_source || event.utm_medium ) {
+			detail = ( event.utm_source || '—' ) + ' / ' + ( event.utm_medium || '—' );
+		}
+		if ( event.utm_campaign ) {
+			detail += ( detail ? ' · ' : '' ) + event.utm_campaign;
+		}
+		if ( ! detail ) {
+			[ 'gclid', 'fbclid', 'msclkid', 'ttclid', 'li_fat_id', 'twclid' ].some( function ( key ) {
+				if ( event[ key ] ) {
+					detail = key + '=' + event[ key ];
+					return true;
+				}
+				return false;
+			} );
+		}
+		if ( detail ) {
+			li.appendChild( document.createTextNode( ' ' + detail ) );
+		}
+
+		if ( event.destination ) {
+			const path = document.createElement( 'span' );
+			path.className   = 'utmat-journey-path';
+			path.textContent = shortLinkPath( event.destination );
+			path.title       = event.destination;
+			li.appendChild( document.createTextNode( ' ' ) );
+			li.appendChild( path );
+		}
+
+		const custom = event.custom || {};
+		Object.keys( custom ).forEach( function ( key ) {
+			const pair = document.createElement( 'span' );
+			pair.className   = 'utmat-journey-custom';
+			pair.textContent = key + '=' + custom[ key ];
+			li.appendChild( document.createTextNode( ' ' ) );
+			li.appendChild( pair );
+		} );
+
+		return li;
+	}
+
+	// The hidden expander row: the touches (ascending) with the conversion
+	// itself listed last as the terminal step. Created lazily on first
+	// expansion and kept in the DOM, toggled via its hidden attribute.
+	function renderJourneyTouches( journey ) {
+		const tr = document.createElement( 'tr' );
+		tr.className = 'utmat-journey-details';
+		tr.id        = 'utmat-journey-' + journey.conversion.id;
+		tr.hidden    = true;
+
+		const td = document.createElement( 'td' );
+		td.colSpan = JOURNEY_COLS;
+
+		const list = document.createElement( 'ol' );
+		list.className = 'utmat-journey-touches';
+
+		if ( journey.touches_truncated ) {
+			const note = document.createElement( 'li' );
+			note.className   = 'utmat-journey-truncated';
+			note.textContent = i18n.touchesTruncated || 'Showing the most recent 100 touches.';
+			list.appendChild( note );
+		}
+
+		( journey.touches || [] ).forEach( function ( event ) {
+			list.appendChild( renderJourneyTouchItem( event ) );
+		} );
+		list.appendChild( renderJourneyTouchItem( journey.conversion ) );
+
+		td.appendChild( list );
+		tr.appendChild( td );
+		return tr;
+	}
+
+	function toggleJourneyDetails( journey, row, btn ) {
+		let details = document.getElementById( 'utmat-journey-' + journey.conversion.id );
+		if ( ! details ) {
+			details = renderJourneyTouches( journey );
+			row.parentNode.insertBefore( details, row.nextSibling );
+		}
+		const open = details.hidden;
+		details.hidden         = ! open;
+		btn.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
+		btn.textContent        = open ? ( i18n.hideTouches || 'Hide touches' ) : ( i18n.showTouches || 'Show touches' );
+	}
+
+	function renderJourneysTable( journeys ) {
+		if ( ! elJourneysTbody || ! elJourneysTable ) {
+			return;
+		}
+		elJourneysTbody.innerHTML = '';
+
+		if ( ! journeys.length ) {
+			show( elJourneysEmpty );
+			hide( elJourneysTable );
+			return;
+		}
+		hide( elJourneysEmpty );
+		show( elJourneysTable );
+
+		journeys.forEach( function ( journey ) {
+			const row = elJourneysTbody.insertRow();
+			row.dataset.journeyId = String( journey.conversion.id );
+
+			// When (UTC-stored timestamp, rendered in the admin's locale).
+			// No data-colname: the cell sits before the primary column, where
+			// core's mobile layout gives the label no gutter and it would
+			// overprint the date.
+			const whenCell = row.insertCell();
+			whenCell.className = 'utmat-col-when';
+			whenCell.textContent = formatEventTime( journey.conversion.clicked_at );
+			whenCell.title = journey.conversion.clicked_at;
+
+			// Conversion: kind chip + label; core's toggle-row button makes
+			// the mobile list-table collapse work on the primary column.
+			const convCell = row.insertCell();
+			convCell.className = 'utmat-col-conversion column-primary';
+			convCell.appendChild( makeKindChip( journey.conversion.kind ) );
+			convCell.appendChild( document.createTextNode( ' ' ) );
+			const label = document.createElement( 'span' );
+			label.className   = 'utmat-journey-label';
+			label.textContent = journeyLabel( journey.conversion );
+			label.title       = label.textContent;
+			convCell.appendChild( label );
+
+			const toggle = document.createElement( 'button' );
+			toggle.type      = 'button';
+			toggle.className = 'toggle-row';
+			const toggleText = document.createElement( 'span' );
+			toggleText.className   = 'screen-reader-text';
+			toggleText.textContent = i18n.showDetails || 'Show more details';
+			toggle.appendChild( toggleText );
+			convCell.appendChild( toggle );
+
+			// First / last touch.
+			const firstCell = row.insertCell();
+			firstCell.dataset.colname = JOURNEY_COL_NAMES[ 2 ] || '';
+			renderTouchCell( firstCell, journey.first_touch );
+
+			const lastCell = row.insertCell();
+			lastCell.dataset.colname = JOURNEY_COL_NAMES[ 3 ] || '';
+			renderTouchCell( lastCell, journey.last_touch );
+
+			// Touches: count badge + the expander button.
+			const touchesCell = row.insertCell();
+			touchesCell.className = 'utmat-col-touches';
+			touchesCell.dataset.colname = JOURNEY_COL_NAMES[ 4 ] || '';
+			const badge = document.createElement( 'span' );
+			badge.className   = 'utmat-clicks-badge';
+			badge.textContent = formatNumber( journey.touch_count );
+			touchesCell.appendChild( badge );
+
+			const expand = document.createElement( 'button' );
+			expand.type      = 'button';
+			expand.className = 'button-link utmat-journey-toggle';
+			expand.setAttribute( 'aria-expanded', 'false' );
+			expand.setAttribute( 'aria-controls', 'utmat-journey-' + journey.conversion.id );
+			expand.textContent = i18n.showTouches || 'Show touches';
+			expand.addEventListener( 'click', function () {
+				toggleJourneyDetails( journey, row, expand );
+			} );
+			touchesCell.appendChild( document.createTextNode( ' ' ) );
+			touchesCell.appendChild( expand );
+		} );
+	}
+
+	/**
+	 * Fetch and render the Journeys tab (last 50 conversions within 365
+	 * days — no period control on this tab by design).
+	 *
+	 * @since 1.0.0
+	 * @return {void}
+	 */
+	function loadJourneys() {
+		journeysLoaded = true;
+		show( elJourneysLoading );
+
+		apiFetch( '/journeys?per_page=50&period=365' ).then( function ( body ) {
+			hide( elJourneysLoading );
+			renderJourneysTable( body.journeys || [] );
+
+			if ( elJourneysWithout ) {
+				const without = Number( body.without_visitor ) || 0;
+				elJourneysWithout.textContent = fmt(
+					i18n.journeysWithoutVisitor || 'Conversions without a visitor id (not shown): %s',
+					formatNumber( without )
+				);
+				elJourneysWithout.hidden = ! without;
+			}
+		} ).catch( function ( err ) {
+			hide( elJourneysLoading );
+			if ( elJourneysMsg ) {
+				elJourneysMsg.textContent = err.message || ( i18n.journeysFailed || 'Could not load journeys.' );
+				elJourneysMsg.className   = 'utmat-add-form__msg is-error';
+			}
+		} );
+	}
+
 	// ── UTM naming conventions ────────────────────────────────────────────────
 	// Inconsistent case/spaces silently fragment reports ("My Newsletter" vs
 	// "my-newsletter"), so utm_* values are normalized on blur and on submit.
@@ -2050,7 +2359,7 @@
 	const EXPORT_COLUMNS = [
 		'clicked_at', 'link_id', 'channel', 'utm_source', 'utm_medium', 'utm_campaign',
 		'utm_id', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'msclkid',
-		'ttclid', 'li_fat_id', 'twclid', 'destination', 'referrer', 'is_conversion', 'order_total',
+		'ttclid', 'li_fat_id', 'twclid', 'destination', 'referrer', 'is_conversion', 'order_total', 'visitor_id',
 	];
 
 	function csvCell( value ) {

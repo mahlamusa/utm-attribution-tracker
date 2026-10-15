@@ -40,10 +40,14 @@ class DashboardWidget {
 	/**
 	 * Display label per integration slug.
 	 *
+	 * Public so the dashboard view can expose the same product names to the
+	 * Journeys tab (the `integrationLabels` key of the utmat-i18n block);
+	 * values are vendor product names and deliberately untranslated.
+	 *
 	 * @since 1.0.0
 	 * @var array<string, string>
 	 */
-	private const INTEGRATION_LABELS = array(
+	public const INTEGRATION_LABELS = array(
 		'contact-form-7' => 'Contact Form 7',
 		'gravity-forms'  => 'Gravity Forms',
 		'ninja-forms'    => 'Ninja Forms',

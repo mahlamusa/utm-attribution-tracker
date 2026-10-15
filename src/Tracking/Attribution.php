@@ -395,11 +395,13 @@ class Attribution {
 	}
 
 	/**
-	 * Describe the attribution cookie to the WP Consent API.
+	 * Describe the attribution cookies to the WP Consent API.
 	 *
 	 * Hooked on `init`; a no-op without the API. Consent-management plugins
-	 * read this registry to list the cookie in their banners. `either` is
-	 * reported as marketing, the stricter of its two categories.
+	 * read this registry to list the cookies in their banners: the
+	 * first/last-touch cookie and the visitor id cookie are both declared,
+	 * under the same category and lifetime. `either` is reported as
+	 * marketing, the stricter of its two categories.
 	 *
 	 * @since 1.0.0
 	 * @return void
@@ -419,6 +421,15 @@ class Attribution {
 			/* translators: %d: number of days the attribution cookie lives. */
 			sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days ),
 			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utm-attribution-tracker' )
+		);
+
+		wp_add_cookie_info(
+			self::VISITOR_COOKIE_NAME,
+			'UTM & Attribution Tracker',
+			'either' === $category ? 'marketing' : $category,
+			/* translators: %d: number of days the visitor id cookie lives. */
+			sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days ),
+			__( "Random visitor id that links a visitor's tagged visits to their later orders and form submissions.", 'utm-attribution-tracker' )
 		);
 	}
 

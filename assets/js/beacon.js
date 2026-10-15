@@ -26,6 +26,15 @@
  * untagged landing writes `{ ch, rh, lp, ts }` unless it is direct, which
  * never writes or updates the cookie.
  *
+ * A second first-party cookie, `utmat_vid`, holds a random visitor id
+ * (UUID v4) that ties a visitor's tagged visits to their later orders and
+ * form submissions. It is read-or-generated and written by
+ * writeVisitorCookie() inside writeTouch(), under exactly the condition
+ * that writes `utmat_attr`, so it shares the cookie's consent gate,
+ * lifetime and refresh behaviour; its value is sent as the collect
+ * request's `vid` field so the server can stamp it on the event row even
+ * through the cookie-less fetch fallback.
+ *
  * Consent is decided here, in the browser, so it is correct on cached
  * pages: consentState() returns `off` (the utmatBeacon cookieEnabled
  * master switch is off), `allowed`, `undecided` or `denied`, using the WP
@@ -68,6 +77,15 @@
 
 	var COOKIE_NAME = 'utmat_attr';
 	var VID_COOKIE = 'utmat_vid';
+
+	// Shape a visitor id must have to be kept (UUID v4, lowercase).
+	var VID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+	// The visitor id resolved by the last writeVisitorCookie() call, '' when
+	// no cookie was written (gate off, undecided or denied). Read by the
+	// collect/visit request builders so the body's vid field carries exactly
+	// the id that went onto the device — never a freshly generated one.
+	var visitorVid = '';
 
 	// Touch held in page memory while consent is undecided; one slot, newest
 	// wins, dies with the page. Never persisted to storage or a cookie. A
@@ -291,6 +309,65 @@
 	}
 
 	/**
+	 * Generate a random UUID v4 string, lowercase.
+	 *
+	 * Uses crypto.getRandomValues() when available; without it (older
+	 * browsers, insecure contexts without the API) each nibble falls back to
+	 * Math.random(). Version and variant bits are forced per RFC 4122.
+	 *
+	 * @return {string} xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx
+	 */
+	function uuid4() {
+		var bytes = new Array( 16 );
+		var i, out;
+
+		if ( window.crypto && window.crypto.getRandomValues ) {
+			var buf = new Uint8Array( 16 );
+			window.crypto.getRandomValues( buf );
+			for ( i = 0; i < 16; i++ ) {
+				bytes[ i ] = buf[ i ];
+			}
+		} else {
+			for ( i = 0; i < 16; i++ ) {
+				bytes[ i ] = Math.floor( Math.random() * 256 );
+			}
+		}
+		bytes[ 6 ] = ( bytes[ 6 ] & 0x0f ) | 0x40;
+		bytes[ 8 ] = ( bytes[ 8 ] & 0x3f ) | 0x80;
+
+		out = '';
+		for ( i = 0; i < 16; i++ ) {
+			if ( 4 === i || 6 === i || 8 === i || 10 === i ) {
+				out += '-';
+			}
+			out += ( '0' + bytes[ i ].toString( 16 ) ).slice( -2 );
+		}
+		return out;
+	}
+
+	/**
+	 * Read-or-generate the visitor id and (re)write the utmat_vid cookie.
+	 *
+	 * Only ever called from writeTouch()'s utmat_attr write, so the id cookie
+	 * shares that write's consent gate and lifetime. Rewriting on every
+	 * tagged visit refreshes the expiry in step with utmat_attr; a stored id
+	 * that is not a well-formed UUID v4 is replaced.
+	 */
+	function writeVisitorCookie() {
+		var vid = readCookie( VID_COOKIE );
+		if ( ! VID_RE.test( vid ) ) {
+			vid = uuid4();
+		}
+		writeCookie(
+			VID_COOKIE,
+			vid,
+			parseInt( config.cookieDays, 10 ) || 90,
+			!! config.secure
+		);
+		visitorVid = vid;
+	}
+
+	/**
 	 * Write a touch into the attribution cookie as the new last touch.
 	 *
 	 * Only ever reached from the `allowed` branch of recordTouch(): this is
@@ -329,6 +406,9 @@
 				parseInt( config.cookieDays, 10 ) || 90,
 				!! config.secure
 			);
+			// Same condition, same lifetime: issue or refresh the visitor id
+			// alongside the attribution cookie so the two never drift apart.
+			writeVisitorCookie();
 		}
 	}
 
@@ -375,7 +455,7 @@
 				recordTouch( touch.touch );
 			}
 			if ( config.gateEvents ) {
-				sendVisit( touch.url || touch.touch.lp, touch.ref );
+				sendVisit( touch.url || touch.touch.lp, touch.ref, visitorVid );
 			}
 			return;
 		}
@@ -390,6 +470,9 @@
 			}
 			fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
 			fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
+			if ( visitorVid ) {
+				fields.push( 'vid=' + encodeURIComponent( visitorVid ) );
+			}
 			sendCollect( fields, window.location.search );
 		}
 	}
@@ -459,18 +542,25 @@
 	/**
 	 * POST an untagged landing visit (page URL and referrer) and mark the tab.
 	 *
+	 * The optional vid is the visitor id writeVisitorCookie() resolved for
+	 * the landing's cookie step, when it ran (a direct landing writes no
+	 * cookie and sends no id); it stamps the visit row so the landing can
+	 * appear as a touch in that visitor's journey.
+	 *
 	 * @param {string} pageUrl  The landing page URL.
 	 * @param {string} referrer The document referrer at landing ('' when none).
+	 * @param {string} vid      The visitor id ('' when none was written).
 	 */
-	function sendVisit( pageUrl, referrer ) {
-		sendCollect(
-			[
-				'visit=1',
-				'page_url=' + encodeURIComponent( pageUrl ),
-				'referrer=' + encodeURIComponent( referrer || '' ),
-			],
-			window.location.search
-		);
+	function sendVisit( pageUrl, referrer, vid ) {
+		var fields = [
+			'visit=1',
+			'page_url=' + encodeURIComponent( pageUrl ),
+			'referrer=' + encodeURIComponent( referrer || '' ),
+		];
+		if ( vid ) {
+			fields.push( 'vid=' + encodeURIComponent( vid ) );
+		}
+		sendCollect( fields, window.location.search );
 		markVisit();
 	}
 
@@ -646,6 +736,9 @@
 			if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
 				fields.push( 'page_url=' + encodeURIComponent( window.location.href ) );
 				fields.push( 'referrer=' + encodeURIComponent( document.referrer || '' ) );
+				if ( visitorVid ) {
+					fields.push( 'vid=' + encodeURIComponent( visitorVid ) );
+				}
 				sendCollect( fields, search );
 			}
 			return;
@@ -685,8 +778,10 @@
 		}
 
 		// The visit row takes the full URL; only the cookie touch is capped.
+		// visitorVid is '' for a direct landing (no cookie write) and while
+		// consent is undecided, matching the tagged-visit rule.
 		if ( ! config.gateEvents || 'allowed' === state || 'off' === state ) {
-			sendVisit( window.location.href, document.referrer || '' );
+			sendVisit( window.location.href, document.referrer || '', visitorVid );
 		} else if ( 'undecided' === state ) {
 			pending = { kind: 'visit', touch: touch, ref: document.referrer || '', url: window.location.href };
 		}

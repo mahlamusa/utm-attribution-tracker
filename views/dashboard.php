@@ -2,15 +2,16 @@
 /**
  * Dashboard view
  *
- * Tabbed admin page (Overview, Links, Settings, Diagnostics) rendered by
- * Dashboard::render_page(). All data is loaded by assets/js/dashboard.js
- * through the utmat/v1 REST routes.
+ * Tabbed admin page (Overview, Links, Journeys, Settings, Diagnostics)
+ * rendered by Dashboard::render_page(). All data is loaded by
+ * assets/js/dashboard.js through the utmat/v1 REST routes.
  *
  * @since 1.0.0
  *
  * @package UTMAT\Admin
  */
 
+use UTMAT\Admin\DashboardWidget;
 use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\TrafficSource;
 
@@ -44,6 +45,7 @@ $utmat_kses = array(
 	<div class="nav-tab-wrapper utmat-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Dashboard sections', 'utm-attribution-tracker' ); ?>">
 		<a href="#overview" class="nav-tab nav-tab-active" id="utmat-tab-overview" role="tab" aria-selected="true" aria-controls="utmat-panel-overview" tabindex="0"><?php esc_html_e( 'Overview', 'utm-attribution-tracker' ); ?></a>
 		<a href="#links" class="nav-tab" id="utmat-tab-links" role="tab" aria-selected="false" aria-controls="utmat-panel-links" tabindex="-1"><?php esc_html_e( 'Links', 'utm-attribution-tracker' ); ?></a>
+		<a href="#journeys" class="nav-tab" id="utmat-tab-journeys" role="tab" aria-selected="false" aria-controls="utmat-panel-journeys" tabindex="-1"><?php esc_html_e( 'Journeys', 'utm-attribution-tracker' ); ?></a>
 		<a href="#settings" class="nav-tab" id="utmat-tab-settings" role="tab" aria-selected="false" aria-controls="utmat-panel-settings" tabindex="-1"><?php esc_html_e( 'Settings', 'utm-attribution-tracker' ); ?></a>
 		<a href="#diagnostics" class="nav-tab" id="utmat-tab-diagnostics" role="tab" aria-selected="false" aria-controls="utmat-panel-diagnostics" tabindex="-1"><?php esc_html_e( 'Diagnostics', 'utm-attribution-tracker' ); ?></a>
 	</div>
@@ -384,6 +386,44 @@ $utmat_kses = array(
 			<p class="utmat-footnote"><?php esc_html_e( 'Hover over or tab to a row for Edit, Duplicate, QR code, Copy link and Delete. Click counts are all time.', 'utm-attribution-tracker' ); ?></p>
 		</div>
 	</div><!-- /#utmat-panel-links -->
+
+	<!-- Journeys -->
+	<div class="utmat-panel" id="utmat-panel-journeys" role="tabpanel" aria-labelledby="utmat-tab-journeys" tabindex="0" hidden>
+		<div class="utmat-journeys-head">
+			<div>
+				<h2><?php esc_html_e( 'Journeys', 'utm-attribution-tracker' ); ?></h2>
+				<p class="utmat-section__desc"><?php esc_html_e( 'The last 50 conversions and the tagged visits that led to them. Journeys are built from the visitor id cookie, so they cover traffic recorded after this version.', 'utm-attribution-tracker' ); ?></p>
+			</div>
+			<span class="utmat-add-form__msg" id="utmat-journeys-msg" role="status"></span>
+		</div>
+
+		<div id="utmat-journeys-loading" class="utmat-loading" aria-live="polite" hidden>
+			<span class="spinner is-active"></span>
+			<p><?php esc_html_e( 'Loading journeys…', 'utm-attribution-tracker' ); ?></p>
+		</div>
+
+		<div class="utmat-placeholder" id="utmat-journeys-empty" hidden>
+			<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg>
+			<p><?php esc_html_e( 'No journeys yet. Journeys appear for visitors tracked after this version; earlier events have no visitor id.', 'utm-attribution-tracker' ); ?></p>
+		</div>
+
+		<table class="wp-list-table widefat fixed striped utmat-journeys-table" id="utmat-journeys-table" hidden>
+			<thead>
+				<tr>
+					<th scope="col" class="utmat-col-when"><?php esc_html_e( 'When', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmat-col-conversion column-primary"><?php esc_html_e( 'Conversion', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmat-col-first"><?php esc_html_e( 'First touch', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmat-col-last"><?php esc_html_e( 'Last touch', 'utm-attribution-tracker' ); ?></th>
+					<th scope="col" class="utmat-col-touches"><?php esc_html_e( 'Touches', 'utm-attribution-tracker' ); ?></th>
+				</tr>
+			</thead>
+			<tbody id="utmat-journeys-tbody">
+				<!-- Populated by JS -->
+			</tbody>
+		</table>
+
+		<p class="utmat-footnote" id="utmat-journeys-without" hidden></p>
+	</div><!-- /#utmat-panel-journeys -->
 
 	<!-- Settings -->
 	<div class="utmat-panel" id="utmat-panel-settings" role="tabpanel" aria-labelledby="utmat-tab-settings" tabindex="0" hidden>
@@ -900,122 +940,139 @@ $utmat_kses = array(
 	<?php
 	echo wp_json_encode(
 		array(
-			'copied'                => __( 'Copied!', 'utm-attribution-tracker' ),
-			'copyFailed'            => __( 'Copy failed', 'utm-attribution-tracker' ),
-			'errorPrefix'           => __( 'Could not load data:', 'utm-attribution-tracker' ),
-			'noLinks'               => __( 'No tracked links yet. Use Add tracked link to create one.', 'utm-attribution-tracker' ),
-			'noLinksMatch'          => __( 'No tracked links match your search.', 'utm-attribution-tracker' ),
-			'deleteSelected'        => __( 'Delete selected', 'utm-attribution-tracker' ),
-			'presetSaved'           => __( 'Preset saved.', 'utm-attribution-tracker' ),
-			'presetNameRequired'    => __( 'Please enter a preset name.', 'utm-attribution-tracker' ),
-			'confirmDeletePreset'   => __( 'Delete this preset?', 'utm-attribution-tracker' ),
-			'testWebhookSending'    => __( 'Sending…', 'utm-attribution-tracker' ),
-			'testWebhookSent'       => __( 'Test webhook sent.', 'utm-attribution-tracker' ),
-			'testWebhookFailed'     => __( 'Delivery failed — check the URL and your receiver.', 'utm-attribution-tracker' ),
-			'presetHelpGeneric'     => __( 'JSON POST signed with X-UTMAT-Signature. Events: conversion, lead, test.', 'utm-attribution-tracker' ),
-			'presetHelpZapier'      => __( 'Create a Zap with the trigger Webhooks by Zapier → Catch Hook and paste its URL. Zapier parses the JSON and offers every key, including nested first_touch and last_touch values, as fields in later steps. Click Send test so the Zap can pull in a sample.', 'utm-attribution-tracker' ),
-			'presetHelpMake'        => __( 'Add a Webhooks → Custom webhook module and paste its URL. Click Send test while the module is listening so Make can detect the data structure.', 'utm-attribution-tracker' ),
-			'presetHelpHubspot'     => __( 'Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmat-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot.', 'utm-attribution-tracker' ),
-			'presetHelpGohighlevel' => __( 'In a HighLevel workflow add the Inbound Webhook trigger and paste its URL. Click Send test, then use Fetch sample request in the trigger to map email, phone, first_name and last_name onto Create/Update Contact. Keys are flat and contain no spaces.', 'utm-attribution-tracker' ),
+			'copied'                 => __( 'Copied!', 'utm-attribution-tracker' ),
+			'copyFailed'             => __( 'Copy failed', 'utm-attribution-tracker' ),
+			'errorPrefix'            => __( 'Could not load data:', 'utm-attribution-tracker' ),
+			'noLinks'                => __( 'No tracked links yet. Use Add tracked link to create one.', 'utm-attribution-tracker' ),
+			'noLinksMatch'           => __( 'No tracked links match your search.', 'utm-attribution-tracker' ),
+			'deleteSelected'         => __( 'Delete selected', 'utm-attribution-tracker' ),
+			'presetSaved'            => __( 'Preset saved.', 'utm-attribution-tracker' ),
+			'presetNameRequired'     => __( 'Please enter a preset name.', 'utm-attribution-tracker' ),
+			'confirmDeletePreset'    => __( 'Delete this preset?', 'utm-attribution-tracker' ),
+			'testWebhookSending'     => __( 'Sending…', 'utm-attribution-tracker' ),
+			'testWebhookSent'        => __( 'Test webhook sent.', 'utm-attribution-tracker' ),
+			'testWebhookFailed'      => __( 'Delivery failed — check the URL and your receiver.', 'utm-attribution-tracker' ),
+			'presetHelpGeneric'      => __( 'JSON POST signed with X-UTMAT-Signature. Events: conversion, lead, test.', 'utm-attribution-tracker' ),
+			'presetHelpZapier'       => __( 'Create a Zap with the trigger Webhooks by Zapier → Catch Hook and paste its URL. Zapier parses the JSON and offers every key, including nested first_touch and last_touch values, as fields in later steps. Click Send test so the Zap can pull in a sample.', 'utm-attribution-tracker' ),
+			'presetHelpMake'         => __( 'Add a Webhooks → Custom webhook module and paste its URL. Click Send test while the module is listening so Make can detect the data structure.', 'utm-attribution-tracker' ),
+			'presetHelpHubspot'      => __( 'Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmat-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot.', 'utm-attribution-tracker' ),
+			'presetHelpGohighlevel'  => __( 'In a HighLevel workflow add the Inbound Webhook trigger and paste its URL. Click Send test, then use Fetch sample request in the trigger to map email, phone, first_name and last_name onto Create/Update Contact. Keys are flat and contain no spaces.', 'utm-attribution-tracker' ),
 			/* translators: 1: date and time of the delivery, 2: response detail. */
-			'webhookLastOk'         => __( 'Last delivery: %1$s succeeded (%2$s)', 'utm-attribution-tracker' ),
+			'webhookLastOk'          => __( 'Last delivery: %1$s succeeded (%2$s)', 'utm-attribution-tracker' ),
 			/* translators: 1: date and time of the delivery, 2: error detail. */
-			'webhookLastFailed'     => __( 'Last delivery: %1$s failed (%2$s)', 'utm-attribution-tracker' ),
-			'duplicate'             => __( 'Duplicate', 'utm-attribution-tracker' ),
-			'duplicateHint'         => __( 'Pre-fill the add-link form with this link’s values to create a variant.', 'utm-attribution-tracker' ),
-			'copySuffix'            => __( '(copy)', 'utm-attribution-tracker' ),
-			'clicksLabel'           => __( 'Clicks', 'utm-attribution-tracker' ),
-			'delete'                => __( 'Delete', 'utm-attribution-tracker' ),
-			'confirmDelete'         => __( 'Confirm?', 'utm-attribution-tracker' ),
-			'added'                 => __( 'Link added.', 'utm-attribution-tracker' ),
-			'updated'               => __( 'Link updated.', 'utm-attribution-tracker' ),
-			'deleted'               => __( 'Link deleted.', 'utm-attribution-tracker' ),
-			'edit'                  => __( 'Edit', 'utm-attribution-tracker' ),
-			'saveChanges'           => __( 'Save changes', 'utm-attribution-tracker' ),
-			'addLink'               => __( 'Add link', 'utm-attribution-tracker' ),
-			'revenueLabel'          => __( 'Revenue', 'utm-attribution-tracker' ),
-			'ordersLabel'           => __( 'Orders', 'utm-attribution-tracker' ),
-			'qrCode'                => __( 'QR code', 'utm-attribution-tracker' ),
-			'downloadPng'           => __( 'Download PNG', 'utm-attribution-tracker' ),
-			'exporting'             => __( 'Exporting…', 'utm-attribution-tracker' ),
-			'exportCsv'             => __( 'Export CSV', 'utm-attribution-tracker' ),
-			'exportEmpty'           => __( 'No events to export for this period.', 'utm-attribution-tracker' ),
-			'settingsSaved'         => __( 'Settings saved.', 'utm-attribution-tracker' ),
-			'platformGoogle'        => __( 'Google Ads', 'utm-attribution-tracker' ),
-			'platformFacebook'      => __( 'Facebook / Meta', 'utm-attribution-tracker' ),
-			'platformMicrosoft'     => __( 'Microsoft Ads', 'utm-attribution-tracker' ),
-			'platformTiktok'        => __( 'TikTok Ads', 'utm-attribution-tracker' ),
-			'platformLinkedin'      => __( 'LinkedIn Ads', 'utm-attribution-tracker' ),
-			'platformTwitter'       => __( 'X / Twitter Ads', 'utm-attribution-tracker' ),
-			'vsPrevious'            => __( 'vs previous period', 'utm-attribution-tracker' ),
-			'conversionsSeries'     => __( 'Conversions', 'utm-attribution-tracker' ),
-			'previousPeriodSeries'  => __( 'Previous period', 'utm-attribution-tracker' ),
+			'webhookLastFailed'      => __( 'Last delivery: %1$s failed (%2$s)', 'utm-attribution-tracker' ),
+			'duplicate'              => __( 'Duplicate', 'utm-attribution-tracker' ),
+			'duplicateHint'          => __( 'Pre-fill the add-link form with this link’s values to create a variant.', 'utm-attribution-tracker' ),
+			'copySuffix'             => __( '(copy)', 'utm-attribution-tracker' ),
+			'clicksLabel'            => __( 'Clicks', 'utm-attribution-tracker' ),
+			'delete'                 => __( 'Delete', 'utm-attribution-tracker' ),
+			'confirmDelete'          => __( 'Confirm?', 'utm-attribution-tracker' ),
+			'added'                  => __( 'Link added.', 'utm-attribution-tracker' ),
+			'updated'                => __( 'Link updated.', 'utm-attribution-tracker' ),
+			'deleted'                => __( 'Link deleted.', 'utm-attribution-tracker' ),
+			'edit'                   => __( 'Edit', 'utm-attribution-tracker' ),
+			'saveChanges'            => __( 'Save changes', 'utm-attribution-tracker' ),
+			'addLink'                => __( 'Add link', 'utm-attribution-tracker' ),
+			'revenueLabel'           => __( 'Revenue', 'utm-attribution-tracker' ),
+			'ordersLabel'            => __( 'Orders', 'utm-attribution-tracker' ),
+			'qrCode'                 => __( 'QR code', 'utm-attribution-tracker' ),
+			'downloadPng'            => __( 'Download PNG', 'utm-attribution-tracker' ),
+			'exporting'              => __( 'Exporting…', 'utm-attribution-tracker' ),
+			'exportCsv'              => __( 'Export CSV', 'utm-attribution-tracker' ),
+			'exportEmpty'            => __( 'No events to export for this period.', 'utm-attribution-tracker' ),
+			'settingsSaved'          => __( 'Settings saved.', 'utm-attribution-tracker' ),
+			'platformGoogle'         => __( 'Google Ads', 'utm-attribution-tracker' ),
+			'platformFacebook'       => __( 'Facebook / Meta', 'utm-attribution-tracker' ),
+			'platformMicrosoft'      => __( 'Microsoft Ads', 'utm-attribution-tracker' ),
+			'platformTiktok'         => __( 'TikTok Ads', 'utm-attribution-tracker' ),
+			'platformLinkedin'       => __( 'LinkedIn Ads', 'utm-attribution-tracker' ),
+			'platformTwitter'        => __( 'X / Twitter Ads', 'utm-attribution-tracker' ),
+			'vsPrevious'             => __( 'vs previous period', 'utm-attribution-tracker' ),
+			'conversionsSeries'      => __( 'Conversions', 'utm-attribution-tracker' ),
+			'previousPeriodSeries'   => __( 'Previous period', 'utm-attribution-tracker' ),
 			/* translators: %s: name of the detected page cache plugin. */
-			'cacheDetected'         => __( 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.', 'utm-attribution-tracker' ),
-			'deviceDesktop'         => __( 'Desktop', 'utm-attribution-tracker' ),
-			'deviceMobile'          => __( 'Mobile', 'utm-attribution-tracker' ),
-			'deviceTablet'          => __( 'Tablet', 'utm-attribution-tracker' ),
-			'channels'              => TrafficSource::channel_labels(),
-			'testEmailSending'      => __( 'Sending…', 'utm-attribution-tracker' ),
-			'testEmailSent'         => __( 'Test email sent.', 'utm-attribution-tracker' ),
-			'testEmailFailed'       => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),
-			'diagnosticsRunning'    => __( 'Running…', 'utm-attribution-tracker' ),
-			'diagnosticsFailed'     => __( 'Could not run diagnostics.', 'utm-attribution-tracker' ),
-			'diagStatusPass'        => __( 'Passed', 'utm-attribution-tracker' ),
-			'diagStatusWarn'        => __( 'Warning', 'utm-attribution-tracker' ),
-			'diagStatusFail'        => __( 'Failed', 'utm-attribution-tracker' ),
-			'diagStatusSkip'        => __( 'Skipped', 'utm-attribution-tracker' ),
-			'diagFormComplete'      => __( 'Covered', 'utm-attribution-tracker' ),
-			'diagFormPartial'       => __( 'Partial', 'utm-attribution-tracker' ),
-			'diagFormNone'          => __( 'No fields', 'utm-attribution-tracker' ),
-			'diagNone'              => __( '—', 'utm-attribution-tracker' ),
-			'drawerAddTitle'        => __( 'Add tracked link', 'utm-attribution-tracker' ),
-			'drawerEditTitle'       => __( 'Edit tracked link', 'utm-attribution-tracker' ),
-			'drawerBuildTitle'      => __( 'Build a tagged URL', 'utm-attribution-tracker' ),
-			'copyTaggedUrl'         => __( 'Copy tagged URL', 'utm-attribution-tracker' ),
-			'copyLink'              => __( 'Copy link', 'utm-attribution-tracker' ),
-			'copyShortLink'         => __( 'Copy short link', 'utm-attribution-tracker' ),
-			'copyDestination'       => __( 'Copy destination URL', 'utm-attribution-tracker' ),
+			'cacheDetected'          => __( 'Detected %s. Tracking still works correctly on cached pages via the front-end beacon.', 'utm-attribution-tracker' ),
+			'deviceDesktop'          => __( 'Desktop', 'utm-attribution-tracker' ),
+			'deviceMobile'           => __( 'Mobile', 'utm-attribution-tracker' ),
+			'deviceTablet'           => __( 'Tablet', 'utm-attribution-tracker' ),
+			'channels'               => TrafficSource::channel_labels(),
+			'testEmailSending'       => __( 'Sending…', 'utm-attribution-tracker' ),
+			'testEmailSent'          => __( 'Test email sent.', 'utm-attribution-tracker' ),
+			'testEmailFailed'        => __( 'Sending failed — check your mail configuration.', 'utm-attribution-tracker' ),
+			'diagnosticsRunning'     => __( 'Running…', 'utm-attribution-tracker' ),
+			'diagnosticsFailed'      => __( 'Could not run diagnostics.', 'utm-attribution-tracker' ),
+			'diagStatusPass'         => __( 'Passed', 'utm-attribution-tracker' ),
+			'diagStatusWarn'         => __( 'Warning', 'utm-attribution-tracker' ),
+			'diagStatusFail'         => __( 'Failed', 'utm-attribution-tracker' ),
+			'diagStatusSkip'         => __( 'Skipped', 'utm-attribution-tracker' ),
+			'diagFormComplete'       => __( 'Covered', 'utm-attribution-tracker' ),
+			'diagFormPartial'        => __( 'Partial', 'utm-attribution-tracker' ),
+			'diagFormNone'           => __( 'No fields', 'utm-attribution-tracker' ),
+			'diagNone'               => __( '—', 'utm-attribution-tracker' ),
+			'drawerAddTitle'         => __( 'Add tracked link', 'utm-attribution-tracker' ),
+			'drawerEditTitle'        => __( 'Edit tracked link', 'utm-attribution-tracker' ),
+			'drawerBuildTitle'       => __( 'Build a tagged URL', 'utm-attribution-tracker' ),
+			'copyTaggedUrl'          => __( 'Copy tagged URL', 'utm-attribution-tracker' ),
+			'copyLink'               => __( 'Copy link', 'utm-attribution-tracker' ),
+			'copyShortLink'          => __( 'Copy short link', 'utm-attribution-tracker' ),
+			'copyDestination'        => __( 'Copy destination URL', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'selectLink'            => __( 'Select %s', 'utm-attribution-tracker' ),
+			'selectLink'             => __( 'Select %s', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'qrFor'                 => __( 'QR code for %s', 'utm-attribution-tracker' ),
+			'qrFor'                  => __( 'QR code for %s', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'editLink'              => __( 'Edit %s', 'utm-attribution-tracker' ),
+			'editLink'               => __( 'Edit %s', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'duplicateLink'         => __( 'Duplicate %s', 'utm-attribution-tracker' ),
+			'duplicateLink'          => __( 'Duplicate %s', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'copyLinkFor'           => __( 'Copy short link for %s', 'utm-attribution-tracker' ),
+			'copyLinkFor'            => __( 'Copy short link for %s', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link label. */
-			'deleteLink'            => __( 'Delete %s', 'utm-attribution-tracker' ),
-			'close'                 => __( 'Close', 'utm-attribution-tracker' ),
-			'showDetails'           => __( 'Show more details', 'utm-attribution-tracker' ),
+			'deleteLink'             => __( 'Delete %s', 'utm-attribution-tracker' ),
+			'close'                  => __( 'Close', 'utm-attribution-tracker' ),
+			'showDetails'            => __( 'Show more details', 'utm-attribution-tracker' ),
 			/* translators: 1: number of tracked links shown, 2: their total all-time clicks. */
-			'linksCount'            => __( 'Links: %1$s · Clicks (all time): %2$s', 'utm-attribution-tracker' ),
-			'shortlinkPending'      => __( 'Created from the label when you save.', 'utm-attribution-tracker' ),
+			'linksCount'             => __( 'Links: %1$s · Clicks (all time): %2$s', 'utm-attribution-tracker' ),
+			'shortlinkPending'       => __( 'Created from the label when you save.', 'utm-attribution-tracker' ),
 			/* translators: %s: tracked link ID. */
-			'shortcodeFor'          => __( 'Shortcode: [utmat_link id="%s"]', 'utm-attribution-tracker' ),
-			'shortcodeAfterSave'    => __( 'After saving, embed it with the [utmat_link] shortcode.', 'utm-attribution-tracker' ),
-			'previewEmpty'          => __( 'Enter a destination URL to see the final link.', 'utm-attribution-tracker' ),
+			'shortcodeFor'           => __( 'Shortcode: [utmat_link id="%s"]', 'utm-attribution-tracker' ),
+			'shortcodeAfterSave'     => __( 'After saving, embed it with the [utmat_link] shortcode.', 'utm-attribution-tracker' ),
+			'previewEmpty'           => __( 'Enter a destination URL to see the final link.', 'utm-attribution-tracker' ),
 			/* translators: %s: conversion rate as a percentage, for example 2.0%. */
-			'convRate'              => __( '%s of clicks', 'utm-attribution-tracker' ),
+			'convRate'               => __( '%s of clicks', 'utm-attribution-tracker' ),
 			/* translators: %s: number of orders. */
-			'revenueMeta'           => __( 'From %s orders on tagged campaigns', 'utm-attribution-tracker' ),
+			'revenueMeta'            => __( 'From %s orders on tagged campaigns', 'utm-attribution-tracker' ),
 			/* translators: 1: number of clicks, 2: share of all clicks as a percentage. */
-			'topShare'              => __( '%1$s clicks · %2$s of total', 'utm-attribution-tracker' ),
-			'tileNoClicks'          => __( 'No clicks yet', 'utm-attribution-tracker' ),
-			'tileWooHint'           => __( 'Appears with WooCommerce orders', 'utm-attribution-tracker' ),
-			'tileConvHint'          => __( 'Appears with WooCommerce orders and form leads', 'utm-attribution-tracker' ),
-			'tileWaiting'           => __( 'Waiting for data', 'utm-attribution-tracker' ),
-			'tileNoData'            => __( 'No tagged clicks in this period', 'utm-attribution-tracker' ),
+			'topShare'               => __( '%1$s clicks · %2$s of total', 'utm-attribution-tracker' ),
+			'tileNoClicks'           => __( 'No clicks yet', 'utm-attribution-tracker' ),
+			'tileWooHint'            => __( 'Appears with WooCommerce orders', 'utm-attribution-tracker' ),
+			'tileConvHint'           => __( 'Appears with WooCommerce orders and form leads', 'utm-attribution-tracker' ),
+			'tileWaiting'            => __( 'Waiting for data', 'utm-attribution-tracker' ),
+			'tileNoData'             => __( 'No tagged clicks in this period', 'utm-attribution-tracker' ),
 			/* translators: %s: number of days in the selected period. */
-			'compareDays'           => __( 'Compared with the previous %s days', 'utm-attribution-tracker' ),
-			'compareRange'          => __( 'Compared with the previous period of the same length', 'utm-attribution-tracker' ),
-			'unsavedNone'           => __( 'No unsaved changes', 'utm-attribution-tracker' ),
+			'compareDays'            => __( 'Compared with the previous %s days', 'utm-attribution-tracker' ),
+			'compareRange'           => __( 'Compared with the previous period of the same length', 'utm-attribution-tracker' ),
+			'unsavedNone'            => __( 'No unsaved changes', 'utm-attribution-tracker' ),
 			/* translators: %s: number of changed settings. */
-			'unsavedCount'          => __( 'Unsaved changes: %s', 'utm-attribution-tracker' ),
+			'unsavedCount'           => __( 'Unsaved changes: %s', 'utm-attribution-tracker' ),
 			/* translators: %s: time the diagnostics last ran. */
-			'diagLastRun'           => __( 'Last run at %s', 'utm-attribution-tracker' ),
+			'diagLastRun'            => __( 'Last run at %s', 'utm-attribution-tracker' ),
+			/* translators: 1: order number, 2: formatted order total. */
+			'journeyOrder'           => __( 'Order #%1$s · %2$s', 'utm-attribution-tracker' ),
+			/* translators: %s: formatted order total. */
+			'journeyOrderNoNumber'   => __( 'Order · %s', 'utm-attribution-tracker' ),
+			/* translators: 1: form title, 2: integration name. */
+			'journeyLead'            => __( 'Lead · %1$s · %2$s', 'utm-attribution-tracker' ),
+			'kindOrder'              => __( 'Order', 'utm-attribution-tracker' ),
+			'kindLead'               => __( 'Lead', 'utm-attribution-tracker' ),
+			'kindClick'              => __( 'Click', 'utm-attribution-tracker' ),
+			'kindVisit'              => __( 'Visit', 'utm-attribution-tracker' ),
+			'showTouches'            => __( 'Show touches', 'utm-attribution-tracker' ),
+			'hideTouches'            => __( 'Hide touches', 'utm-attribution-tracker' ),
+			'touchesTruncated'       => __( 'Showing the most recent 100 touches.', 'utm-attribution-tracker' ),
+			'journeysFailed'         => __( 'Could not load journeys.', 'utm-attribution-tracker' ),
+			/* translators: %s: number of conversions without a visitor id. */
+			'journeysWithoutVisitor' => __( 'Conversions without a visitor id (not shown): %s', 'utm-attribution-tracker' ),
+			'integrationLabels'      => DashboardWidget::INTEGRATION_LABELS,
 		)
 	);
 	?>

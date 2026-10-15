@@ -11,6 +11,9 @@
  *   GET    utmat/v1/export      — raw event rows for CSV export
  *   POST   utmat/v1/settings    — save retention days + weekly email toggle
  *   GET    utmat/v1/diagnostics — Tracking Doctor diagnostic check results
+ *   GET    utmat/v1/events      — paginated, filterable event rows
+ *   GET    utmat/v1/journeys    — conversions with their preceding touches
+ *   GET    utmat/v1/journeys/<visitor_id> — one visitor's full event list
  *
  * All routes require the `manage_options` capability.
  *
@@ -23,6 +26,7 @@ namespace UTMAT\Admin;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use stdClass;
 use UTMAT\DB\Schema;
 use UTMAT\Diagnostics\Checks;
 use UTMAT\Reports\ConversionWebhook;
@@ -31,6 +35,7 @@ use UTMAT\Tracking\Attribution;
 use UTMAT\Tracking\LinkManager;
 use UTMAT\Tracking\Tracker;
 use UTMAT\Tracking\TrafficSource;
+use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -42,6 +47,19 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.0.0
  */
 class RestController {
+
+	/**
+	 * The event columns the read routes select and return.
+	 *
+	 * The privacy-light set: `ip_hash` and `user_agent` are never included.
+	 * Order matches the events table and is shared by /events, /journeys
+	 * and /journeys/{visitor_id}.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	private const EVENT_COLUMNS = 'id, link_id, visitor_id, clicked_at, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content, gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, touch, order_total, device, channel, custom, meta';
 
 	/**
 	 * Register REST routes.
@@ -149,6 +167,97 @@ class RestController {
 					'include_visits' => array(
 						'default'           => false,
 						'sanitize_callback' => 'rest_sanitize_boolean',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/events',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'get_events' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array_merge(
+					self::pagination_args(),
+					array(
+						'period'     => array(
+							'default'           => 30,
+							'sanitize_callback' => 'absint',
+						),
+						'campaign'   => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'since'      => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'until'      => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'channel'    => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_key',
+						),
+						'kind'       => array(
+							'type'              => 'string',
+							'enum'              => array( 'click', 'visit', 'order', 'lead' ),
+							'sanitize_callback' => 'sanitize_key',
+							'validate_callback' => 'rest_validate_request_arg',
+						),
+						'visitor_id' => array(
+							'type'              => 'string',
+							'format'            => 'uuid',
+							'sanitize_callback' => 'sanitize_text_field',
+							'validate_callback' => 'rest_validate_request_arg',
+						),
+					)
+				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/journeys',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'get_journeys' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array_merge(
+					self::pagination_args(),
+					array(
+						'period' => array(
+							'default'           => 30,
+							'sanitize_callback' => 'absint',
+						),
+						'since'  => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'until'  => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					)
+				),
+			)
+		);
+
+		register_rest_route(
+			'utmat/v1',
+			'/journeys/(?P<visitor_id>[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( self::class, 'get_journey' ),
+				'permission_callback' => array( self::class, 'check_permission' ),
+				'args'                => array(
+					'visitor_id' => array(
+						'type'              => 'string',
+						'format'            => 'uuid',
+						'validate_callback' => 'rest_validate_request_arg',
 					),
 				),
 			)
@@ -778,9 +887,10 @@ class RestController {
 	 * `user_agent` are never included. Capped at the newest 10,000 rows.
 	 * Conversion rows are included and flagged via the `is_conversion` column.
 	 * Untagged landing visits are left out unless `include_visits` is set;
-	 * every row carries its `channel` and one key per configured custom
-	 * parameter (empty string when the row has no value; the raw `custom`
-	 * JSON column is never returned).
+	 * every row carries its `channel`, its `visitor_id` (directly after
+	 * `order_total`) and one key per configured custom parameter (empty
+	 * string when the row has no value; the raw `custom` JSON column is
+	 * never returned).
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -802,7 +912,7 @@ class RestController {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			"SELECT clicked_at, link_id, {$channel_case} AS channel, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
-			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total, custom
+			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total, visitor_id, custom
 			 FROM {$table}
 			 WHERE {$where}
 			 ORDER BY clicked_at DESC
@@ -825,6 +935,378 @@ class RestController {
 		}
 
 		return new WP_REST_Response( array( 'rows' => array_values( (array) $rows ) ), 200 );
+	}
+
+	/**
+	 * Shared page/per_page argument definitions for the paginated read routes.
+	 *
+	 * The handlers clamp the values (1..200 for /events, 1..100 for
+	 * /journeys) and force page >= 1, so an out-of-range request degrades
+	 * instead of erroring.
+	 *
+	 * @since 1.0.0
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function pagination_args(): array {
+		return array(
+			'page'     => array(
+				'default'           => 1,
+				'sanitize_callback' => 'absint',
+			),
+			'per_page' => array(
+				'default'           => 50,
+				'sanitize_callback' => 'absint',
+			),
+		);
+	}
+
+	/**
+	 * GET utmat/v1/events
+	 *
+	 * Paginated, filterable event rows, newest first. The date range matches
+	 * /stats (resolve_now_local/resolve_period/build_where), so the two
+	 * partition the same rows; `channel` filters the stored column only
+	 * (legacy rows hold '' and never match); `kind` filters on the derived
+	 * kind (see event_kind()); `visitor_id` accepts any UUID version, so a
+	 * non-v4 value simply matches no rows.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function get_events( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+		$table    = esc_sql( Schema::table() );
+		$columns  = self::EVENT_COLUMNS;
+		$campaign = (string) $request->get_param( 'campaign' );
+
+		$now_local = self::resolve_now_local( $request, wp_timezone() );
+		$period    = self::resolve_period( $request, $now_local );
+
+		$where = self::build_where( $period, $campaign, $now_local );
+
+		$channel = (string) $request->get_param( 'channel' );
+		if ( '' !== $channel ) {
+			$where .= $wpdb->prepare( ' AND channel = %s', $channel );
+		}
+
+		$visitor_id = (string) $request->get_param( 'visitor_id' );
+		if ( '' !== $visitor_id ) {
+			$where .= $wpdb->prepare( ' AND visitor_id = %s', $visitor_id );
+		}
+
+		switch ( (string) $request->get_param( 'kind' ) ) {
+			case 'lead':
+				$where .= " AND link_id = 'lead'";
+				break;
+			case 'order':
+				$where .= " AND is_conversion = 1 AND link_id != 'lead'";
+				break;
+			case 'visit':
+				$where .= " AND link_id = 'visit'";
+				break;
+			case 'click':
+				$where .= " AND is_conversion = 0 AND link_id != 'visit'";
+				break;
+		}
+
+		$per_page = min( 200, max( 1, absint( $request->get_param( 'per_page' ) ) ) );
+		$page     = max( 1, absint( $request->get_param( 'page' ) ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table; $columns is a class constant, $table/$where are built above through esc_sql()/$wpdb->prepare()
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare( "SELECT {$columns} FROM {$table} WHERE {$where} ORDER BY clicked_at DESC, id DESC LIMIT %d OFFSET %d", $per_page, $offset ),
+			ARRAY_A
+		);
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where}" );
+		// phpcs:enable
+
+		$events = array();
+		foreach ( (array) $rows as $row ) {
+			$events[] = self::format_event( (array) $row );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'events'      => $events,
+				'total'       => $total,
+				'page'        => $page,
+				'per_page'    => $per_page,
+				'total_pages' => (int) ceil( $total / $per_page ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * GET utmat/v1/journeys
+	 *
+	 * One row per conversion that carries a visitor id, newest first, with
+	 * the visitor's preceding events as touches. The touches are fetched one
+	 * visitor at a time (indexed on visitor_id, LIMIT 1001, newest first and
+	 * reversed in PHP) so one heavy visitor can never starve the others, as a
+	 * single IN query with a global limit would. first_touch/last_touch/
+	 * touch_count cover the whole fetched predecessor set (clicks and visits
+	 * only — earlier conversions stay in the list but are not counted); the
+	 * touches array is capped at the most recent 100 with a truncation flag.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response
+	 */
+	public static function get_journeys( WP_REST_Request $request ): WP_REST_Response {
+		global $wpdb;
+		$table   = esc_sql( Schema::table() );
+		$columns = self::EVENT_COLUMNS;
+
+		$now_local = self::resolve_now_local( $request, wp_timezone() );
+		$period    = self::resolve_period( $request, $now_local );
+		$where     = self::build_where( $period, '', $now_local );
+
+		$per_page = min( 100, max( 1, absint( $request->get_param( 'per_page' ) ) ) );
+		$page     = max( 1, absint( $request->get_param( 'page' ) ) );
+		$offset   = ( $page - 1 ) * $per_page;
+
+		$conv_where = "is_conversion = 1 AND visitor_id != '' AND {$where}";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table; see get_events()
+		$conversions     = (array) $wpdb->get_results(
+			$wpdb->prepare( "SELECT {$columns} FROM {$table} WHERE {$conv_where} ORDER BY clicked_at DESC, id DESC LIMIT %d OFFSET %d", $per_page, $offset ),
+			ARRAY_A
+		);
+		$total           = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$conv_where}" );
+		$without_visitor = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE is_conversion = 1 AND visitor_id = '' AND {$where}" );
+		// phpcs:enable
+
+		$by_visitor = array();
+		$journeys   = array();
+
+		foreach ( $conversions as $conversion ) {
+			$visitor_id = (string) $conversion['visitor_id'];
+
+			// One fetch per distinct visitor on the page, bound to their
+			// newest conversion here (the page is ordered newest first).
+			if ( ! isset( $by_visitor[ $visitor_id ] ) ) {
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- see get_events()
+				$fetched = (array) $wpdb->get_results(
+					$wpdb->prepare(
+						"SELECT {$columns} FROM {$table} WHERE visitor_id = %s AND ( clicked_at < %s OR ( clicked_at = %s AND id <= %d ) ) ORDER BY clicked_at DESC, id DESC LIMIT 1001",
+						$visitor_id,
+						(string) $conversion['clicked_at'],
+						(string) $conversion['clicked_at'],
+						(int) $conversion['id']
+					),
+					ARRAY_A
+				);
+				// phpcs:enable
+				$visitor_truncated = ( 1001 === count( $fetched ) );
+				if ( $visitor_truncated ) {
+					array_pop( $fetched );
+				}
+				// Reverse to ascending: the fetch cap cut the oldest rows,
+				// which is what keeps the conversion and its nearest touches.
+				$by_visitor[ $visitor_id ] = array(
+					'rows'      => array_reverse( $fetched ),
+					'truncated' => $visitor_truncated,
+				);
+			}
+
+			$visitor = $by_visitor[ $visitor_id ];
+
+			$predecessors = array();
+			foreach ( $visitor['rows'] as $row ) {
+				if ( (string) $row['clicked_at'] < (string) $conversion['clicked_at']
+					|| ( (string) $row['clicked_at'] === (string) $conversion['clicked_at'] && (int) $row['id'] < (int) $conversion['id'] ) ) {
+					$predecessors[] = $row;
+				}
+			}
+
+			$first_touch = null;
+			$last_touch  = null;
+			$touch_count = 0;
+			foreach ( $predecessors as $row ) {
+				$kind = self::event_kind( $row );
+				if ( 'click' !== $kind && 'visit' !== $kind ) {
+					continue;
+				}
+				++$touch_count;
+				if ( null === $first_touch ) {
+					$first_touch = $row;
+				}
+				$last_touch = $row;
+			}
+
+			$touches = count( $predecessors ) > 100 ? array_slice( $predecessors, -100 ) : $predecessors;
+
+			$journey = array(
+				'conversion'        => self::format_event( $conversion ),
+				'visitor_id'        => $visitor_id,
+				'first_touch'       => null === $first_touch ? null : self::format_event( $first_touch ),
+				'last_touch'        => null === $last_touch ? null : self::format_event( $last_touch ),
+				'touch_count'       => $touch_count,
+				'touches'           => array(),
+				'touches_truncated' => count( $predecessors ) > 100 || $visitor['truncated'],
+			);
+			foreach ( $touches as $touch ) {
+				$journey['touches'][] = self::format_event( $touch );
+			}
+			$journeys[] = $journey;
+		}
+
+		return new WP_REST_Response(
+			array(
+				'journeys'        => $journeys,
+				'total'           => $total,
+				'page'            => $page,
+				'per_page'        => $per_page,
+				'total_pages'     => (int) ceil( $total / $per_page ),
+				'without_visitor' => $without_visitor,
+			),
+			200
+		);
+	}
+
+	/**
+	 * GET utmat/v1/journeys/<visitor_id>
+	 *
+	 * The visitor's full event list, ascending. Fetched newest-first with a
+	 * LIMIT of 501 and reversed in PHP so a cut drops the oldest rows, never
+	 * the newest. `conversions` counts the returned rows only.
+	 *
+	 * @since 1.0.0
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_journey( WP_REST_Request $request ) {
+		global $wpdb;
+		$table      = esc_sql( Schema::table() );
+		$columns    = self::EVENT_COLUMNS;
+		$visitor_id = (string) $request->get_param( 'visitor_id' );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- see get_events()
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare( "SELECT {$columns} FROM {$table} WHERE visitor_id = %s ORDER BY clicked_at DESC, id DESC LIMIT 501", $visitor_id ),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		if ( array() === $rows ) {
+			return new WP_Error(
+				'utmat_not_found',
+				__( 'No events recorded for this visitor.', 'utm-attribution-tracker' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		$truncated = ( 501 === count( $rows ) );
+		if ( $truncated ) {
+			array_pop( $rows );
+		}
+		$rows = array_reverse( $rows );
+
+		$events      = array();
+		$conversions = 0;
+		$first_seen  = '';
+		$last_seen   = '';
+		foreach ( $rows as $row ) {
+			if ( ! empty( $row['is_conversion'] ) ) {
+				++$conversions;
+			}
+			if ( '' === $first_seen ) {
+				$first_seen = (string) $row['clicked_at'];
+			}
+			$last_seen = (string) $row['clicked_at'];
+			$events[]  = self::format_event( $row );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'visitor_id'  => $visitor_id,
+				'events'      => $events,
+				'conversions' => $conversions,
+				'first_seen'  => $first_seen,
+				'last_seen'   => $last_seen,
+				'truncated'   => $truncated,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Derive an event's kind from its row.
+	 *
+	 * Never stored: `lead` rows are form submissions, `order` covers the
+	 * WooCommerce rows plus legacy seeded conversions (which were only ever
+	 * orders), `visit` is an untagged landing, and everything else —
+	 * `incoming` tagged visits and short-link slugs — is a click, matching
+	 * how every existing click metric counts them.
+	 *
+	 * @since 1.0.0
+	 * @param array<string, mixed> $row Event row (ARRAY_A).
+	 * @return string One of 'click', 'visit', 'order', 'lead'.
+	 */
+	private static function event_kind( array $row ): string {
+		$link_id = (string) ( $row['link_id'] ?? '' );
+
+		if ( 'lead' === $link_id ) {
+			return 'lead';
+		}
+		if ( 'order' === $link_id || ! empty( $row['is_conversion'] ) ) {
+			return 'order';
+		}
+		if ( 'visit' === $link_id ) {
+			return 'visit';
+		}
+		return 'click';
+	}
+
+	/**
+	 * Serialise one event row for the read routes.
+	 *
+	 * Casts id/is_conversion/order_total, leaves clicked_at exactly as stored
+	 * (UTC `Y-m-d H:i:s`) and emits `channel` as stored ('' on legacy rows).
+	 * The two JSON columns are always objects: decoded without `assoc` and
+	 * replaced with an empty stdClass when NULL, empty or undecodable, so the
+	 * response encodes `{}` and never `[]`. `ip_hash` and `user_agent` are
+	 * never selected (see EVENT_COLUMNS).
+	 *
+	 * @since 1.0.0
+	 * @param array<string, mixed> $row Event row (ARRAY_A).
+	 * @return array<string, mixed>
+	 */
+	private static function format_event( array $row ): array {
+		$custom = json_decode( (string) ( $row['custom'] ?? '' ) );
+		$meta   = json_decode( (string) ( $row['meta'] ?? '' ) );
+
+		return array(
+			'id'            => (int) $row['id'],
+			'link_id'       => (string) ( $row['link_id'] ?? '' ),
+			'visitor_id'    => (string) ( $row['visitor_id'] ?? '' ),
+			'clicked_at'    => (string) ( $row['clicked_at'] ?? '' ),
+			'utm_source'    => (string) ( $row['utm_source'] ?? '' ),
+			'utm_medium'    => (string) ( $row['utm_medium'] ?? '' ),
+			'utm_campaign'  => (string) ( $row['utm_campaign'] ?? '' ),
+			'utm_id'        => (string) ( $row['utm_id'] ?? '' ),
+			'utm_term'      => (string) ( $row['utm_term'] ?? '' ),
+			'utm_content'   => (string) ( $row['utm_content'] ?? '' ),
+			'gclid'         => (string) ( $row['gclid'] ?? '' ),
+			'fbclid'        => (string) ( $row['fbclid'] ?? '' ),
+			'msclkid'       => (string) ( $row['msclkid'] ?? '' ),
+			'ttclid'        => (string) ( $row['ttclid'] ?? '' ),
+			'li_fat_id'     => (string) ( $row['li_fat_id'] ?? '' ),
+			'twclid'        => (string) ( $row['twclid'] ?? '' ),
+			'destination'   => (string) ( $row['destination'] ?? '' ),
+			'referrer'      => (string) ( $row['referrer'] ?? '' ),
+			'is_conversion' => (bool) (int) ( $row['is_conversion'] ?? 0 ),
+			'touch'         => (string) ( $row['touch'] ?? '' ),
+			'order_total'   => ( isset( $row['order_total'] ) && null !== $row['order_total'] && '' !== $row['order_total'] ) ? (float) $row['order_total'] : null,
+			'device'        => (string) ( $row['device'] ?? '' ),
+			'channel'       => (string) ( $row['channel'] ?? '' ),
+			'custom'        => ( $custom instanceof stdClass ) ? $custom : new stdClass(),
+			'meta'          => ( $meta instanceof stdClass ) ? $meta : new stdClass(),
+			'kind'          => self::event_kind( $row ),
+		);
 	}
 
 	/**
