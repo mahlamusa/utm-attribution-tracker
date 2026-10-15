@@ -843,11 +843,13 @@ class RestController {
 	 * Build the prepared WHERE clause for the period immediately before the
 	 * requested one.
 	 *
-	 * Starts at site-local midnight `2 × $period` days ago and spans exactly
-	 * the same duration as the current window has elapsed so far (period days
-	 * plus the partial current day). Comparing equal durations keeps the
-	 * trend percentage fair early in the day, when the current window has
-	 * only a few hours of today in it. Same optional campaign filter as
+	 * Starts at site-local midnight `2 × $period + 1` days ago (the current
+	 * window covers `$period + 1` calendar days, so this ends just before it
+	 * starts) and spans exactly the same duration as the current window has
+	 * elapsed so far (period days plus the partial current day). Comparing
+	 * equal durations keeps the trend percentage fair early in the day, when
+	 * the current window has only a few hours of today in it. Same optional
+	 * campaign filter as
 	 * {@see build_where()}.
 	 *
 	 * @since 1.0.0
@@ -860,7 +862,7 @@ class RestController {
 		global $wpdb;
 
 		$utc    = new DateTimeZone( 'UTC' );
-		$double = 2 * $period;
+		$double = 2 * $period + 1;
 
 		$since_current = $now_local->modify( "-{$period} days" )->setTime( 0, 0, 0 );
 		$since_prev    = $now_local->modify( "-{$double} days" )->setTime( 0, 0, 0 );
