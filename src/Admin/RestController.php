@@ -3,38 +3,38 @@
  * REST Controller — exposes stats and links data to the dashboard.
  *
  * Routes:
- *   GET    utmat/v1/stats       — aggregated click data
- *   GET    utmat/v1/links       — managed links with per-link click counts
- *   POST   utmat/v1/links       — create a managed link
- *   PUT    utmat/v1/links/<id>  — update a managed link
- *   DELETE utmat/v1/links/<id>  — delete a managed link
- *   GET    utmat/v1/export      — raw event rows for CSV export
- *   POST   utmat/v1/settings    — save retention days + weekly email toggle
- *   GET    utmat/v1/diagnostics — Tracking Doctor diagnostic check results
- *   GET    utmat/v1/events      — paginated, filterable event rows
- *   GET    utmat/v1/journeys    — conversions with their preceding touches
- *   GET    utmat/v1/journeys/<visitor_id> — one visitor's full event list
+ *   GET    utmatra/v1/stats       — aggregated click data
+ *   GET    utmatra/v1/links       — managed links with per-link click counts
+ *   POST   utmatra/v1/links       — create a managed link
+ *   PUT    utmatra/v1/links/<id>  — update a managed link
+ *   DELETE utmatra/v1/links/<id>  — delete a managed link
+ *   GET    utmatra/v1/export      — raw event rows for CSV export
+ *   POST   utmatra/v1/settings    — save retention days + weekly email toggle
+ *   GET    utmatra/v1/diagnostics — Tracking Doctor diagnostic check results
+ *   GET    utmatra/v1/events      — paginated, filterable event rows
+ *   GET    utmatra/v1/journeys    — conversions with their preceding touches
+ *   GET    utmatra/v1/journeys/<visitor_id> — one visitor's full event list
  *
  * All routes require the `manage_options` capability.
  *
  * @since 1.0.0
  *
- * @package UTMAT\Admin
+ * @package Utmatra\Admin
  */
 
-namespace UTMAT\Admin;
+namespace Utmatra\Admin;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use stdClass;
-use UTMAT\DB\Schema;
-use UTMAT\Diagnostics\Checks;
-use UTMAT\Reports\ConversionWebhook;
-use UTMAT\Reports\WeeklyEmail;
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\LinkManager;
-use UTMAT\Tracking\Tracker;
-use UTMAT\Tracking\TrafficSource;
+use Utmatra\DB\Schema;
+use Utmatra\Diagnostics\Checks;
+use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\LinkManager;
+use Utmatra\Tracking\Tracker;
+use Utmatra\Tracking\TrafficSource;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -69,7 +69,7 @@ class RestController {
 	 */
 	public static function register_routes(): void {
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/stats',
 			array(
 				'methods'             => 'GET',
@@ -97,7 +97,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/links',
 			array(
 				array(
@@ -114,7 +114,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/links/(?P<id>[a-z0-9_\-]+)',
 			array(
 				array(
@@ -141,7 +141,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/export',
 			array(
 				'methods'             => 'GET',
@@ -173,7 +173,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/events',
 			array(
 				'methods'             => 'GET',
@@ -220,7 +220,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/journeys',
 			array(
 				'methods'             => 'GET',
@@ -247,7 +247,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/journeys/(?P<visitor_id>[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})',
 			array(
 				'methods'             => 'GET',
@@ -264,7 +264,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/presets',
 			array(
 				'methods'             => 'POST',
@@ -274,7 +274,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/presets/(?P<id>[a-z0-9_\-]+)',
 			array(
 				'methods'             => 'DELETE',
@@ -289,7 +289,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/test-email',
 			array(
 				'methods'             => 'POST',
@@ -299,7 +299,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/test-webhook',
 			array(
 				'methods'             => 'POST',
@@ -317,7 +317,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/settings',
 			array(
 				'methods'             => 'POST',
@@ -372,7 +372,7 @@ class RestController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/diagnostics',
 			array(
 				'methods'             => 'GET',
@@ -393,7 +393,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/stats
+	 * GET utmatra/v1/stats
 	 *
 	 * Rows are stored in UTC; day grouping and the period boundary use the
 	 * site timezone by shifting `clicked_at` with the site's current UTC
@@ -880,7 +880,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/export
+	 * GET utmatra/v1/export
 	 *
 	 * Returns raw event rows for the period as JSON; the dashboard assembles
 	 * the CSV client-side. Exports are privacy-light by design: `ip_hash` and
@@ -961,7 +961,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/events
+	 * GET utmatra/v1/events
 	 *
 	 * Paginated, filterable event rows, newest first. The date range matches
 	 * /stats (resolve_now_local/resolve_period/build_where), so the two
@@ -1040,7 +1040,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/journeys
+	 * GET utmatra/v1/journeys
 	 *
 	 * One row per conversion that carries a visitor id, newest first, with
 	 * the visitor's preceding events as touches. The touches are fetched one
@@ -1168,7 +1168,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/journeys/<visitor_id>
+	 * GET utmatra/v1/journeys/<visitor_id>
 	 *
 	 * The visitor's full event list, ascending. Fetched newest-first with a
 	 * LIMIT of 501 and reversed in PHP so a cut drops the oldest rows, never
@@ -1193,7 +1193,7 @@ class RestController {
 
 		if ( array() === $rows ) {
 			return new WP_Error(
-				'utmat_not_found',
+				'utmatra_not_found',
 				__( 'No events recorded for this visitor.', 'utm-attribution-tracker' ),
 				array( 'status' => 404 )
 			);
@@ -1310,7 +1310,7 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/test-email — send the weekly summary now.
+	 * POST utmatra/v1/test-email — send the weekly summary now.
 	 *
 	 * Sends the report regardless of the weekly toggle so admins can preview
 	 * the email and confirm delivery works before enabling the schedule.
@@ -1323,7 +1323,7 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/test-webhook — send a synthetic payload now.
+	 * POST utmatra/v1/test-webhook — send a synthetic payload now.
 	 *
 	 * Lets the admin verify their receiver and HMAC signature checking work
 	 * before relying on it for real events. The optional `preset` and
@@ -1345,7 +1345,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/diagnostics — run the Tracking Doctor checks.
+	 * GET utmatra/v1/diagnostics — run the Tracking Doctor checks.
 	 *
 	 * Computed fresh on every request; every check is a cheap local read
 	 * (option/meta reads, a bounded orders query), never cached.
@@ -1358,7 +1358,7 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/settings
+	 * POST utmatra/v1/settings
 	 *
 	 * Saves the retention window (0 = keep forever), the weekly email
 	 * toggle, the webhook settings (URL — empty disables it; preset; the
@@ -1400,9 +1400,9 @@ class RestController {
 		}
 		$visits = (bool) $request->get_param( 'track_visits' );
 
-		update_option( 'utmat_retention_days', $retention );
+		update_option( 'utmatra_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
-		update_option( 'utmat_cookie_days', $cookie );
+		update_option( 'utmatra_cookie_days', $cookie );
 		update_option( ConversionWebhook::OPTION_URL, $webhook );
 		update_option( ConversionWebhook::OPTION_PRESET, $preset );
 		update_option(
@@ -1413,8 +1413,8 @@ class RestController {
 			)
 		);
 		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
-		update_option( 'utmat_track_visits', $visits ? 1 : 0 );
-		update_option( 'utmat_custom_params', $custom_names );
+		update_option( 'utmatra_track_visits', $visits ? 1 : 0 );
+		update_option( 'utmatra_custom_params', $custom_names );
 
 		if ( $weekly ) {
 			WeeklyEmail::schedule();
@@ -1465,7 +1465,7 @@ class RestController {
 
 			$reserved = in_array( $name, Tracker::reserved_param_names( true ), true )
 				|| str_starts_with( $name, 'utm_' )
-				|| str_starts_with( $name, 'utmat_' )
+				|| str_starts_with( $name, 'utmatra_' )
 				|| str_starts_with( $name, 'first_' )
 				|| str_ends_with( $name, '_first' );
 
@@ -1504,7 +1504,7 @@ class RestController {
 	}
 
 	/**
-	 * GET utmat/v1/links
+	 * GET utmatra/v1/links
 	 *
 	 * Click counts for all links come from a single GROUP BY query instead
 	 * of one COUNT query per link. The response also carries a `suggestions`
@@ -1555,7 +1555,7 @@ class RestController {
 	 */
 	private static function presets(): array {
 		$out = array();
-		foreach ( (array) get_option( 'utmat_presets', array() ) as $id => $preset ) {
+		foreach ( (array) get_option( 'utmatra_presets', array() ) as $id => $preset ) {
 			if ( ! is_array( $preset ) ) {
 				continue;
 			}
@@ -1572,7 +1572,7 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/presets — save a named UTM preset.
+	 * POST utmatra/v1/presets — save a named UTM preset.
 	 *
 	 * A preset is a reusable source/medium/term/content combination (e.g.
 	 * "Instagram Story") the admin can apply to the add-link form instead of
@@ -1595,7 +1595,7 @@ class RestController {
 			);
 		}
 
-		$presets        = (array) get_option( 'utmat_presets', array() );
+		$presets        = (array) get_option( 'utmatra_presets', array() );
 		$presets[ $id ] = array(
 			'name'        => $name,
 			'utm_source'  => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_source' ) ) ),
@@ -1603,13 +1603,13 @@ class RestController {
 			'utm_term'    => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_term' ) ) ),
 			'utm_content' => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_content' ) ) ),
 		);
-		update_option( 'utmat_presets', $presets );
+		update_option( 'utmatra_presets', $presets );
 
 		return new WP_REST_Response( array_merge( array( 'id' => $id ), $presets[ $id ] ), 201 );
 	}
 
 	/**
-	 * DELETE utmat/v1/presets/<id> — delete a saved UTM preset.
+	 * DELETE utmatra/v1/presets/<id> — delete a saved UTM preset.
 	 *
 	 * @since 1.0.0
 	 * @param WP_REST_Request $request REST request.
@@ -1617,7 +1617,7 @@ class RestController {
 	 */
 	public static function delete_preset( WP_REST_Request $request ): WP_REST_Response {
 		$id      = (string) $request->get_param( 'id' );
-		$presets = (array) get_option( 'utmat_presets', array() );
+		$presets = (array) get_option( 'utmatra_presets', array() );
 
 		if ( ! isset( $presets[ $id ] ) ) {
 			return new WP_REST_Response(
@@ -1627,7 +1627,7 @@ class RestController {
 		}
 
 		unset( $presets[ $id ] );
-		update_option( 'utmat_presets', $presets );
+		update_option( 'utmatra_presets', $presets );
 
 		return new WP_REST_Response( array( 'deleted' => true ), 200 );
 	}
@@ -1800,7 +1800,7 @@ class RestController {
 	}
 
 	/**
-	 * POST utmat/v1/links — create a managed link.
+	 * POST utmatra/v1/links — create a managed link.
 	 *
 	 * The slug is derived from the submitted label when no explicit id is
 	 * given. Fails when the slug is empty, reserved (`incoming`, `visit`,
@@ -1845,7 +1845,7 @@ class RestController {
 	}
 
 	/**
-	 * PUT utmat/v1/links/<id> — update a managed link.
+	 * PUT utmatra/v1/links/<id> — update a managed link.
 	 *
 	 * Updates the label, destination, and the six UTM fields of an existing
 	 * link. The slug is immutable — renaming would orphan recorded events.
@@ -1888,7 +1888,7 @@ class RestController {
 	}
 
 	/**
-	 * DELETE utmat/v1/links/<id> — delete a managed link.
+	 * DELETE utmatra/v1/links/<id> — delete a managed link.
 	 *
 	 * Recorded click events are kept for historical stats; only the managed
 	 * link definition is removed.

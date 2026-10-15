@@ -3,26 +3,26 @@
  * Tracker — records click events on init.
  *
  * Two tracking modes:
- *  1. Outbound redirect: /?utmat_track=<slug> → records event then wp_redirect().
+ *  1. Outbound redirect: /?utmatra_track=<slug> → records event then wp_redirect().
  *  2. Passive incoming: any page load with a whitelisted UTM param or ad
  *     click ID present is recorded (no-JS fallback to the front-end beacon).
  *
  * The passive path also resolves the per-browser visitor id: when the cookie
- * gate is open, maybe_set_visitor_cookie() issues or refreshes the `utmat_vid`
+ * gate is open, maybe_set_visitor_cookie() issues or refreshes the `utmatra_vid`
  * cookie (the beacon writes it for JS visitors) and record() stamps the id on
  * the row, so conversions can be shown with the touches that preceded them.
  *
- * Filter `utmat_track_logged_in_users` (bool, default false) controls whether
+ * Filter `utmatra_track_logged_in_users` (bool, default false) controls whether
  * administrator clicks are recorded.
  *
  * @since 1.0.0
  *
- * @package UTMAT\Tracking
+ * @package Utmatra\Tracking
  */
 
-namespace UTMAT\Tracking;
+namespace Utmatra\Tracking;
 
-use UTMAT\DB\Schema;
+use Utmatra\DB\Schema;
 use WP;
 
 defined( 'ABSPATH' ) || exit;
@@ -39,7 +39,7 @@ class Tracker {
 	 *
 	 * This is the fixed list only. Runtime readers (the passive PHP path, the
 	 * collect endpoint, the attribution cookie, the form adapters and the
-	 * front-end beacon via `utmatBeacon.params`) use param_whitelist(), which
+	 * front-end beacon via `utmatraBeacon.params`) use param_whitelist(), which
 	 * merges in the admin-defined custom parameters.
 	 *
 	 * @since 1.0.0
@@ -80,7 +80,7 @@ class Tracker {
 	 * `vid`), events-table column names that record() reads straight from
 	 * `$data`, and common form or credential field names that the beacon
 	 * would otherwise pre-fill on every page. Names starting with `utm_` or
-	 * `utmat_` and names ending in `_first` are rejected by rule rather than
+	 * `utmatra_` and names ending in `_first` are rejected by rule rather than
 	 * listed here. `ref` is deliberately absent: the referrer-host touch key
 	 * is `rh`, so `ref` stays free for affiliate-style parameters.
 	 *
@@ -140,7 +140,7 @@ class Tracker {
 	/**
 	 * The admin-defined custom parameter names, validated on every read.
 	 *
-	 * Reads the `utmat_custom_params` option and re-applies the cheap
+	 * Reads the `utmatra_custom_params` option and re-applies the cheap
 	 * validation rules (shape, reserved names, uniqueness, the cap) so a
 	 * hand-edited option can never inject an unsafe key. The query-var check
 	 * is save-time only. Not memoised: the option comes from the alloptions
@@ -150,7 +150,7 @@ class Tracker {
 	 * @return string[] Validated names in saved order, at most MAX_CUSTOM_PARAMS.
 	 */
 	public static function custom_params(): array {
-		$stored = get_option( 'utmat_custom_params', array() );
+		$stored = get_option( 'utmatra_custom_params', array() );
 		if ( ! is_array( $stored ) ) {
 			return array();
 		}
@@ -216,7 +216,7 @@ class Tracker {
 	 * Whether a (lowercased, trimmed) name is acceptable as a custom parameter.
 	 *
 	 * A valid name starts with a letter and is 1 to 32 characters of
-	 * `[a-z0-9_]`, does not start with `utm_` or `utmat_`, does not end in
+	 * `[a-z0-9_]`, does not start with `utm_` or `utmatra_`, does not end in
 	 * `_first` (the first-touch field suffix) and is not reserved. The
 	 * leading letter keeps underscore-prefixed names away from the REST
 	 * API's own `_fields`-style arguments and keeps all-digit names from
@@ -231,7 +231,7 @@ class Tracker {
 		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{0,31}$/D', $name ) ) {
 			return false;
 		}
-		if ( str_starts_with( $name, 'utm_' ) || str_starts_with( $name, 'utmat_' ) || str_starts_with( $name, 'first_' ) || str_ends_with( $name, '_first' ) ) {
+		if ( str_starts_with( $name, 'utm_' ) || str_starts_with( $name, 'utmatra_' ) || str_starts_with( $name, 'first_' ) || str_ends_with( $name, '_first' ) ) {
 			return false;
 		}
 
@@ -239,14 +239,14 @@ class Tracker {
 	}
 
 	/**
-	 * Register the utmat_track query variable so WordPress parses it.
+	 * Register the utmatra_track query variable so WordPress parses it.
 	 *
 	 * @since 1.0.0
 	 * @param string[] $vars Existing public query vars.
 	 * @return string[]
 	 */
 	public static function register_query_vars( array $vars ): array {
-		$vars[] = 'utmat_track';
+		$vars[] = 'utmatra_track';
 		return $vars;
 	}
 
@@ -269,7 +269,7 @@ class Tracker {
 
 		// --- 1. Outbound redirect ---
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$track_id = isset( $_GET['utmat_track'] ) ? sanitize_key( wp_unslash( $_GET['utmat_track'] ) ) : '';
+		$track_id = isset( $_GET['utmatra_track'] ) ? sanitize_key( wp_unslash( $_GET['utmatra_track'] ) ) : '';
 
 		if ( ! empty( $track_id ) ) {
 			$link = LinkManager::get( $track_id );
@@ -298,7 +298,7 @@ class Tracker {
 		// A /go/{slug}/ pretty-link request is resolved by the outbound redirect
 		// path at parse_request (which records the click and 302s). At this early
 		// `init` pass that request still carries its UTM query params but no
-		// utmat_track $_GET value, so without this guard it would also be
+		// utmatra_track $_GET value, so without this guard it would also be
 		// logged here as a passive "incoming" row — double-counting the click.
 		$request_path = (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
 		if ( empty( $track_id ) && 1 === preg_match( '#^/go/[a-z0-9_\-]+/?$#', $request_path ) ) {
@@ -349,7 +349,7 @@ class Tracker {
 	 * page from both sets, and is skipped entirely if still over the limit so
 	 * the existing cookie is preserved. Runs only for non-bot traffic (enforced
 	 * at the call site), when headers are not yet sent, when the
-	 * `utmat_enable_cookie` master switch allows it, and when the visitor has
+	 * `utmatra_enable_cookie` master switch allows it, and when the visitor has
 	 * granted the configured consent category (always true without a WP
 	 * Consent API). Those checks live in cookie_gate_open(), the single gate
 	 * both server-side cookie writers share.
@@ -442,10 +442,10 @@ class Tracker {
 	 * Whether a server-side cookie write is permitted right now.
 	 *
 	 * The single gate both server-side cookie writers share: headers must not
-	 * have been sent, the `utmat_enable_cookie` master switch must allow the
+	 * have been sent, the `utmatra_enable_cookie` master switch must allow the
 	 * attribution cookies, and — when a WP Consent API implementation is
 	 * present — the visitor must have granted the configured consent
-	 * category. `utmat_attr` and `utmat_vid` can therefore never be issued to
+	 * category. `utmatra_attr` and `utmatra_vid` can therefore never be issued to
 	 * a visitor who has not consented.
 	 *
 	 * @since 1.0.0
@@ -459,8 +459,8 @@ class Tracker {
 	 * PHP fallback writer for the per-browser visitor id cookie.
 	 *
 	 * The no-JS counterpart of the beacon's write: keeps the existing
-	 * `utmat_vid` when it holds a valid UUID v4 and generates one otherwise,
-	 * then always re-sets the cookie with the same options as `utmat_attr` so
+	 * `utmatra_vid` when it holds a valid UUID v4 and generates one otherwise,
+	 * then always re-sets the cookie with the same options as `utmatra_attr` so
 	 * an existing id gets a fresh expiry on every tagged visit — without the
 	 * rewrite the two cookies would drift apart and split a no-JS visitor's
 	 * journey in two. Returns the resolved id, or '' when the gate is closed
@@ -510,7 +510,7 @@ class Tracker {
 	 * handle_incoming_request() instead, so a bot is redirected but not logged.
 	 *
 	 * By default logged-in admins are also excluded.
-	 * Return `true` from the `utmat_track_logged_in_users` filter to override.
+	 * Return `true` from the `utmatra_track_logged_in_users` filter to override.
 	 *
 	 * @since 1.0.0
 	 * @return bool
@@ -545,7 +545,7 @@ class Tracker {
 			 *
 			 * @var bool $track_admins
 			 */
-			$track_admins = apply_filters( 'utmat_track_logged_in_users', false );
+			$track_admins = apply_filters( 'utmatra_track_logged_in_users', false );
 			if ( ! $track_admins ) {
 				return false;
 			}
@@ -575,7 +575,7 @@ class Tracker {
 	 *
 	 * `channel` is written from $data when given, else computed by
 	 * TrafficSource::channel() from the assembled row; `visitor_id` is
-	 * written from $data and, when absent, falls back to the `utmat_vid`
+	 * written from $data and, when absent, falls back to the `utmatra_vid`
 	 * cookie (Attribution::visitor_id()) so short-link clicks, order rows
 	 * and lead rows are stamped without their call sites changing.
 	 * `custom` is built from a `custom` array in $data plus any configured
@@ -600,7 +600,7 @@ class Tracker {
 
 		// Passed explicitly by the paths that resolved it (the passive PHP
 		// path before recording, the collect endpoint from the beacon's vid
-		// field); every other caller falls back to the `utmat_vid` cookie.
+		// field); every other caller falls back to the `utmatra_vid` cookie.
 		$vid = (string) ( $data['visitor_id'] ?? Attribution::visitor_id() );
 
 		$row = array(
@@ -682,7 +682,7 @@ class Tracker {
 
 		$window = self::dedup_window();
 		if ( empty( $data['is_conversion'] ) && false !== $inserted && $window > 0 ) {
-			set_transient( 'utmat_dd_' . self::dedup_key( $data ), 1, $window );
+			set_transient( 'utmatra_dd_' . self::dedup_key( $data ), 1, $window );
 		}
 	}
 
@@ -691,7 +691,7 @@ class Tracker {
 	 *
 	 * Identity = same hashed client IP + same link_id + same set of
 	 * UTM/click-ID values. Checked against a transient
-	 * (`utmat_dd_{md5}`) so no table scan is needed; record() sets the
+	 * (`utmatra_dd_{md5}`) so no table scan is needed; record() sets the
 	 * transient after a successful insert. A window of 0 disables dedup.
 	 * Conversion rows are exempt: an order is always a distinct conversion,
 	 * so `is_conversion` truthy is never a duplicate.
@@ -707,7 +707,7 @@ class Tracker {
 		if ( self::dedup_window() <= 0 ) {
 			return false;
 		}
-		return false !== get_transient( 'utmat_dd_' . self::dedup_key( $data ) );
+		return false !== get_transient( 'utmatra_dd_' . self::dedup_key( $data ) );
 	}
 
 	/**
@@ -751,7 +751,7 @@ class Tracker {
 		 *
 		 * @var int $window
 		 */
-		return (int) apply_filters( 'utmat_dedup_window', 30 * MINUTE_IN_SECONDS );
+		return (int) apply_filters( 'utmatra_dedup_window', 30 * MINUTE_IN_SECONDS );
 	}
 
 	/**
@@ -787,7 +787,7 @@ class Tracker {
 	 * Whether a user agent string looks like a bot, crawler, or link preview.
 	 *
 	 * Case-insensitive keyword match; an empty user agent also counts as a
-	 * bot. Override the verdict via the `utmat_is_bot` filter.
+	 * bot. Override the verdict via the `utmatra_is_bot` filter.
 	 *
 	 * @since 1.0.0
 	 * @param string $ua The user agent string.
@@ -840,7 +840,7 @@ class Tracker {
 		 *
 		 * @var bool $verdict
 		 */
-		return (bool) apply_filters( 'utmat_is_bot', $verdict, $ua );
+		return (bool) apply_filters( 'utmatra_is_bot', $verdict, $ua );
 	}
 
 	/**
@@ -848,7 +848,7 @@ class Tracker {
 	 *
 	 * Returns REMOTE_ADDR by default. Sites behind a trusted reverse proxy
 	 * may substitute a forwarded header's value via the
-	 * `utmat_client_ip` filter — but forwarded headers (X-Forwarded-For
+	 * `utmatra_client_ip` filter — but forwarded headers (X-Forwarded-For
 	 * etc.) are client-spoofable, so only trust them when every request
 	 * passes through a proxy that overwrites the header.
 	 *
@@ -863,7 +863,7 @@ class Tracker {
 		 *
 		 * @var string $ip
 		 */
-		return (string) apply_filters( 'utmat_client_ip', $ip );
+		return (string) apply_filters( 'utmatra_client_ip', $ip );
 	}
 
 	/**
@@ -877,10 +877,10 @@ class Tracker {
 	 * @return string The salted SHA-256 hash.
 	 */
 	public static function hash_ip( string $ip ): string {
-		$salt = (string) get_option( 'utmat_salt', '' );
+		$salt = (string) get_option( 'utmatra_salt', '' );
 		if ( '' === $salt ) {
 			$salt = wp_generate_password( 64, true, true );
-			add_option( 'utmat_salt', $salt );
+			add_option( 'utmatra_salt', $salt );
 		}
 		return hash( 'sha256', $salt . $ip );
 	}

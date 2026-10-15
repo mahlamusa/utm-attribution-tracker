@@ -8,22 +8,22 @@
  * AI, no live network probes — and returns the fixed shape documented on
  * run_all().
  *
- * @package UTMAT\Diagnostics
+ * @package Utmatra\Diagnostics
  */
 
-namespace UTMAT\Diagnostics;
+namespace Utmatra\Diagnostics;
 
-use UTMAT\Admin\Dashboard;
-use UTMAT\Integrations\Forms\Bricks;
-use UTMAT\Integrations\Forms\ContactForm7;
-use UTMAT\Integrations\Forms\Elementor;
-use UTMAT\Integrations\Forms\FluentForms;
-use UTMAT\Integrations\Forms\Formidable;
-use UTMAT\Integrations\Forms\Forminator;
-use UTMAT\Integrations\Forms\GravityForms;
-use UTMAT\Integrations\Forms\NinjaForms;
-use UTMAT\Integrations\Forms\WPForms;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Admin\Dashboard;
+use Utmatra\Integrations\Forms\Bricks;
+use Utmatra\Integrations\Forms\ContactForm7;
+use Utmatra\Integrations\Forms\Elementor;
+use Utmatra\Integrations\Forms\FluentForms;
+use Utmatra\Integrations\Forms\Formidable;
+use Utmatra\Integrations\Forms\Forminator;
+use Utmatra\Integrations\Forms\GravityForms;
+use Utmatra\Integrations\Forms\NinjaForms;
+use Utmatra\Integrations\Forms\WPForms;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -105,7 +105,7 @@ class Checks {
 		$details     = array(
 			'api_present'    => $api_present,
 			'consent_type'   => $api_present ? wp_get_consent_type() : '',
-			'registered'     => $api_present ? (bool) consent_api_registered( UTM_ATTRIBUTION_TRACKER_BASENAME ) : false,
+			'registered'     => $api_present ? (bool) consent_api_registered( UTMATRA_BASENAME ) : false,
 			'category'       => $category,
 			'master_enabled' => Attribution::enabled(),
 			'gate_events'    => Attribution::gate_events(),
@@ -116,7 +116,7 @@ class Checks {
 				'consent',
 				$label,
 				'warn',
-				__( 'The utmat_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed.', 'utm-attribution-tracker' ),
+				__( 'The utmatra_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed.', 'utm-attribution-tracker' ),
 				$details
 			);
 		}
@@ -158,7 +158,7 @@ class Checks {
 		if ( $details['gate_events'] ) {
 			$message = sprintf(
 				/* translators: 1: consent type (optin or optout), 2: consent category label. */
-				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmat_consent_gate_events filter is enabled.', 'utm-attribution-tracker' ),
+				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled.', 'utm-attribution-tracker' ),
 				$details['consent_type'],
 				Attribution::consent_category_label( $category )
 			);
@@ -299,7 +299,7 @@ class Checks {
 			if ( ! class_exists( $definition['class'] ) ) {
 				$unsupported_plugins[] = array(
 					'label'   => $definition['label'],
-					'message' => __( "UTM & Attribution Tracker does not yet capture attribution for this plugin's forms.", 'utm-attribution-tracker' ),
+					'message' => __( "Utmatra does not yet capture attribution for this plugin's forms.", 'utm-attribution-tracker' ),
 				);
 				continue;
 			}
@@ -407,7 +407,7 @@ class Checks {
 		$total     = count( $orders );
 		$attribute = 0;
 		foreach ( $orders as $order ) {
-			if ( '' !== (string) $order->get_meta( '_utmat_last', true ) ) {
+			if ( '' !== (string) $order->get_meta( '_utmatra_last', true ) ) {
 				++$attribute;
 			}
 		}

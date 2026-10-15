@@ -6,7 +6,7 @@
  * cannot find an attribution field by name. A Hidden Field whose Default
  * Value is "Query parameter" and whose query parameter is a recognised
  * attribution field name (`utm_source`, `utm_source_first`, …) is marked
- * with `data-utmat-field="<name>"` at render and the beacon fills it from
+ * with `data-utmatra-field="<name>"` at render and the beacon fills it from
  * the attribution cookie on page load. Forminator's own URL prefill is
  * left alone: a matching parameter on the current page wins, because the
  * beacon never overwrites a non-empty field. No value is written by this
@@ -16,15 +16,15 @@
  * defined, checked at `plugins_loaded` priority 20). Without Forminator
  * the class is loaded but completely inert.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
 use Forminator_API;
 use Forminator_Base_Form_Model;
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -68,7 +68,7 @@ class Forminator {
 	 * Runs on `forminator_field_markup`. Only a Hidden Field set to
 	 * "Query parameter" with an attribution field name as its parameter is
 	 * touched; the first `<input type="hidden" ` in its markup gains the
-	 * `data-utmat-field` attribute. Everything else is returned untouched.
+	 * `data-utmatra-field` attribute. Everything else is returned untouched.
 	 *
 	 * @since 1.0.0
 	 *
@@ -100,7 +100,7 @@ class Forminator {
 			return $html;
 		}
 
-		return substr_replace( $html, '<input type="hidden" data-utmat-field="' . esc_attr( $name ) . '" ', $position, strlen( $needle ) );
+		return substr_replace( $html, '<input type="hidden" data-utmatra-field="' . esc_attr( $name ) . '" ', $position, strlen( $needle ) );
 	}
 
 	/**

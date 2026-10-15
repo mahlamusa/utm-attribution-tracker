@@ -2,23 +2,21 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: UTM & Attribution Tracker 1.0.0\n"
+"Project-Id-Version: Utmatra - UTM Attribution and Tracking 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/utm-attribution-tracker\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-15T06:02:21+00:00\n"
+"POT-Creation-Date: 2026-10-15T07:48:50+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utm-attribution-tracker\n"
 
 #. Plugin Name of the plugin
-#: src/Admin/Dashboard.php:56
-#: src/Privacy/PrivacyPolicy.php:72
-#: views/dashboard.php:33
-msgid "UTM & Attribution Tracker"
+#: src/Admin/Dashboard.php:57
+msgid "Utmatra - UTM Attribution and Tracking"
 msgstr ""
 
 #. Plugin URI of the plugin
@@ -33,18 +31,19 @@ msgstr ""
 msgid "Lindeni Mahlalela"
 msgstr ""
 
-#: src/Admin/Dashboard.php:57
-#: src/Admin/Dashboard.php:236
+#: src/Admin/Dashboard.php:58
+#: src/Admin/Dashboard.php:237
 #: src/Integrations/Forms/Bricks.php:82
-msgid "UTM & Attribution"
+#: src/Privacy/PrivacyPolicy.php:72
+msgid "Utmatra"
 msgstr ""
 
-#: src/Admin/Dashboard.php:215
+#: src/Admin/Dashboard.php:216
 msgid "You do not have permission to access this page."
 msgstr ""
 
 #: src/Admin/DashboardWidget.php:75
-msgid "Recent leads (UTM & Attribution)"
+msgid "Recent leads (Utmatra)"
 msgstr ""
 
 #: src/Admin/DashboardWidget.php:98
@@ -115,22 +114,22 @@ msgid "No known full-page cache plugin detected."
 msgstr ""
 
 #: src/Diagnostics/Checks.php:102
-#: views/dashboard.php:505
+#: views/dashboard.php:507
 msgid "Consent"
 msgstr ""
 
 #: src/Diagnostics/Checks.php:119
-msgid "The utmat_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed."
+msgid "The utmatra_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed."
 msgstr ""
 
 #. translators: %s: consent category label (marketing, statistics, or marketing or statistics).
 #: src/Diagnostics/Checks.php:131
-#: views/dashboard.php:523
+#: views/dashboard.php:525
 msgid "No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category."
 msgstr ""
 
 #: src/Diagnostics/Checks.php:143
-#: views/dashboard.php:528
+#: views/dashboard.php:530
 msgid "WP Consent API is active but no consent-management plugin has declared a consent type, so the API reports every category as granted and the cookie is written for every visitor."
 msgstr ""
 
@@ -140,7 +139,7 @@ msgstr ""
 
 #. translators: 1: consent type (optin or optout), 2: consent category label.
 #: src/Diagnostics/Checks.php:161
-msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmat_consent_gate_events filter is enabled."
+msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled."
 msgstr ""
 
 #. translators: 1: consent type (optin or optout), 2: consent category label.
@@ -197,12 +196,12 @@ msgid "Bricks Builder (untested)"
 msgstr ""
 
 #: src/Diagnostics/Checks.php:288
-#: views/dashboard.php:780
+#: views/dashboard.php:782
 msgid "Forms coverage"
 msgstr ""
 
 #: src/Diagnostics/Checks.php:302
-msgid "UTM & Attribution Tracker does not yet capture attribution for this plugin's forms."
+msgid "Utmatra does not yet capture attribution for this plugin's forms."
 msgstr ""
 
 #: src/Diagnostics/Checks.php:321
@@ -267,7 +266,7 @@ msgstr ""
 
 #. translators: %s: attribution field name, e.g. utm_source.
 #: src/Integrations/Forms/WPForms.php:108
-msgid "UTM & Attribution: %s"
+msgid "Utmatra: %s"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:105
@@ -294,32 +293,32 @@ msgid "No attribution data"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:397
-#: views/dashboard.php:415
+#: views/dashboard.php:419
 msgid "First touch"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:398
-#: views/dashboard.php:416
+#: views/dashboard.php:420
 msgid "Last touch"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:423
 #: src/Reports/WeeklyEmail.php:218
-#: views/dashboard.php:861
+#: views/dashboard.php:863
 msgid "Source"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:424
-#: views/dashboard.php:865
+#: views/dashboard.php:867
 msgid "Medium"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:425
 #: src/Reports/WeeklyEmail.php:215
 #: src/Reports/WeeklyEmail.php:306
-#: views/dashboard.php:82
-#: views/dashboard.php:372
-#: views/dashboard.php:857
+#: views/dashboard.php:86
+#: views/dashboard.php:376
+#: views/dashboard.php:859
 msgid "Campaign"
 msgstr ""
 
@@ -328,12 +327,12 @@ msgid "Campaign ID"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:427
-#: views/dashboard.php:887
+#: views/dashboard.php:889
 msgid "Term"
 msgstr ""
 
 #: src/Integrations/WooCommerce.php:428
-#: views/dashboard.php:891
+#: views/dashboard.php:893
 msgid "Content"
 msgstr ""
 
@@ -387,11 +386,11 @@ msgid "Recorded events are kept until manually deleted."
 msgstr ""
 
 #: src/Privacy/PrivacyPolicy.php:56
-msgid "This site uses UTM & Attribution Tracker to measure where visitors come from and how marketing campaigns perform. When you arrive on the site, the plugin records the first page of your visit, the address of the site you came from (referrer), any campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) in the URL, your browser identification string (user agent), and a salted one-way hash of your IP address."
+msgid "This site uses Utmatra to measure where visitors come from and how marketing campaigns perform. When you arrive on the site, the plugin records the first page of your visit, the address of the site you came from (referrer), any campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) in the URL, your browser identification string (user agent), and a salted one-way hash of your IP address."
 msgstr ""
 
 #: src/Privacy/PrivacyPolicy.php:58
-msgid "This site uses UTM & Attribution Tracker to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address."
+msgid "This site uses Utmatra to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address."
 msgstr ""
 
 #: src/Privacy/PrivacyPolicy.php:61
@@ -433,7 +432,7 @@ msgid "Test form"
 msgstr ""
 
 #: src/Reports/ConversionWebhook.php:408
-msgid "Sent from UTM & Attribution Tracker"
+msgid "Sent from Utmatra"
 msgstr ""
 
 #: src/Reports/ConversionWebhook.php:424
@@ -475,7 +474,7 @@ msgid "Top sources"
 msgstr ""
 
 #: src/Reports/WeeklyEmail.php:221
-#: views/dashboard.php:309
+#: views/dashboard.php:313
 msgid "Revenue by campaign"
 msgstr ""
 
@@ -493,20 +492,20 @@ msgid "No data recorded this week."
 msgstr ""
 
 #: src/Reports/WeeklyEmail.php:283
-#: views/dashboard.php:375
-#: views/dashboard.php:967
+#: views/dashboard.php:379
+#: views/dashboard.php:969
 msgid "Clicks"
 msgstr ""
 
 #: src/Reports/WeeklyEmail.php:307
-#: views/dashboard.php:319
-#: views/dashboard.php:977
+#: views/dashboard.php:323
+#: views/dashboard.php:979
 msgid "Orders"
 msgstr ""
 
 #: src/Reports/WeeklyEmail.php:308
-#: views/dashboard.php:304
-#: views/dashboard.php:976
+#: views/dashboard.php:308
+#: views/dashboard.php:978
 msgid "Revenue"
 msgstr ""
 
@@ -597,1202 +596,1206 @@ msgstr ""
 msgid "Other"
 msgstr ""
 
-#: views/dashboard.php:34
+#: views/dashboard.php:36
+msgid "UTM Attribution and Tracking"
+msgstr ""
+
+#: views/dashboard.php:38
 msgid "Campaign clicks, conversions and first/last-touch attribution, kept on your own site."
 msgstr ""
 
-#: views/dashboard.php:38
+#: views/dashboard.php:42
 msgid "Download the raw events for the selected period as CSV (up to 10,000 rows)."
 msgstr ""
 
-#: views/dashboard.php:38
-#: views/dashboard.php:981
+#: views/dashboard.php:42
+#: views/dashboard.php:983
 msgid "Export CSV"
 msgstr ""
 
-#: views/dashboard.php:39
-#: views/dashboard.php:808
-#: views/dashboard.php:1012
+#: views/dashboard.php:43
+#: views/dashboard.php:810
+#: views/dashboard.php:1014
 msgid "Add tracked link"
 msgstr ""
 
-#: views/dashboard.php:45
+#: views/dashboard.php:49
 msgid "Dashboard sections"
 msgstr ""
 
-#: views/dashboard.php:46
+#: views/dashboard.php:50
 msgid "Overview"
 msgstr ""
 
-#: views/dashboard.php:47
+#: views/dashboard.php:51
 msgid "Links"
 msgstr ""
 
-#: views/dashboard.php:48
-#: views/dashboard.php:394
+#: views/dashboard.php:52
+#: views/dashboard.php:398
 msgid "Journeys"
 msgstr ""
 
-#: views/dashboard.php:49
-#: views/dashboard.php:336
-#: views/dashboard.php:910
+#: views/dashboard.php:53
+#: views/dashboard.php:340
+#: views/dashboard.php:912
 msgid "Settings"
 msgstr ""
 
-#: views/dashboard.php:50
-#: views/dashboard.php:698
+#: views/dashboard.php:54
+#: views/dashboard.php:700
 msgid "Diagnostics"
 msgstr ""
 
-#: views/dashboard.php:65
+#: views/dashboard.php:69
 msgid "Date range"
 msgstr ""
 
-#: views/dashboard.php:66
+#: views/dashboard.php:70
 msgid "7 days"
 msgstr ""
 
-#: views/dashboard.php:67
+#: views/dashboard.php:71
 msgid "30 days"
 msgstr ""
 
-#: views/dashboard.php:68
+#: views/dashboard.php:72
 msgid "90 days"
 msgstr ""
 
-#: views/dashboard.php:72
+#: views/dashboard.php:76
 msgid "Custom"
 msgstr ""
 
-#: views/dashboard.php:74
+#: views/dashboard.php:78
 msgid "to"
 msgstr ""
 
-#: views/dashboard.php:75
+#: views/dashboard.php:79
 msgid "Custom range end date"
 msgstr ""
 
-#: views/dashboard.php:77
+#: views/dashboard.php:81
 msgid "Apply"
 msgstr ""
 
-#: views/dashboard.php:78
+#: views/dashboard.php:82
 msgid "Clear"
 msgstr ""
 
-#: views/dashboard.php:84
-#: views/dashboard.php:355
+#: views/dashboard.php:88
+#: views/dashboard.php:359
 msgid "All campaigns"
 msgstr ""
 
-#: views/dashboard.php:94
+#: views/dashboard.php:98
 msgid "Loading data…"
 msgstr ""
 
-#: views/dashboard.php:99
+#: views/dashboard.php:103
 msgid "Total clicks"
 msgstr ""
 
-#: views/dashboard.php:107
-#: views/dashboard.php:991
+#: views/dashboard.php:111
+#: views/dashboard.php:993
 msgid "Conversions"
 msgstr ""
 
-#: views/dashboard.php:112
+#: views/dashboard.php:116
 msgid "Attributed revenue"
 msgstr ""
 
-#: views/dashboard.php:117
+#: views/dashboard.php:121
 msgid "Top source"
 msgstr ""
 
-#: views/dashboard.php:122
+#: views/dashboard.php:126
 msgid "Top campaign"
 msgstr ""
 
-#: views/dashboard.php:132
+#: views/dashboard.php:136
 msgid "Get your first tracked click"
 msgstr ""
 
-#: views/dashboard.php:133
+#: views/dashboard.php:137
 msgid "Tracking is already on. Nothing has been recorded yet because no tagged visit has arrived."
 msgstr ""
 
-#: views/dashboard.php:139
+#: views/dashboard.php:143
 msgid "Open a tagged URL in a private window"
 msgstr ""
 
-#: views/dashboard.php:140
+#: views/dashboard.php:144
 msgid "Visits from logged-in administrators are not tracked, so use a private window or another browser."
 msgstr ""
 
-#: views/dashboard.php:143
-#: views/dashboard.php:642
+#: views/dashboard.php:147
+#: views/dashboard.php:644
 msgid "Copy"
 msgstr ""
 
-#: views/dashboard.php:150
+#: views/dashboard.php:154
 msgid "Or create a tracked short link"
 msgstr ""
 
-#: views/dashboard.php:151
+#: views/dashboard.php:155
 msgid "A tracked link counts the click before forwarding the visitor, and comes with a QR code."
 msgstr ""
 
-#: views/dashboard.php:153
+#: views/dashboard.php:157
 msgid "Create a tracked link"
 msgstr ""
 
-#: views/dashboard.php:160
+#: views/dashboard.php:164
 msgid "Come back in a minute"
 msgstr ""
 
-#: views/dashboard.php:161
+#: views/dashboard.php:165
 msgid "Ad clicks carrying gclid, fbclid, msclkid, ttclid, li_fat_id or twclid are tracked automatically, even without UTM parameters. Bots and repeated reloads are filtered out."
 msgstr ""
 
-#: views/dashboard.php:168
+#: views/dashboard.php:172
 msgid "Already sent traffic?"
 msgstr ""
 
-#: views/dashboard.php:169
+#: views/dashboard.php:173
 msgid "If tagged visits should have shown up, a page cache or consent plugin is the usual reason."
 msgstr ""
 
-#: views/dashboard.php:171
-#: views/dashboard.php:747
+#: views/dashboard.php:175
+#: views/dashboard.php:749
 msgid "Run diagnostics"
 msgstr ""
 
-#: views/dashboard.php:173
+#: views/dashboard.php:177
 msgid "What is tracked"
 msgstr ""
 
-#: views/dashboard.php:175
+#: views/dashboard.php:179
 msgid "UTM source, medium, campaign, term, content and ID"
 msgstr ""
 
-#: views/dashboard.php:176
+#: views/dashboard.php:180
 msgid "Ad click IDs from six platforms"
 msgstr ""
 
-#: views/dashboard.php:177
+#: views/dashboard.php:181
 msgid "Landing page, referrer and device type"
 msgstr ""
 
-#: views/dashboard.php:178
+#: views/dashboard.php:182
 msgid "First and last touch, stored in a first-party cookie for the attribution window set in Settings"
 msgstr ""
 
-#: views/dashboard.php:186
+#: views/dashboard.php:190
 msgid "Clicks over time, traffic breakdown, reach and revenue charts appear here after the first click."
 msgstr ""
 
-#: views/dashboard.php:193
+#: views/dashboard.php:197
 msgid "Clicks over time"
 msgstr ""
 
-#: views/dashboard.php:197
+#: views/dashboard.php:201
 msgid "Clicks over time line chart"
 msgstr ""
 
-#: views/dashboard.php:198
-#: views/dashboard.php:215
-#: views/dashboard.php:225
-#: views/dashboard.php:235
-#: views/dashboard.php:245
-#: views/dashboard.php:264
-#: views/dashboard.php:275
-#: views/dashboard.php:316
+#: views/dashboard.php:202
+#: views/dashboard.php:219
+#: views/dashboard.php:229
+#: views/dashboard.php:239
+#: views/dashboard.php:249
+#: views/dashboard.php:268
+#: views/dashboard.php:279
+#: views/dashboard.php:320
 msgid "No data for this period."
 msgstr ""
 
-#: views/dashboard.php:204
+#: views/dashboard.php:208
 msgid "Traffic breakdown"
 msgstr ""
 
-#: views/dashboard.php:205
+#: views/dashboard.php:209
 msgid "Where the clicks in this period came from"
 msgstr ""
 
-#: views/dashboard.php:210
+#: views/dashboard.php:214
 msgid "By source"
 msgstr ""
 
-#: views/dashboard.php:211
-#: views/dashboard.php:221
-#: views/dashboard.php:231
-#: views/dashboard.php:271
-#: views/dashboard.php:281
+#: views/dashboard.php:215
+#: views/dashboard.php:225
+#: views/dashboard.php:235
+#: views/dashboard.php:275
+#: views/dashboard.php:285
 msgid "clicks"
 msgstr ""
 
-#: views/dashboard.php:220
+#: views/dashboard.php:224
 msgid "By campaign"
 msgstr ""
 
-#: views/dashboard.php:230
+#: views/dashboard.php:234
 msgid "By medium"
 msgstr ""
 
-#: views/dashboard.php:240
+#: views/dashboard.php:244
 msgid "By device"
 msgstr ""
 
-#: views/dashboard.php:241
+#: views/dashboard.php:245
 msgid "share"
 msgstr ""
 
-#: views/dashboard.php:253
+#: views/dashboard.php:257
 msgid "Reach"
 msgstr ""
 
-#: views/dashboard.php:254
+#: views/dashboard.php:258
 msgid "Channels, landing pages, referrers and ad platforms"
 msgstr ""
 
-#: views/dashboard.php:259
+#: views/dashboard.php:263
 msgid "Channels"
 msgstr ""
 
-#: views/dashboard.php:260
+#: views/dashboard.php:264
 msgid "visits"
 msgstr ""
 
-#: views/dashboard.php:265
+#: views/dashboard.php:269
 msgid "Untagged visit tracking is off, so only tagged traffic is classified. Turn it on in Settings to see direct, organic, social, AI-assistant and referral visits."
 msgstr ""
 
-#: views/dashboard.php:270
+#: views/dashboard.php:274
 msgid "Top landing pages"
 msgstr ""
 
-#: views/dashboard.php:280
+#: views/dashboard.php:284
 msgid "Top referrers"
 msgstr ""
 
-#: views/dashboard.php:285
+#: views/dashboard.php:289
 msgid "No external referrers recorded in this period."
 msgstr ""
 
-#: views/dashboard.php:290
+#: views/dashboard.php:294
 msgid "Ad platforms"
 msgstr ""
 
-#: views/dashboard.php:291
+#: views/dashboard.php:295
 msgid "click IDs"
 msgstr ""
 
-#: views/dashboard.php:295
+#: views/dashboard.php:299
 msgid "No ad click IDs recorded in this period."
 msgstr ""
 
-#: views/dashboard.php:305
+#: views/dashboard.php:309
 msgid "WooCommerce orders attributed to tagged campaigns"
 msgstr ""
 
-#: views/dashboard.php:310
+#: views/dashboard.php:314
 msgid "Tagged campaigns"
 msgstr ""
 
-#: views/dashboard.php:315
+#: views/dashboard.php:319
 msgid "Revenue by campaign bar chart"
 msgstr ""
 
-#: views/dashboard.php:321
+#: views/dashboard.php:325
 msgid "Average order"
 msgstr ""
 
 #. translators: %s: link to the Settings tab.
-#: views/dashboard.php:335
+#: views/dashboard.php:339
 msgid "Logged-in administrators are not tracked, and bots and repeated reloads are filtered out automatically. Data retention is set under %s."
 msgstr ""
 
-#: views/dashboard.php:347
+#: views/dashboard.php:351
 msgid "Use these redirect URLs in emails, ads, and banners. The click is counted before the visitor is forwarded to the destination."
 msgstr ""
 
-#: views/dashboard.php:350
+#: views/dashboard.php:354
 msgid "Search tracked links"
 msgstr ""
 
-#: views/dashboard.php:352
+#: views/dashboard.php:356
 msgid "Search by label, campaign, source, or medium…"
 msgstr ""
 
-#: views/dashboard.php:353
+#: views/dashboard.php:357
 msgid "Filter links by campaign"
 msgstr ""
 
-#: views/dashboard.php:360
-#: views/dashboard.php:948
+#: views/dashboard.php:364
+#: views/dashboard.php:950
 msgid "Delete selected"
 msgstr ""
 
-#: views/dashboard.php:368
+#: views/dashboard.php:372
 msgid "Select all"
 msgstr ""
 
-#: views/dashboard.php:371
-#: views/dashboard.php:825
+#: views/dashboard.php:375
+#: views/dashboard.php:827
 msgid "Label"
 msgstr ""
 
-#: views/dashboard.php:373
+#: views/dashboard.php:377
 msgid "Source / medium"
 msgstr ""
 
-#: views/dashboard.php:377
-#: views/dashboard.php:919
+#: views/dashboard.php:381
+#: views/dashboard.php:921
 msgid "Short link"
 msgstr ""
 
-#: views/dashboard.php:378
+#: views/dashboard.php:382
 msgid "Destination"
 msgstr ""
 
-#: views/dashboard.php:386
+#: views/dashboard.php:390
 msgid "Hover over or tab to a row for Edit, Duplicate, QR code, Copy link and Delete. Click counts are all time."
 msgstr ""
 
-#: views/dashboard.php:395
+#: views/dashboard.php:399
 msgid "The last 50 conversions and the tagged visits that led to them. Journeys are built from the visitor id cookie, so they cover traffic recorded after this version."
 msgstr ""
 
-#: views/dashboard.php:402
+#: views/dashboard.php:406
 msgid "Loading journeys…"
 msgstr ""
 
-#: views/dashboard.php:407
+#: views/dashboard.php:411
 msgid "No journeys yet. Journeys appear for visitors tracked after this version; earlier events have no visitor id."
 msgstr ""
 
-#: views/dashboard.php:413
+#: views/dashboard.php:417
 msgid "When"
 msgstr ""
 
-#: views/dashboard.php:414
+#: views/dashboard.php:418
 msgid "Conversion"
 msgstr ""
 
-#: views/dashboard.php:417
+#: views/dashboard.php:421
 msgid "Touches"
 msgstr ""
 
-#: views/dashboard.php:440
+#: views/dashboard.php:444
 msgid "Tracking"
 msgstr ""
 
-#: views/dashboard.php:441
+#: views/dashboard.php:445
 msgid "What the beacon records on each visit."
 msgstr ""
 
-#: views/dashboard.php:445
+#: views/dashboard.php:449
 msgid "Untagged visits"
 msgstr ""
 
-#: views/dashboard.php:450
+#: views/dashboard.php:454
 msgid "Track the first page of every visit"
 msgstr ""
 
-#: views/dashboard.php:452
+#: views/dashboard.php:456
 msgid "Records the landing page and referrer of visits that arrive without campaign parameters, so organic, social, AI-assistant and referral traffic appear in the Channels report. On by default; about one event per visit."
 msgstr ""
 
-#: views/dashboard.php:458
-#: views/dashboard.php:902
+#: views/dashboard.php:460
+#: views/dashboard.php:904
 msgid "Custom parameters"
 msgstr ""
 
 #. translators: %1$s: example custom parameter name, as inline code.
-#: views/dashboard.php:466
+#: views/dashboard.php:468
 msgid "Extra URL parameters to capture alongside UTM tags and click IDs, separated by commas. Up to 10 names that start with a letter and use lowercase letters, digits and underscores. Each one is available to forms under its own name (%1$s) and becomes a CSV column. Do not use the name of a form field or anything that identifies a person."
 msgstr ""
 
-#: views/dashboard.php:480
+#: views/dashboard.php:482
 msgid "Data and privacy"
 msgstr ""
 
-#: views/dashboard.php:481
+#: views/dashboard.php:483
 msgid "How long events are kept and how long a visitor stays attributed to a campaign."
 msgstr ""
 
-#: views/dashboard.php:485
+#: views/dashboard.php:487
 msgid "Keep events for"
 msgstr ""
 
-#: views/dashboard.php:489
-#: views/dashboard.php:499
+#: views/dashboard.php:491
+#: views/dashboard.php:501
 msgid "days"
 msgstr ""
 
-#: views/dashboard.php:491
+#: views/dashboard.php:493
 msgid "Events older than this are deleted daily. 0 keeps events forever."
 msgstr ""
 
-#: views/dashboard.php:495
+#: views/dashboard.php:497
 msgid "Attribution window"
 msgstr ""
 
-#: views/dashboard.php:501
+#: views/dashboard.php:503
 msgid "How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors."
 msgstr ""
 
-#: views/dashboard.php:507
+#: views/dashboard.php:509
 msgid "Consent category"
 msgstr ""
 
-#: views/dashboard.php:510
+#: views/dashboard.php:512
 msgid "Marketing (recommended)"
 msgstr ""
 
-#: views/dashboard.php:511
+#: views/dashboard.php:513
 msgid "Statistics"
 msgstr ""
 
-#: views/dashboard.php:512
+#: views/dashboard.php:514
 msgid "Marketing or statistics"
 msgstr ""
 
-#: views/dashboard.php:514
+#: views/dashboard.php:516
 msgid "The attribution cookie is written only after the visitor grants this consent category. Applies when a plugin implementing the WP Consent API is active."
 msgstr ""
 
 #. translators: %s: consent type declared by the consent plugin (optin or optout).
-#: views/dashboard.php:533
+#: views/dashboard.php:535
 msgid "WP Consent API detected (%s)."
 msgstr ""
 
-#: views/dashboard.php:539
+#: views/dashboard.php:541
 msgid "On sites with a full-page cache, a change to this setting reaches visitors after the cache is purged."
 msgstr ""
 
-#: views/dashboard.php:550
+#: views/dashboard.php:552
 msgid "Weekly report"
 msgstr ""
 
-#: views/dashboard.php:551
+#: views/dashboard.php:553
 msgid "A short summary email once a week with clicks, top campaigns, top sources and, with WooCommerce, revenue."
 msgstr ""
 
-#: views/dashboard.php:555
+#: views/dashboard.php:557
 msgid "Weekly email"
 msgstr ""
 
-#: views/dashboard.php:560
+#: views/dashboard.php:562
 msgid "Send a weekly campaign summary email"
 msgstr ""
 
-#: views/dashboard.php:562
+#: views/dashboard.php:564
 msgid "Sent through wp_mail(), so your SMTP plugin applies. Off by default."
 msgstr ""
 
-#: views/dashboard.php:566
+#: views/dashboard.php:568
 msgid "Recipient"
 msgstr ""
 
 #. translators: %s: name of the filter that changes the report recipient.
-#: views/dashboard.php:574
+#: views/dashboard.php:576
 msgid "The site admin email. Developers can change the recipient with the %s filter."
 msgstr ""
 
-#: views/dashboard.php:587
+#: views/dashboard.php:589
 msgid "Send the weekly summary to the report recipient now, regardless of the toggle."
 msgstr ""
 
-#: views/dashboard.php:587
+#: views/dashboard.php:589
 msgid "Send test email"
 msgstr ""
 
-#: views/dashboard.php:596
+#: views/dashboard.php:598
 msgid "Webhooks"
 msgstr ""
 
-#: views/dashboard.php:597
+#: views/dashboard.php:599
 msgid "Send each attributed WooCommerce order and form lead, with its attribution data, to your CRM or automation tool."
 msgstr ""
 
-#: views/dashboard.php:601
-#: views/dashboard.php:839
+#: views/dashboard.php:603
+#: views/dashboard.php:841
 msgid "Preset"
 msgstr ""
 
-#: views/dashboard.php:604
+#: views/dashboard.php:606
 msgid "Generic JSON"
 msgstr ""
 
-#: views/dashboard.php:605
+#: views/dashboard.php:607
 msgid "Zapier"
 msgstr ""
 
-#: views/dashboard.php:606
+#: views/dashboard.php:608
 msgid "Make"
 msgstr ""
 
-#: views/dashboard.php:607
+#: views/dashboard.php:609
 msgid "HubSpot Forms"
 msgstr ""
 
-#: views/dashboard.php:608
+#: views/dashboard.php:610
 msgid "GoHighLevel"
 msgstr ""
 
-#: views/dashboard.php:614
+#: views/dashboard.php:616
 msgid "Webhook URL"
 msgstr ""
 
-#: views/dashboard.php:617
+#: views/dashboard.php:619
 msgid "POSTs a JSON payload here for every enabled event. Leave blank to disable."
 msgstr ""
 
-#: views/dashboard.php:621
+#: views/dashboard.php:623
 msgid "Send for"
 msgstr ""
 
-#: views/dashboard.php:626
+#: views/dashboard.php:628
 msgid "WooCommerce orders"
 msgstr ""
 
-#: views/dashboard.php:628
+#: views/dashboard.php:630
 msgid "Not available for the HubSpot preset"
 msgstr ""
 
-#: views/dashboard.php:632
+#: views/dashboard.php:634
 msgid "Form leads"
 msgstr ""
 
-#: views/dashboard.php:638
+#: views/dashboard.php:640
 msgid "Signing secret"
 msgstr ""
 
-#: views/dashboard.php:644
-msgid "Every request carries an X-UTMAT-Signature header (sha256=HMAC of the JSON body using this secret) so your receiver can verify it came from this site."
+#: views/dashboard.php:646
+msgid "Every request carries an X-Utmatra-Signature header (sha256=HMAC of the JSON body using this secret) so your receiver can verify it came from this site."
 msgstr ""
 
-#: views/dashboard.php:648
+#: views/dashboard.php:650
 msgid "Last delivery"
 msgstr ""
 
-#: views/dashboard.php:652
+#: views/dashboard.php:654
 msgid "Send a synthetic payload in the selected preset’s shape to the configured URL now."
 msgstr ""
 
-#: views/dashboard.php:652
+#: views/dashboard.php:654
 msgid "Send test webhook"
 msgstr ""
 
-#: views/dashboard.php:662
+#: views/dashboard.php:664
 msgid "Embedding"
 msgstr ""
 
-#: views/dashboard.php:663
+#: views/dashboard.php:665
 msgid "Put tracked links in content and pass attribution into forms."
 msgstr ""
 
-#: views/dashboard.php:667
+#: views/dashboard.php:669
 msgid "Shortcode"
 msgstr ""
 
-#: views/dashboard.php:669
+#: views/dashboard.php:671
 msgid "Click here"
 msgstr ""
 
-#: views/dashboard.php:670
+#: views/dashboard.php:672
 msgid "Enclosed text becomes the link text. You can also pass label=\"…\", or leave both out to use the link’s label. Incoming visits that already carry UTM parameters are tracked automatically, no shortcode required."
 msgstr ""
 
-#: views/dashboard.php:674
+#: views/dashboard.php:676
 msgid "Form fields"
 msgstr ""
 
 #. translators: 1: utm_source field name, 2: utm_campaign field name, 3: gclid field name, 4: landing_page field name, 5: the _first suffix.
-#: views/dashboard.php:681
+#: views/dashboard.php:683
 msgid "Add a hidden field named %1$s, %2$s, %3$s or %4$s (append %5$s for first touch) and it is filled from the attribution cookie. Contact Form 7, Gravity Forms, Ninja Forms and Elementor Pro Forms are supported."
 msgstr ""
 
 #. translators: %s: link to the Diagnostics tab.
-#: views/dashboard.php:697
+#: views/dashboard.php:699
 msgid "Check which forms are covered under %s."
 msgstr ""
 
-#: views/dashboard.php:707
+#: views/dashboard.php:709
 msgid "Privacy policy"
 msgstr ""
 
 #. translators: %s: link to the Privacy Policy Guide screen.
-#: views/dashboard.php:714
+#: views/dashboard.php:716
 msgid "Suggested wording is added to the %s."
 msgstr ""
 
-#: views/dashboard.php:715
+#: views/dashboard.php:717
 msgid "Privacy Policy Guide"
 msgstr ""
 
-#: views/dashboard.php:730
+#: views/dashboard.php:732
 msgid "Discard"
 msgstr ""
 
-#: views/dashboard.php:731
+#: views/dashboard.php:733
 msgid "Save settings"
 msgstr ""
 
-#: views/dashboard.php:741
+#: views/dashboard.php:743
 msgid "Tracking Doctor"
 msgstr ""
 
-#: views/dashboard.php:742
+#: views/dashboard.php:744
 msgid "Local checks on caching, consent, cookies, forms and WooCommerce attribution. Nothing is sent to any external service."
 msgstr ""
 
-#: views/dashboard.php:745
+#: views/dashboard.php:747
 msgid "Not run yet"
 msgstr ""
 
-#: views/dashboard.php:753
+#: views/dashboard.php:755
 msgid "Run the checks to see whether caching, consent, cookies, forms and WooCommerce attribution are set up correctly."
 msgstr ""
 
-#: views/dashboard.php:758
-#: views/dashboard.php:1004
+#: views/dashboard.php:760
+#: views/dashboard.php:1006
 msgid "Passed"
 msgstr ""
 
-#: views/dashboard.php:762
+#: views/dashboard.php:764
 msgid "Warnings"
 msgstr ""
 
-#: views/dashboard.php:766
-#: views/dashboard.php:1006
+#: views/dashboard.php:768
+#: views/dashboard.php:1008
 msgid "Failed"
 msgstr ""
 
-#: views/dashboard.php:770
-#: views/dashboard.php:1007
+#: views/dashboard.php:772
+#: views/dashboard.php:1009
 msgid "Skipped"
 msgstr ""
 
-#: views/dashboard.php:781
+#: views/dashboard.php:783
 msgid "Attribution fields found on each form"
 msgstr ""
 
-#: views/dashboard.php:787
+#: views/dashboard.php:789
 msgid "Form"
 msgstr ""
 
-#: views/dashboard.php:788
+#: views/dashboard.php:790
 msgid "Integration"
 msgstr ""
 
-#: views/dashboard.php:789
+#: views/dashboard.php:791
 msgid "Status"
 msgstr ""
 
-#: views/dashboard.php:790
+#: views/dashboard.php:792
 msgid "Present"
 msgstr ""
 
-#: views/dashboard.php:791
+#: views/dashboard.php:793
 msgid "Missing"
 msgstr ""
 
-#: views/dashboard.php:809
-#: views/dashboard.php:1031
+#: views/dashboard.php:811
+#: views/dashboard.php:1033
 msgid "Close"
 msgstr ""
 
-#: views/dashboard.php:819
+#: views/dashboard.php:821
 msgid "Build a URL only"
 msgstr ""
 
-#: views/dashboard.php:821
+#: views/dashboard.php:823
 msgid "Get a tagged URL to paste anywhere. No short link is created and nothing is saved."
 msgstr ""
 
-#: views/dashboard.php:827
+#: views/dashboard.php:829
 msgid "Spring newsletter button"
 msgstr ""
 
-#: views/dashboard.php:828
+#: views/dashboard.php:830
 msgid "Shown in this table and used as the default link text of the shortcode."
 msgstr ""
 
-#: views/dashboard.php:832
+#: views/dashboard.php:834
 msgid "Destination URL"
 msgstr ""
 
-#: views/dashboard.php:835
+#: views/dashboard.php:837
 msgid "Where visitors land. The UTM parameters below are added to it on redirect."
 msgstr ""
 
-#: views/dashboard.php:841
+#: views/dashboard.php:843
 msgid "None"
 msgstr ""
 
-#: views/dashboard.php:843
+#: views/dashboard.php:845
 msgid "Delete preset"
 msgstr ""
 
-#: views/dashboard.php:844
+#: views/dashboard.php:846
 msgid "Save current as preset"
 msgstr ""
 
-#: views/dashboard.php:849
+#: views/dashboard.php:851
 msgid "Preset name"
 msgstr ""
 
-#: views/dashboard.php:850
+#: views/dashboard.php:852
 msgid "e.g. Instagram Story"
 msgstr ""
 
-#: views/dashboard.php:851
+#: views/dashboard.php:853
 msgid "Save"
 msgstr ""
 
-#: views/dashboard.php:852
-#: views/dashboard.php:931
+#: views/dashboard.php:854
+#: views/dashboard.php:933
 msgid "Cancel"
 msgstr ""
 
-#: views/dashboard.php:878
+#: views/dashboard.php:880
 msgid "Some values were normalized for consistent reporting (lowercase, spaces replaced with \"-\")."
 msgstr ""
 
-#: views/dashboard.php:880
+#: views/dashboard.php:882
 msgid "Dismiss this notice"
 msgstr ""
 
-#: views/dashboard.php:884
+#: views/dashboard.php:886
 msgid "Advanced: term, content, campaign ID"
 msgstr ""
 
-#: views/dashboard.php:895
+#: views/dashboard.php:897
 msgid "Campaign ID (utm_id)"
 msgstr ""
 
 #. translators: %s: link to the Settings tab.
-#: views/dashboard.php:909
+#: views/dashboard.php:911
 msgid "Set up under %s."
 msgstr ""
 
-#: views/dashboard.php:921
+#: views/dashboard.php:923
 msgid "Visitors are forwarded to"
 msgstr ""
 
-#: views/dashboard.php:922
+#: views/dashboard.php:924
 msgid "Tagged URL"
 msgstr ""
 
-#: views/dashboard.php:932
-#: views/dashboard.php:975
+#: views/dashboard.php:934
+#: views/dashboard.php:977
 msgid "Add link"
 msgstr ""
 
-#: views/dashboard.php:943
+#: views/dashboard.php:945
 msgid "Copied!"
 msgstr ""
 
-#: views/dashboard.php:944
+#: views/dashboard.php:946
 msgid "Copy failed"
 msgstr ""
 
-#: views/dashboard.php:945
+#: views/dashboard.php:947
 msgid "Could not load data:"
 msgstr ""
 
-#: views/dashboard.php:946
+#: views/dashboard.php:948
 msgid "No tracked links yet. Use Add tracked link to create one."
 msgstr ""
 
-#: views/dashboard.php:947
+#: views/dashboard.php:949
 msgid "No tracked links match your search."
 msgstr ""
 
-#: views/dashboard.php:949
+#: views/dashboard.php:951
 msgid "Preset saved."
 msgstr ""
 
-#: views/dashboard.php:950
+#: views/dashboard.php:952
 msgid "Please enter a preset name."
 msgstr ""
 
-#: views/dashboard.php:951
+#: views/dashboard.php:953
 msgid "Delete this preset?"
 msgstr ""
 
-#: views/dashboard.php:952
-#: views/dashboard.php:999
+#: views/dashboard.php:954
+#: views/dashboard.php:1001
 msgid "Sending…"
 msgstr ""
 
-#: views/dashboard.php:953
+#: views/dashboard.php:955
 msgid "Test webhook sent."
 msgstr ""
 
-#: views/dashboard.php:954
+#: views/dashboard.php:956
 msgid "Delivery failed — check the URL and your receiver."
 msgstr ""
 
-#: views/dashboard.php:955
-msgid "JSON POST signed with X-UTMAT-Signature. Events: conversion, lead, test."
-msgstr ""
-
-#: views/dashboard.php:956
-msgid "Create a Zap with the trigger Webhooks by Zapier → Catch Hook and paste its URL. Zapier parses the JSON and offers every key, including nested first_touch and last_touch values, as fields in later steps. Click Send test so the Zap can pull in a sample."
-msgstr ""
-
 #: views/dashboard.php:957
-msgid "Add a Webhooks → Custom webhook module and paste its URL. Click Send test while the module is listening so Make can detect the data structure."
+msgid "JSON POST signed with X-Utmatra-Signature. Events: conversion, lead, test."
 msgstr ""
 
 #: views/dashboard.php:958
-msgid "Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmat-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot."
+msgid "Create a Zap with the trigger Webhooks by Zapier → Catch Hook and paste its URL. Zapier parses the JSON and offers every key, including nested first_touch and last_touch values, as fields in later steps. Click Send test so the Zap can pull in a sample."
 msgstr ""
 
 #: views/dashboard.php:959
+msgid "Add a Webhooks → Custom webhook module and paste its URL. Click Send test while the module is listening so Make can detect the data structure."
+msgstr ""
+
+#: views/dashboard.php:960
+msgid "Paste the Forms API URL for your HubSpot form: replace {portalId} with your account ID and {formGuid} with the form ID. Only form fields that exist on that HubSpot form are accepted: add email, firstname, lastname, phone and, to keep attribution, hidden fields named utm_source, utm_medium, utm_campaign, utm_term and utm_content. When the visitor carries HubSpot’s own tracking cookie (hubspotutk) it is included so HubSpot can link the submission to its visitor record. A rejected submission shows HubSpot’s error under Last delivery. Send test creates a contact for utmatra-test@example.com. Leads only; WooCommerce orders are not sent to HubSpot."
+msgstr ""
+
+#: views/dashboard.php:961
 msgid "In a HighLevel workflow add the Inbound Webhook trigger and paste its URL. Click Send test, then use Fetch sample request in the trigger to map email, phone, first_name and last_name onto Create/Update Contact. Keys are flat and contain no spaces."
 msgstr ""
 
 #. translators: 1: date and time of the delivery, 2: response detail.
-#: views/dashboard.php:961
+#: views/dashboard.php:963
 msgid "Last delivery: %1$s succeeded (%2$s)"
 msgstr ""
 
 #. translators: 1: date and time of the delivery, 2: error detail.
-#: views/dashboard.php:963
+#: views/dashboard.php:965
 msgid "Last delivery: %1$s failed (%2$s)"
 msgstr ""
 
-#: views/dashboard.php:964
+#: views/dashboard.php:966
 msgid "Duplicate"
 msgstr ""
 
-#: views/dashboard.php:965
+#: views/dashboard.php:967
 msgid "Pre-fill the add-link form with this link’s values to create a variant."
 msgstr ""
 
-#: views/dashboard.php:966
+#: views/dashboard.php:968
 msgid "(copy)"
 msgstr ""
 
-#: views/dashboard.php:968
+#: views/dashboard.php:970
 msgid "Delete"
 msgstr ""
 
-#: views/dashboard.php:969
+#: views/dashboard.php:971
 msgid "Confirm?"
 msgstr ""
 
-#: views/dashboard.php:970
+#: views/dashboard.php:972
 msgid "Link added."
 msgstr ""
 
-#: views/dashboard.php:971
+#: views/dashboard.php:973
 msgid "Link updated."
 msgstr ""
 
-#: views/dashboard.php:972
+#: views/dashboard.php:974
 msgid "Link deleted."
 msgstr ""
 
-#: views/dashboard.php:973
+#: views/dashboard.php:975
 msgid "Edit"
 msgstr ""
 
-#: views/dashboard.php:974
+#: views/dashboard.php:976
 msgid "Save changes"
 msgstr ""
 
-#: views/dashboard.php:978
+#: views/dashboard.php:980
 msgid "QR code"
 msgstr ""
 
-#: views/dashboard.php:979
+#: views/dashboard.php:981
 msgid "Download PNG"
 msgstr ""
 
-#: views/dashboard.php:980
+#: views/dashboard.php:982
 msgid "Exporting…"
 msgstr ""
 
-#: views/dashboard.php:982
+#: views/dashboard.php:984
 msgid "No events to export for this period."
 msgstr ""
 
-#: views/dashboard.php:983
+#: views/dashboard.php:985
 msgid "Settings saved."
 msgstr ""
 
-#: views/dashboard.php:984
+#: views/dashboard.php:986
 msgid "Google Ads"
 msgstr ""
 
-#: views/dashboard.php:985
+#: views/dashboard.php:987
 msgid "Facebook / Meta"
 msgstr ""
 
-#: views/dashboard.php:986
+#: views/dashboard.php:988
 msgid "Microsoft Ads"
 msgstr ""
 
-#: views/dashboard.php:987
+#: views/dashboard.php:989
 msgid "TikTok Ads"
 msgstr ""
 
-#: views/dashboard.php:988
+#: views/dashboard.php:990
 msgid "LinkedIn Ads"
 msgstr ""
 
-#: views/dashboard.php:989
+#: views/dashboard.php:991
 msgid "X / Twitter Ads"
 msgstr ""
 
-#: views/dashboard.php:990
+#: views/dashboard.php:992
 msgid "vs previous period"
 msgstr ""
 
-#: views/dashboard.php:992
+#: views/dashboard.php:994
 msgid "Previous period"
 msgstr ""
 
 #. translators: %s: name of the detected page cache plugin.
-#: views/dashboard.php:994
+#: views/dashboard.php:996
 msgid "Detected %s. Tracking still works correctly on cached pages via the front-end beacon."
 msgstr ""
 
-#: views/dashboard.php:995
+#: views/dashboard.php:997
 msgid "Desktop"
 msgstr ""
 
-#: views/dashboard.php:996
+#: views/dashboard.php:998
 msgid "Mobile"
 msgstr ""
 
-#: views/dashboard.php:997
+#: views/dashboard.php:999
 msgid "Tablet"
 msgstr ""
 
-#: views/dashboard.php:1000
+#: views/dashboard.php:1002
 msgid "Test email sent."
 msgstr ""
 
-#: views/dashboard.php:1001
+#: views/dashboard.php:1003
 msgid "Sending failed — check your mail configuration."
 msgstr ""
 
-#: views/dashboard.php:1002
+#: views/dashboard.php:1004
 msgid "Running…"
 msgstr ""
 
-#: views/dashboard.php:1003
+#: views/dashboard.php:1005
 msgid "Could not run diagnostics."
 msgstr ""
 
-#: views/dashboard.php:1005
+#: views/dashboard.php:1007
 msgid "Warning"
 msgstr ""
 
-#: views/dashboard.php:1008
+#: views/dashboard.php:1010
 msgid "Covered"
 msgstr ""
 
-#: views/dashboard.php:1009
+#: views/dashboard.php:1011
 msgid "Partial"
 msgstr ""
 
-#: views/dashboard.php:1010
+#: views/dashboard.php:1012
 msgid "No fields"
 msgstr ""
 
-#: views/dashboard.php:1011
+#: views/dashboard.php:1013
 msgid "—"
 msgstr ""
 
-#: views/dashboard.php:1013
+#: views/dashboard.php:1015
 msgid "Edit tracked link"
 msgstr ""
 
-#: views/dashboard.php:1014
+#: views/dashboard.php:1016
 msgid "Build a tagged URL"
 msgstr ""
 
-#: views/dashboard.php:1015
+#: views/dashboard.php:1017
 msgid "Copy tagged URL"
 msgstr ""
 
-#: views/dashboard.php:1016
+#: views/dashboard.php:1018
 msgid "Copy link"
 msgstr ""
 
-#: views/dashboard.php:1017
+#: views/dashboard.php:1019
 msgid "Copy short link"
 msgstr ""
 
-#: views/dashboard.php:1018
+#: views/dashboard.php:1020
 msgid "Copy destination URL"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1020
+#: views/dashboard.php:1022
 msgid "Select %s"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1022
+#: views/dashboard.php:1024
 msgid "QR code for %s"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1024
+#: views/dashboard.php:1026
 msgid "Edit %s"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1026
+#: views/dashboard.php:1028
 msgid "Duplicate %s"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1028
+#: views/dashboard.php:1030
 msgid "Copy short link for %s"
 msgstr ""
 
 #. translators: %s: tracked link label.
-#: views/dashboard.php:1030
+#: views/dashboard.php:1032
 msgid "Delete %s"
 msgstr ""
 
-#: views/dashboard.php:1032
+#: views/dashboard.php:1034
 msgid "Show more details"
 msgstr ""
 
 #. translators: 1: number of tracked links shown, 2: their total all-time clicks.
-#: views/dashboard.php:1034
+#: views/dashboard.php:1036
 msgid "Links: %1$s · Clicks (all time): %2$s"
 msgstr ""
 
-#: views/dashboard.php:1035
+#: views/dashboard.php:1037
 msgid "Created from the label when you save."
 msgstr ""
 
 #. translators: %s: tracked link ID.
-#: views/dashboard.php:1037
-msgid "Shortcode: [utmat_link id=\"%s\"]"
-msgstr ""
-
-#: views/dashboard.php:1038
-msgid "After saving, embed it with the [utmat_link] shortcode."
-msgstr ""
-
 #: views/dashboard.php:1039
+msgid "Shortcode: [utmatra_link id=\"%s\"]"
+msgstr ""
+
+#: views/dashboard.php:1040
+msgid "After saving, embed it with the [utmatra_link] shortcode."
+msgstr ""
+
+#: views/dashboard.php:1041
 msgid "Enter a destination URL to see the final link."
 msgstr ""
 
 #. translators: %s: conversion rate as a percentage, for example 2.0%.
-#: views/dashboard.php:1041
+#: views/dashboard.php:1043
 msgid "%s of clicks"
 msgstr ""
 
 #. translators: %s: number of orders.
-#: views/dashboard.php:1043
+#: views/dashboard.php:1045
 msgid "From %s orders on tagged campaigns"
 msgstr ""
 
 #. translators: 1: number of clicks, 2: share of all clicks as a percentage.
-#: views/dashboard.php:1045
+#: views/dashboard.php:1047
 msgid "%1$s clicks · %2$s of total"
 msgstr ""
 
-#: views/dashboard.php:1046
+#: views/dashboard.php:1048
 msgid "No clicks yet"
 msgstr ""
 
-#: views/dashboard.php:1047
+#: views/dashboard.php:1049
 msgid "Appears with WooCommerce orders"
 msgstr ""
 
-#: views/dashboard.php:1048
+#: views/dashboard.php:1050
 msgid "Appears with WooCommerce orders and form leads"
 msgstr ""
 
-#: views/dashboard.php:1049
+#: views/dashboard.php:1051
 msgid "Waiting for data"
 msgstr ""
 
-#: views/dashboard.php:1050
+#: views/dashboard.php:1052
 msgid "No tagged clicks in this period"
 msgstr ""
 
 #. translators: %s: number of days in the selected period.
-#: views/dashboard.php:1052
+#: views/dashboard.php:1054
 msgid "Compared with the previous %s days"
 msgstr ""
 
-#: views/dashboard.php:1053
+#: views/dashboard.php:1055
 msgid "Compared with the previous period of the same length"
 msgstr ""
 
-#: views/dashboard.php:1054
+#: views/dashboard.php:1056
 msgid "No unsaved changes"
 msgstr ""
 
 #. translators: %s: number of changed settings.
-#: views/dashboard.php:1056
+#: views/dashboard.php:1058
 msgid "Unsaved changes: %s"
 msgstr ""
 
 #. translators: %s: time the diagnostics last ran.
-#: views/dashboard.php:1058
+#: views/dashboard.php:1060
 msgid "Last run at %s"
 msgstr ""
 
 #. translators: 1: order number, 2: formatted order total.
-#: views/dashboard.php:1060
+#: views/dashboard.php:1062
 msgid "Order #%1$s · %2$s"
 msgstr ""
 
 #. translators: %s: formatted order total.
-#: views/dashboard.php:1062
+#: views/dashboard.php:1064
 msgid "Order · %s"
 msgstr ""
 
 #. translators: 1: form title, 2: integration name.
-#: views/dashboard.php:1064
+#: views/dashboard.php:1066
 msgid "Lead · %1$s · %2$s"
 msgstr ""
 
-#: views/dashboard.php:1065
+#: views/dashboard.php:1067
 msgid "Order"
 msgstr ""
 
-#: views/dashboard.php:1066
+#: views/dashboard.php:1068
 msgid "Lead"
 msgstr ""
 
-#: views/dashboard.php:1067
+#: views/dashboard.php:1069
 msgid "Click"
 msgstr ""
 
-#: views/dashboard.php:1068
+#: views/dashboard.php:1070
 msgid "Visit"
 msgstr ""
 
-#: views/dashboard.php:1069
+#: views/dashboard.php:1071
 msgid "Show touches"
 msgstr ""
 
-#: views/dashboard.php:1070
+#: views/dashboard.php:1072
 msgid "Hide touches"
 msgstr ""
 
-#: views/dashboard.php:1071
+#: views/dashboard.php:1073
 msgid "Showing the most recent 100 touches."
 msgstr ""
 
-#: views/dashboard.php:1072
+#: views/dashboard.php:1074
 msgid "Could not load journeys."
 msgstr ""
 
 #. translators: %s: number of conversions without a visitor id.
-#: views/dashboard.php:1074
+#: views/dashboard.php:1076
 msgid "Conversions without a visitor id (not shown): %s"
 msgstr ""

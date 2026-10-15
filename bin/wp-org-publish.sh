@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# bin/wp-org-publish.sh — End-to-end publish workflow for UTM & Attribution Tracker
+# bin/wp-org-publish.sh — End-to-end publish workflow for Utmatra
 # releases to the WordPress.org plugin repository.
 #
 # Run via: npm run wporg:publish        (uses Stable tag from readme.txt)
@@ -80,7 +80,7 @@ fi
 
 if ! grep -q "^ \* Version: *${VERSION}\$" "$GITPATH/${SLUG}.php"; then
     echo "ERROR: ${SLUG}.php Plugin Header Version: line does not match ${VERSION}" >&2
-    echo "       Update it (and UTM_ATTRIBUTION_TRACKER_VERSION below it) before re-running." >&2
+    echo "       Update it (and UTMATRA_VERSION below it) before re-running." >&2
     exit 1
 fi
 

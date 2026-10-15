@@ -3,29 +3,29 @@
  * ConversionWebhook — outbound POST to a configurable URL on new conversion
  * (WooCommerce order or form lead).
  *
- * Disabled by default (the `utmat_webhook_url` option is empty). When an
+ * Disabled by default (the `utmatra_webhook_url` option is empty). When an
  * attributed WooCommerce order is placed (see Integrations\WooCommerce) or
- * an attributed form submission is recorded (the `utmat_lead_recorded`
+ * an attributed form submission is recorded (the `utmatra_lead_recorded`
  * action fired by Insights\Recorder), the payload — order total, currency
  * and the first/last-touch attribution sets for orders; the form's field
  * values and both attribution sets for leads — is POSTed to the configured
  * URL, signed with an HMAC-SHA256 signature over a per-site secret so the
  * receiver can verify the request actually came from this site.
  *
- * The `utmat_webhook_preset` option selects the body shape: the generic
+ * The `utmatra_webhook_preset` option selects the body shape: the generic
  * JSON payload (also used by the Zapier and Make presets, whose receivers
  * parse nested JSON themselves), the HubSpot Forms API v3 submission body
  * (leads only), or GoHighLevel's flat snake_case object. The
- * `utmat_webhook_events` option toggles order and lead events
+ * `utmatra_webhook_events` option toggles order and lead events
  * independently; both default to on.
  *
- * @package UTMAT\Reports
+ * @package Utmatra\Reports
  */
 
-namespace UTMAT\Reports;
+namespace Utmatra\Reports;
 
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\Tracker;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -41,7 +41,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	public const OPTION_URL = 'utmat_webhook_url';
+	public const OPTION_URL = 'utmatra_webhook_url';
 
 	/**
 	 * Option name holding the per-site HMAC signing secret.
@@ -50,7 +50,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	private const OPTION_SECRET = 'utmat_webhook_secret';
+	private const OPTION_SECRET = 'utmatra_webhook_secret';
 
 	/**
 	 * Option name holding the result of the most recent delivery attempt.
@@ -59,7 +59,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	private const OPTION_LAST = 'utmat_webhook_last';
+	private const OPTION_LAST = 'utmatra_webhook_last';
 
 	/**
 	 * Option name holding the selected webhook preset.
@@ -68,7 +68,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	public const OPTION_PRESET = 'utmat_webhook_preset';
+	public const OPTION_PRESET = 'utmatra_webhook_preset';
 
 	/**
 	 * Option name holding the per-event toggles (orders / leads).
@@ -77,7 +77,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	public const OPTION_EVENTS = 'utmat_webhook_events';
+	public const OPTION_EVENTS = 'utmatra_webhook_events';
 
 	/**
 	 * The accepted webhook presets.
@@ -95,7 +95,7 @@ class ConversionWebhook {
 	 *
 	 * @var string
 	 */
-	private const TEST_EMAIL = 'utmat-test@example.com';
+	private const TEST_EMAIL = 'utmatra-test@example.com';
 
 	/**
 	 * Timeout in seconds for the outbound request.
@@ -183,7 +183,7 @@ class ConversionWebhook {
 	 *
 	 * No-ops when no URL is configured. The generic event name is passed
 	 * explicitly because the HubSpot body carries no `event` key of its own;
-	 * the HMAC signature and X-UTMAT-Event headers are sent for every
+	 * the HMAC signature and X-Utmatra-Event headers are sent for every
 	 * preset (harmless to receivers that ignore them). Records the outcome
 	 * via {@see self::record_result()} regardless of success so the settings
 	 * card can show the admin whether delivery is actually working; a non-2xx
@@ -209,9 +209,9 @@ class ConversionWebhook {
 			array(
 				'timeout' => self::TIMEOUT,
 				'headers' => array(
-					'Content-Type'      => 'application/json',
-					'X-UTMAT-Signature' => 'sha256=' . $signature,
-					'X-UTMAT-Event'     => $event,
+					'Content-Type'        => 'application/json',
+					'X-Utmatra-Signature' => 'sha256=' . $signature,
+					'X-Utmatra-Event'     => $event,
 				),
 				'body'    => $body,
 			)
@@ -306,7 +306,7 @@ class ConversionWebhook {
 	/**
 	 * Build and send the payload for a recorded form lead.
 	 *
-	 * Hooked on `utmat_lead_recorded`. Skipped without sending (and without
+	 * Hooked on `utmatra_lead_recorded`. Skipped without sending (and without
 	 * touching the last-delivery record) when lead events are toggled off or
 	 * no URL is configured.
 	 *
@@ -405,7 +405,7 @@ class ConversionWebhook {
 						'First name' => 'Test',
 						'Last name'  => 'Lead',
 						'Phone'      => '+15555550123',
-						'Message'    => __( 'Sent from UTM & Attribution Tracker', 'utm-attribution-tracker' ),
+						'Message'    => __( 'Sent from Utmatra', 'utm-attribution-tracker' ),
 					),
 				)
 			);

@@ -12,7 +12,7 @@
  * One smart tag per field name (`{utm_source}`, `{landing_page_first}`, …)
  * resolves at submit time for notification templates, from the submitted
  * POST first and the cookie second. A field whose default value is one of
- * those tags is marked with `data-utmat-field` so the beacon fills it
+ * those tags is marked with `data-utmatra-field` so the beacon fills it
  * client-side; at render the tag resolves to an empty string on purpose,
  * because a server-rendered value would be baked into cached HTML.
  *
@@ -20,13 +20,13 @@
  * checked at `plugins_loaded` priority 20). Without WPForms the class is
  * loaded but completely inert.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 use WP_Post;
 
 defined( 'ABSPATH' ) || exit;
@@ -105,7 +105,7 @@ class WPForms {
 		foreach ( Attribution::field_names() as $name ) {
 			$tags[ $name ] = sprintf(
 				/* translators: %s: attribution field name, e.g. utm_source. */
-				__( 'UTM & Attribution: %s', 'utm-attribution-tracker' ),
+				__( 'Utmatra: %s', 'utm-attribution-tracker' ),
 				$name
 			);
 		}
@@ -162,7 +162,7 @@ class WPForms {
 	 * Mark a field whose default value is an attribution smart tag.
 	 *
 	 * Runs on `wpforms_field_properties` at priority 20, after WPForms'
-	 * own prefill callback, and only adds the `data-utmat-field` attribute
+	 * own prefill callback, and only adds the `data-utmatra-field` attribute
 	 * the beacon looks for. The value is left alone: the initial render is
 	 * already empty, and after a failed validation WPForms must keep
 	 * restoring the submitted value itself.
@@ -186,7 +186,7 @@ class WPForms {
 			return $properties;
 		}
 
-		$properties['inputs']['primary']['data']['utmat-field'] = $name;
+		$properties['inputs']['primary']['data']['utmatra-field'] = $name;
 
 		return $properties;
 	}

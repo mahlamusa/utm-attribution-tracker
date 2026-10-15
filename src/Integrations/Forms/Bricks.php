@@ -16,13 +16,13 @@
  * `after_setup_theme` because Bricks is a theme and none of its constants
  * exist at `plugins_loaded`.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -79,7 +79,7 @@ class Bricks {
 			$tags[] = array(
 				'name'  => '{' . $name . '}',
 				'label' => $name,
-				'group' => __( 'UTM & Attribution', 'utm-attribution-tracker' ),
+				'group' => __( 'Utmatra', 'utm-attribution-tracker' ),
 			);
 		}
 

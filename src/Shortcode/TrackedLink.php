@@ -1,22 +1,22 @@
 <?php
 /**
- * TrackedLink shortcode — [utmat_link].
+ * TrackedLink shortcode — [utmatra_link].
  *
  * Usage:
- *   [utmat_link id="example-campaign" label="Click here"]
- *   [utmat_link id="example-campaign"]Click <strong>here</strong>[/utmat_link]
+ *   [utmatra_link id="example-campaign" label="Click here"]
+ *   [utmatra_link id="example-campaign"]Click <strong>here</strong>[/utmatra_link]
  *
  * Renders an anchor tag that points to the plugin's redirect endpoint so
  * clicks are counted before the visitor is forwarded to the destination.
  * Enclosed content wins over the label attribute and may contain markup
  * (filtered through wp_kses_post) and nested shortcodes.
  *
- * @package UTMAT\Shortcode
+ * @package Utmatra\Shortcode
  */
 
-namespace UTMAT\Shortcode;
+namespace Utmatra\Shortcode;
 
-use UTMAT\Tracking\LinkManager;
+use Utmatra\Tracking\LinkManager;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,7 +26,7 @@ defined( 'ABSPATH' ) || exit;
 class TrackedLink {
 
 	/**
-	 * Render the [utmat_link] shortcode.
+	 * Render the [utmatra_link] shortcode.
 	 *
 	 * @since 1.0.0
 	 * @param array<string, string>|string $atts    Shortcode attributes.
@@ -42,7 +42,7 @@ class TrackedLink {
 				'rel'   => 'noopener',
 			),
 			(array) $atts,
-			'utmat_link'
+			'utmatra_link'
 		);
 
 		$id = sanitize_key( $atts['id'] );

@@ -2,16 +2,16 @@
 /**
  * Dashboard — registers the admin menu page and enqueues assets.
  *
- * @package UTMAT\Admin
+ * @package Utmatra\Admin
  */
 
-namespace UTMAT\Admin;
+namespace Utmatra\Admin;
 
-use UTMAT\Reports\ConversionWebhook;
-use UTMAT\Reports\WeeklyEmail;
-use UTMAT\Tracking\Attribution;
-use UTMAT\Tracking\LinkManager;
-use UTMAT\Tracking\Tracker;
+use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Tracking\Attribution;
+use Utmatra\Tracking\LinkManager;
+use Utmatra\Tracking\Tracker;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,8 +25,9 @@ class Dashboard {
 	private const PAGE_SLUG = 'utm-attribution-tracker';
 
 	/**
-	 * Admin menu icon: a hollow first-touch ring, a route and a solid
-	 * conversion disc, as a base64 SVG data URI.
+	 * Admin menu icon: the Utmatra "UTM" route (a first-touch ring, link
+	 * dots where the letters join, a conversion dot), as a base64 SVG
+	 * data URI.
 	 *
 	 * Single fill colour so core's svg-painter recolours it for the default,
 	 * hover and current menu states.
@@ -34,7 +35,7 @@ class Dashboard {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	private const MENU_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjYTdhYWFkIj48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik00IDBhNCA0IDAgMSAxIDAgOCA0IDQgMCAwIDEgMC04em0wIDJhMiAyIDAgMSAwIDAgNCAyIDIgMCAwIDAgMC00eiIvPjxwYXRoIGQ9Ik04IDNoOXY4SDV2NGgxMXYySDNWOWgxMlY1SDh6Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy41Ii8+PC9zdmc+Cg==';
+	private const MENU_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjYTdhYWFkIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwLjIgMC4zNSkiPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTEuOCAyLjZhMS40IDEuNCAwIDEgMSAwIDIuOCAxLjQgMS40IDAgMCAxIDAtMi44em0wIC43NWEuNjUuNjUgMCAxIDAgMCAxLjMuNjUuNjUgMCAwIDAgMC0xLjN6Ii8+PHBhdGggZD0iTTEuNCA1LjNoLjhWMTRoLS44eiIvPjxwYXRoIGQ9Ik0xLjQgMTRhMi42IDIuNiAwIDAgMCA1LjIgMGgtLjhhMS44IDEuOCAwIDAgMS0zLjYgMHoiLz48cGF0aCBkPSJNNS44IDRoLjh2MTBoLS44eiIvPjxwYXRoIGQ9Ik01LjggMy42aDcuMnYuOEg1Ljh6Ii8+PHBhdGggZD0iTTkgMy42aC44VjE3SDl6Ii8+PHBhdGggZD0iTTEyLjIgMy42aC44VjE3aC0uOHpNMTcuNCAzLjZoLjhWMTdoLS44eiIvPjxwYXRoIGQ9Ik0xMi4yIDMuNmguOWwyLjEgNSAyLjEtNWguOWwtMyA3LjF6Ii8+PGNpcmNsZSBjeD0iNi4yIiBjeT0iNCIgcj0iMSIvPjxjaXJjbGUgY3g9IjEyLjYiIGN5PSI0IiByPSIxIi8+PGNpcmNsZSBjeD0iMTcuOCIgY3k9IjQiIHI9IjEuMyIvPjwvZz48L3N2Zz4K';
 
 	/**
 	 * The hook suffix returned by add_menu_page.
@@ -53,8 +54,8 @@ class Dashboard {
 	 */
 	public static function register_menu(): void {
 		self::$hook_suffix = (string) add_menu_page(
-			__( 'UTM & Attribution Tracker', 'utm-attribution-tracker' ),
-			__( 'UTM & Attribution', 'utm-attribution-tracker' ),
+			__( 'Utmatra - UTM Attribution and Tracking', 'utm-attribution-tracker' ),
+			__( 'Utmatra', 'utm-attribution-tracker' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
@@ -78,7 +79,7 @@ class Dashboard {
 		// Chart.js — bundled locally (no CDN; required for wp.org and offline admin).
 		wp_enqueue_script(
 			'chartjs',
-			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/vendor/chart.umd.min.js',
+			UTMATRA_URL . 'assets/js/vendor/chart.umd.min.js',
 			array(),
 			'4.4.0',
 			true
@@ -86,8 +87,8 @@ class Dashboard {
 
 		// qrcode-generator (MIT) — bundled locally, dashboard page only.
 		wp_enqueue_script(
-			'utmat-qrcode',
-			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/vendor/qrcode.min.js',
+			'utmatra-qrcode',
+			UTMATRA_URL . 'assets/js/vendor/qrcode.min.js',
 			array(),
 			'2.0.4',
 			true
@@ -95,22 +96,22 @@ class Dashboard {
 
 		// Version off the file's own mtime (not the plugin version) so a saved
 		// edit always busts the browser cache, even between releases.
-		$js_path  = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/js/dashboard.js';
-		$css_path = UTM_ATTRIBUTION_TRACKER_PATH . 'assets/css/dashboard.css';
+		$js_path  = UTMATRA_PATH . 'assets/js/dashboard.js';
+		$css_path = UTMATRA_PATH . 'assets/css/dashboard.css';
 
 		wp_enqueue_script(
-			'utmat-dashboard',
-			UTM_ATTRIBUTION_TRACKER_URL . 'assets/js/dashboard.js',
-			array( 'chartjs', 'utmat-qrcode' ),
-			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTM_ATTRIBUTION_TRACKER_VERSION,
+			'utmatra-dashboard',
+			UTMATRA_URL . 'assets/js/dashboard.js',
+			array( 'chartjs', 'utmatra-qrcode' ),
+			file_exists( $js_path ) ? (string) filemtime( $js_path ) : UTMATRA_VERSION,
 			true
 		);
 
 		wp_enqueue_style(
-			'utmat-dashboard',
-			UTM_ATTRIBUTION_TRACKER_URL . 'assets/css/dashboard.css',
+			'utmatra-dashboard',
+			UTMATRA_URL . 'assets/css/dashboard.css',
 			array(),
-			file_exists( $css_path ) ? (string) filemtime( $css_path ) : UTM_ATTRIBUTION_TRACKER_VERSION
+			file_exists( $css_path ) ? (string) filemtime( $css_path ) : UTMATRA_VERSION
 		);
 
 		// Pass config to JS.
@@ -131,10 +132,10 @@ class Dashboard {
 		$woo_active = class_exists( 'WooCommerce' );
 
 		wp_localize_script(
-			'utmat-dashboard',
-			'utmatData',
+			'utmatra-dashboard',
+			'utmatraData',
 			array(
-				'apiBase'        => rest_url( 'utmat/v1' ),
+				'apiBase'        => rest_url( 'utmatra/v1' ),
 				'nonce'          => wp_create_nonce( 'wp_rest' ),
 				'siteUrl'        => home_url( '/' ),
 				'links'          => $links_out,
@@ -143,15 +144,15 @@ class Dashboard {
 					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
 					: '',
 				'settings'       => array(
-					'retentionDays'   => (int) get_option( 'utmat_retention_days', 180 ),
+					'retentionDays'   => (int) get_option( 'utmatra_retention_days', 180 ),
 					'weeklyEmail'     => WeeklyEmail::enabled(),
-					'cookieDays'      => (int) get_option( 'utmat_cookie_days', 90 ),
+					'cookieDays'      => (int) get_option( 'utmatra_cookie_days', 90 ),
 					'webhookUrl'      => ConversionWebhook::url(),
 					'webhookPreset'   => ConversionWebhook::preset(),
 					'webhookOrders'   => ConversionWebhook::events()['orders'],
 					'webhookLeads'    => ConversionWebhook::events()['leads'],
 					'consentCategory' => Attribution::consent_category(),
-					'trackVisits'     => 1 === (int) get_option( 'utmat_track_visits', 1 ),
+					'trackVisits'     => 1 === (int) get_option( 'utmatra_track_visits', 1 ),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => ConversionWebhook::secret(),
@@ -214,11 +215,11 @@ class Dashboard {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'utm-attribution-tracker' ) );
 		}
-		require_once UTM_ATTRIBUTION_TRACKER_PATH . 'views/dashboard.php';
+		require_once UTMATRA_PATH . 'views/dashboard.php';
 	}
 
 	/**
-	 * Add a "UTM & Attribution" action link on the Plugins screen.
+	 * Add a "Utmatra" action link on the Plugins screen.
 	 *
 	 * The link always points to `admin.php?page=utm-attribution-tracker` — the
 	 * page URL is the same whether the plugin registered as a standalone
@@ -233,7 +234,7 @@ class Dashboard {
 		$links[] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ),
-			esc_html__( 'UTM & Attribution', 'utm-attribution-tracker' )
+			esc_html__( 'Utmatra', 'utm-attribution-tracker' )
 		);
 		return $links;
 	}

@@ -12,14 +12,14 @@
  * checked at `plugins_loaded` priority 20). Without Fluent Forms the class
  * is loaded but completely inert.
  *
- * @package UTMAT\Integrations\Forms
+ * @package Utmatra\Integrations\Forms
  */
 
-namespace UTMAT\Integrations\Forms;
+namespace Utmatra\Integrations\Forms;
 
 use FluentForm\App\Modules\Form\FormFieldsParser;
-use UTMAT\Insights\Recorder;
-use UTMAT\Tracking\Attribution;
+use Utmatra\Insights\Recorder;
+use Utmatra\Tracking\Attribution;
 
 defined( 'ABSPATH' ) || exit;
 

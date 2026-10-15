@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build step for UTM & Attribution Tracker.
+# Build step for Utmatra.
 #
 # The plugin ships plain PHP/CSS/JS with no Composer or npm build step, so
 # the only build artifact is the translations template (.pot). Run this

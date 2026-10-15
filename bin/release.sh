@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build a distributable UTM & Attribution Tracker release zip.
+# Build a distributable Utmatra release zip.
 #
 # The plugin has no Composer or npm dependencies, so packaging is just:
 #   1. Run build.sh (regenerates the .pot — the only build artifact).

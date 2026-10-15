@@ -3,7 +3,7 @@
  * Collect Controller — public REST endpoint for the front-end beacon.
  *
  * Route:
- *   POST utmat/v1/collect — record an incoming UTM/click-ID page view, or
+ *   POST utmatra/v1/collect — record an incoming UTM/click-ID page view, or
  *   an untagged landing visit (`visit=1`) when visit tracking is on.
  *
  * The route is public by design: the beacon fires from cached pages where a
@@ -13,12 +13,12 @@
  *
  * @since 1.0.0
  *
- * @package UTMAT\Rest
+ * @package Utmatra\Rest
  */
 
-namespace UTMAT\Rest;
+namespace Utmatra\Rest;
 
-use UTMAT\Tracking\Tracker;
+use Utmatra\Tracking\Tracker;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -77,7 +77,7 @@ class CollectController {
 		);
 
 		register_rest_route(
-			'utmat/v1',
+			'utmatra/v1',
 			'/collect',
 			array(
 				'methods'             => 'POST',
@@ -89,7 +89,7 @@ class CollectController {
 	}
 
 	/**
-	 * POST utmat/v1/collect — record a beacon-reported page view.
+	 * POST utmatra/v1/collect — record a beacon-reported page view.
 	 *
 	 * Rejects cross-origin requests (403), rate-limited IPs (429), and
 	 * requests with no UTM param or click ID (400) unless they report an
@@ -97,7 +97,7 @@ class CollectController {
 	 * referrer is external, which records a `visit` row. Bot user agents
 	 * get a 200 with `recorded: false` so they learn nothing; duplicates
 	 * within the dedup window respond the same way. The optional `vid` field
-	 * (the beacon's `utmat_vid` cookie value) stamps the row's visitor id,
+	 * (the beacon's `utmatra_vid` cookie value) stamps the row's visitor id,
 	 * and is dropped when it is not a well-formed UUID v4.
 	 *
 	 * @since 1.0.0
@@ -140,7 +140,7 @@ class CollectController {
 			// site's own host is internal navigation, never a landing.
 			$referrer_host = strtolower( (string) wp_parse_url( $referrer, PHP_URL_HOST ) );
 			$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
-			if ( ! $request->get_param( 'visit' ) || 1 !== (int) get_option( 'utmat_track_visits', 1 ) || $referrer_host === $site_host ) {
+			if ( ! $request->get_param( 'visit' ) || 1 !== (int) get_option( 'utmatra_track_visits', 1 ) || $referrer_host === $site_host ) {
 				return new WP_REST_Response(
 					array( 'message' => __( 'No UTM parameter or click ID present.', 'utm-attribution-tracker' ) ),
 					400
@@ -162,7 +162,7 @@ class CollectController {
 			);
 		}
 
-		// The visitor id from the beacon's utmat_vid cookie. The fetch
+		// The visitor id from the beacon's utmatra_vid cookie. The fetch
 		// fallback sends no cookies (credentials: omit), so this body field
 		// is the only carrier on that path; an invalid value is dropped,
 		// never stored.
@@ -214,9 +214,9 @@ class CollectController {
 	 * The collect rate limit in requests per minute per hashed client IP.
 	 *
 	 * Sites where many visitors share one IP — behind a CDN or SSL proxy
-	 * without the `utmat_client_ip` filter configured, or with heavy
+	 * without the `utmatra_client_ip` filter configured, or with heavy
 	 * NAT/CGNAT audiences — can raise the ceiling via the
-	 * `utmat_rate_limit` filter.
+	 * `utmatra_rate_limit` filter.
 	 *
 	 * @since 1.0.0
 	 * @return int
@@ -227,21 +227,21 @@ class CollectController {
 		 *
 		 * @var int $limit
 		 */
-		return max( 1, (int) apply_filters( 'utmat_rate_limit', self::RATE_LIMIT ) );
+		return max( 1, (int) apply_filters( 'utmatra_rate_limit', self::RATE_LIMIT ) );
 	}
 
 	/**
 	 * Per-IP rate limiting via a transient counter.
 	 *
 	 * Allows rate_limit() requests per rolling minute per hashed client IP
-	 * (`utmat_rl_{ip_hash}`, 60 s TTL); the counter is only
+	 * (`utmatra_rl_{ip_hash}`, 60 s TTL); the counter is only
 	 * incremented for requests that pass.
 	 *
 	 * @since 1.0.0
 	 * @return bool True when the current request exceeds the limit.
 	 */
 	private static function is_rate_limited(): bool {
-		$key   = 'utmat_rl_' . Tracker::hash_ip( Tracker::client_ip() );
+		$key   = 'utmatra_rl_' . Tracker::hash_ip( Tracker::client_ip() );
 		$count = (int) get_transient( $key );
 
 		if ( $count >= self::rate_limit() ) {
