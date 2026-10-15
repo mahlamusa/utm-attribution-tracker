@@ -1145,11 +1145,17 @@
 			const ids = Array.from( selectedLinks );
 			elBulkDeleteBtn.disabled = true;
 
-			Promise.all( ids.map( function ( id ) {
-				return apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
-					.then( function () { return { id: id, ok: true }; } )
-					.catch( function () { return { id: id, ok: false }; } );
-			} ) ).then( function ( results ) {
+			// One request at a time: each DELETE rewrites the whole links
+			// option server-side, so parallel requests overwrite each other
+			// and restore links another request just removed.
+			const results = [];
+			ids.reduce( function ( chain, id ) {
+				return chain.then( function () {
+					return apiFetch( '/links/' + encodeURIComponent( id ), { method: 'DELETE' } )
+						.then( function () { results.push( { id: id, ok: true } ); } )
+						.catch( function () { results.push( { id: id, ok: false } ); } );
+				} );
+			}, Promise.resolve() ).then( function () {
 				results.forEach( function ( r ) {
 					if ( r.ok ) {
 						selectedLinks.delete( r.id );
