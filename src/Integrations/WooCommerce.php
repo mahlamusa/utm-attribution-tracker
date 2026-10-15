@@ -428,7 +428,10 @@ class WooCommerce {
 			return;
 		}
 		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action( self::WEBHOOK_HOOK, array( (int) $order->get_id() ), Scheduler::GROUP, true );
+			// Not enqueued as unique: Action Scheduler's unique check ignores
+			// args, so it would drop other orders' webhooks while one is
+			// pending. META_CONVERTED already makes this once per order.
+			as_enqueue_async_action( self::WEBHOOK_HOOK, array( (int) $order->get_id() ), Scheduler::GROUP );
 		} else {
 			self::send_order_webhook( $order->get_id() );
 		}
