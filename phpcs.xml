@@ -25,5 +25,5 @@
 	</rule>
 
 	<!-- Plugin minimum PHP is 8.0 (see plugin header). -->
-	<config name="minimum_wp_version" value="6.0"/>
+	<config name="minimum_wp_version" value="6.5"/>
 </ruleset>

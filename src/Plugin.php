@@ -262,12 +262,20 @@ class Plugin {
 	/**
 	 * Plugin deactivation — unschedule retention pruning and the weekly report.
 	 *
+	 * Queued order webhooks are cancelled too: with the plugin inactive no
+	 * callback is registered, so they would otherwise run and fail.
+	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Cancels queued order webhooks.
 	 * @return void
 	 */
 	public static function deactivate(): void {
 		Retention::unschedule();
 		WeeklyEmail::unschedule();
+		if ( function_exists( 'as_unschedule_all_actions' ) ) {
+			// Null args match every queued webhook (each carries an order id).
+			as_unschedule_all_actions( WooCommerce::WEBHOOK_HOOK, null, Scheduler::GROUP );
+		}
 		flush_rewrite_rules();
 	}
 }

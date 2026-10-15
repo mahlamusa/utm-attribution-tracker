@@ -428,7 +428,7 @@ class WooCommerce {
 			return;
 		}
 		if ( function_exists( 'as_enqueue_async_action' ) ) {
-			as_enqueue_async_action( self::WEBHOOK_HOOK, array( (int) $order->get_id() ), Scheduler::GROUP );
+			as_enqueue_async_action( self::WEBHOOK_HOOK, array( (int) $order->get_id() ), Scheduler::GROUP, true );
 		} else {
 			self::send_order_webhook( $order->get_id() );
 		}

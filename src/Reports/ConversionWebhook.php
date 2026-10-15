@@ -100,10 +100,11 @@ class ConversionWebhook {
 	/**
 	 * Timeout in seconds for the outbound request.
 	 *
-	 * Kept short because delivery is a blocking call made when an order is
-	 * paid and on form submission (see record_paid_conversion() in the
-	 * WooCommerce integration and send_lead()) — a slow or unreachable
-	 * receiver must not stall the visitor for long.
+	 * Kept short because lead delivery is a blocking call made on form
+	 * submission (see send_lead()) — a slow or unreachable receiver must not
+	 * stall the visitor for long. Order webhooks are sent in the background
+	 * by an Action Scheduler action (see record_paid_conversion() in the
+	 * WooCommerce integration).
 	 *
 	 * @since 1.0.0
 	 *

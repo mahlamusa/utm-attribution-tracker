@@ -329,7 +329,11 @@ class Tracker {
 			$data['visitor_id'] = self::maybe_set_visitor_cookie();
 			// The event gate is off by default (an event carries no cookie);
 			// when a site opts in, the passive record waits for consent too.
-			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data ) ) {
+			// Dedup on the incoming cookie only when this request stamps a
+			// visitor id; with the gate closed record() stores the IP marker
+			// alone, so the check must use the IP key too.
+			$dedup_vid = '' === $data['visitor_id'] ? '' : Attribution::visitor_id();
+			if ( ( ! Attribution::gate_events() || Attribution::consented() ) && ! self::is_duplicate( $data, $dedup_vid ) ) {
 				self::record( $data );
 			}
 			// Cookie logic runs regardless of dedup — a deduplicated repeat
@@ -704,12 +708,15 @@ class Tracker {
 	 * of 0 disables dedup. Conversion rows are exempt: an order is always a
 	 * distinct conversion, so `is_conversion` truthy is never a duplicate.
 	 *
-	 * The visitor id counts only when it already existed before this request
-	 * — the incoming `utmatra_vid` cookie by default, or the beacon's `vid`,
-	 * which it sends only once its cookie has stuck. So two browsers behind
-	 * one IP each record their own touch, while a browser that refuses
-	 * cookies (a fresh id on every request) still dedups by IP, and the PHP
-	 * fallback and the beacon still match on uncached pages.
+	 * The visitor id counts only when it is established: the incoming
+	 * `utmatra_vid` cookie by default, or the beacon's `vid`, which it sends
+	 * only once its cookie write is confirmed (it may have been generated on
+	 * this request). So two browsers behind one IP each record their own
+	 * touch, a browser that refuses cookies (a fresh id on every request)
+	 * still dedups by IP, and the PHP fallback and the beacon still match on
+	 * uncached pages. Trade-off: a first-time visitor without JavaScript, on
+	 * an IP that just recorded the same tagged URL, has no established id yet
+	 * and is deduplicated by IP; with JavaScript its beacon records it.
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Adds the established visitor id to the identity.
