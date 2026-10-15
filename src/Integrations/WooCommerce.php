@@ -3,11 +3,12 @@
  * WooCommerce integration — order attribution capture and display.
  *
  * Attaches the first/last-touch attribution sets (read from the
- * `utmatra_attr` cookie via Attribution) to WooCommerce orders as order
- * meta, records a conversion event row for the revenue-by-campaign report,
- * renders a "Campaign attribution" metabox on the order edit screen, and —
- * when a URL is configured — POSTs the conversion to a webhook (see
- * Utmatra\Reports\ConversionWebhook).
+ * `utmatra_attr` cookie via Attribution) and the visitor id to WooCommerce
+ * orders as order meta at checkout. Once the order is paid it records a
+ * conversion event row for the revenue-by-campaign report and — when a URL
+ * is configured — POSTs the conversion to a webhook (see
+ * Utmatra\Reports\ConversionWebhook), exactly once per order. It also
+ * renders a "Campaign attribution" metabox on the order edit screen.
  *
  * Every hook in this class is registered only when WooCommerce is active
  * (checked at `plugins_loaded` priority 20, after Woo has loaded). On a site
@@ -54,6 +55,27 @@ class WooCommerce {
 	public const META_LAST = '_utmatra_last';
 
 	/**
+	 * Order meta key holding the visitor id captured at checkout.
+	 *
+	 * Payment confirmations often arrive server-to-server (gateway webhooks,
+	 * IPN) without the visitor's cookie, so the id is stored with the order.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const META_VISITOR = '_utmatra_vid';
+
+	/**
+	 * Order meta flag set once the paid conversion has been recorded.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const META_CONVERTED = '_utmatra_converted';
+
+	/**
 	 * Register WooCommerce hooks — only when WooCommerce is active.
 	 *
 	 * Hooked on `plugins_loaded` priority 20: this plugin boots at priority 10
@@ -74,6 +96,13 @@ class WooCommerce {
 
 		// Block checkout / Store API — order already created and saved.
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'capture_store_api' ) );
+
+		// The conversion is recorded only once the order is paid: online
+		// gateways call payment_complete(), offline methods (cash on delivery,
+		// or BACS once marked paid) move the order to processing/completed.
+		add_action( 'woocommerce_payment_complete', array( self::class, 'record_paid_conversion' ) );
+		add_action( 'woocommerce_order_status_processing', array( self::class, 'record_paid_conversion' ) );
+		add_action( 'woocommerce_order_status_completed', array( self::class, 'record_paid_conversion' ) );
 
 		// Order edit screen metabox (legacy post table and HPOS).
 		add_action( 'add_meta_boxes', array( self::class, 'register_metabox' ) );
@@ -220,21 +249,20 @@ class WooCommerce {
 	}
 
 	/**
-	 * Attach attribution meta to an order and record the conversion event.
+	 * Attach attribution meta and the visitor id to an order at checkout.
 	 *
 	 * Skips silently when the visitor has no attribution cookie, and when the
 	 * order already carries last-touch meta (double-write guard: the classic
 	 * and Store API hooks can both fire for one order under some checkout
 	 * setups). Meta is written via the CRUD API only — HPOS-compatible.
 	 *
-	 * The conversion row is built from the last-touch set and inserted via
-	 * Tracker::record() directly, bypassing is_duplicate() — each order is a
-	 * distinct conversion and must never be deduplicated away. The row's
-	 * meta carries the order id, order number and currency; on the classic
-	 * checkout path the order has no id yet, so only the currency survives
-	 * and the dashboard label degrades to the plain order total.
+	 * Nothing is recorded or sent here: checkout runs before the gateway takes
+	 * payment, so a declined or abandoned order must not count as revenue.
+	 * The conversion is recorded by record_paid_conversion() once the order
+	 * is paid.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Records the conversion on payment instead of at checkout.
 	 * @param WC_Order $order The order to attach attribution to.
 	 * @param bool     $save  Whether to call save() (true for the Store API path, where the order is already persisted).
 	 * @return void
@@ -249,41 +277,69 @@ class WooCommerce {
 			return;
 		}
 
-		$first = Attribution::get_first();
-		$last  = Attribution::get_last();
+		$order->update_meta_data( self::META_FIRST, Attribution::get_first() );
+		$order->update_meta_data( self::META_LAST, Attribution::get_last() );
 
-		$order->update_meta_data( self::META_FIRST, $first );
-		$order->update_meta_data( self::META_LAST, $last );
+		$visitor_id = Attribution::visitor_id();
+		if ( '' !== $visitor_id ) {
+			$order->update_meta_data( self::META_VISITOR, $visitor_id );
+		}
 
 		if ( $save ) {
 			$order->save();
 		}
+	}
 
-		// On the classic path the order has no ID yet (save() runs after the
-		// hook), so fall back to the generic order-received endpoint URL.
-		$destination = $order->get_id()
-			? $order->get_checkout_order_received_url()
-			: wc_get_endpoint_url( 'order-received', '', wc_get_checkout_url() );
+	/**
+	 * Record the conversion for a paid order — exactly once.
+	 *
+	 * Hooked on `woocommerce_payment_complete` and the processing/completed
+	 * status transitions, which can each fire for the same order, so the
+	 * META_CONVERTED flag makes every call after the first a no-op. Orders
+	 * without attribution meta (no cookie at checkout) are skipped.
+	 *
+	 * Everything is built from the order meta stored at checkout, never from
+	 * the current request: the payment confirmation may be a gateway's
+	 * server-to-server call carrying no visitor cookie. The conversion row is
+	 * inserted via Tracker::record() directly, bypassing is_duplicate() — each
+	 * order is a distinct conversion and must never be deduplicated away.
+	 *
+	 * @since 1.0.0
+	 * @param int|string $order_id The paid order's id.
+	 * @return void
+	 */
+	public static function record_paid_conversion( $order_id ): void {
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order || $order->get_meta( self::META_CONVERTED ) ) {
+			return;
+		}
+
+		$first = $order->get_meta( self::META_FIRST );
+		$last  = $order->get_meta( self::META_LAST );
+		if ( ! is_array( $last ) || empty( $last ) ) {
+			return;
+		}
+		$first = is_array( $first ) ? $first : array();
+
+		// Flag first and persist, so a concurrent status hook cannot record twice.
+		$order->update_meta_data( self::META_CONVERTED, time() );
+		$order->save();
 
 		$event = array(
 			'link_id'       => 'order',
 			'is_conversion' => 1,
 			'touch'         => 'last',
 			'order_total'   => (float) $order->get_total(),
-			'destination'   => $destination,
+			'destination'   => $order->get_checkout_order_received_url(),
+			'visitor_id'    => (string) $order->get_meta( self::META_VISITOR ),
 			// The checkout's own referrer is the site, so the row inherits
 			// the last touch's channel instead of being classified fresh.
 			'channel'       => (string) ( $last['ch'] ?? '' ),
-			// Conversion metadata for the Journeys labels. On the classic
-			// checkout path the order has no id yet (see the $destination
-			// fallback above), so array_filter() leaves only the currency
-			// and the label degrades to "Order · total".
-			'meta'          => array_filter(
-				array(
-					'order_id'     => $order->get_id(),
-					'order_number' => $order->get_id() ? (string) $order->get_order_number() : '',
-					'currency'     => $order->get_currency(),
-				)
+			// Conversion metadata for the Journeys labels.
+			'meta'          => array(
+				'order_id'     => $order->get_id(),
+				'order_number' => (string) $order->get_order_number(),
+				'currency'     => $order->get_currency(),
 			),
 		);
 		foreach ( Tracker::param_whitelist() as $key ) {
@@ -292,27 +348,20 @@ class WooCommerce {
 
 		Tracker::record( $event );
 
-		// On the classic path the order has no ID yet (see the $destination
-		// fallback above) — get_order_number() defaults to get_id(), so a
-		// real order number is only available once the order is saved.
-		$order_id = $order->get_id();
-
 		Recorder::record(
 			'woocommerce',
 			array(
-				'form_id'    => $order_id,
-				'form_title' => $order_id
-					? sprintf(
-						/* translators: %s: order number. */
-						__( 'Order #%s', 'utm-attribution-tracker' ),
-						$order->get_order_number()
-					)
-					: __( 'New order', 'utm-attribution-tracker' ),
+				'form_id'    => $order->get_id(),
+				'form_title' => sprintf(
+					/* translators: %s: order number. */
+					__( 'Order #%s', 'utm-attribution-tracker' ),
+					$order->get_order_number()
+				),
 				'posted'     => $last,
 				'created_at' => time(),
-				// The order conversion row and the conversion webhook were
-				// both sent above — without this flag Recorder::record()
-				// would add a second `lead` row and a second POST per order.
+				// The order conversion row and the conversion webhook are
+				// both sent here — without this flag Recorder::record() would
+				// add a second `lead` row and a second POST per order.
 				'is_lead'    => false,
 			)
 		);

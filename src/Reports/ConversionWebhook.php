@@ -100,10 +100,10 @@ class ConversionWebhook {
 	/**
 	 * Timeout in seconds for the outbound request.
 	 *
-	 * Kept short because delivery is a blocking call made during checkout
-	 * and form submission (see attach_attribution() in the WooCommerce
-	 * integration and send_lead()) — a slow or unreachable receiver must
-	 * not stall the visitor for long.
+	 * Kept short because delivery is a blocking call made when an order is
+	 * paid and on form submission (see record_paid_conversion() in the
+	 * WooCommerce integration and send_lead()) — a slow or unreachable
+	 * receiver must not stall the visitor for long.
 	 *
 	 * @since 1.0.0
 	 *
