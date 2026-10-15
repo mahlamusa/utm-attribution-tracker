@@ -719,7 +719,13 @@ class Tracker {
 	 * referrer host: a Google landing and a Facebook landing from one IP
 	 * within the window are two visits, reloads of the same landing are one.
 	 *
+	 * When the event carries a visitor id it is part of the key too, so two
+	 * browsers behind one IP (an office, campus or carrier NAT) that hit the
+	 * same tagged URL within the window each record their own touch. Without
+	 * a visitor id (cookie gate closed) the key stays IP-based.
+	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Includes the visitor id when present.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return string
 	 */
@@ -732,6 +738,10 @@ class Tracker {
 		}
 		if ( 'visit' === ( $data['link_id'] ?? '' ) ) {
 			$subset['rh'] = strtolower( (string) wp_parse_url( (string) ( $data['referrer'] ?? '' ), PHP_URL_HOST ) );
+		}
+		$visitor_id = (string) ( $data['visitor_id'] ?? '' );
+		if ( '' !== $visitor_id ) {
+			$subset['vid'] = $visitor_id;
 		}
 		ksort( $subset );
 
