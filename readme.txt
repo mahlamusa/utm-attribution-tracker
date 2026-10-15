@@ -184,7 +184,7 @@ Values are normalized for consistent reporting: lowercased, with whitespace repl
 2. Links: tracked short links with their campaign, source and medium, click counts and redirect URLs.
 3. Journeys: recent orders and form leads with their first and last touch, expandable into the full touch timeline.
 4. Add tracked link: UTM fields with presets, the generated short link, and a build-a-URL-only mode.
-5. Settings: tracking, custom parameters, data retention, attribution window, consent, weekly report, webhooks and embedding.
+5. Settings: tracking, custom parameters, data retention, attribution window, consent, weekly report and webhooks.
 6. Tracking Doctor: local checks for caching, consent, cookies, form coverage and WooCommerce attribution.
 
 == Filter and action reference ==

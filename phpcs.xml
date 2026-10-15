@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="UTMAttributionTracker">
+<ruleset name="Utmatra">
 	<description>Coding standard for Utmatra.</description>
 
 	<file>utm-attribution-tracker.php</file>
