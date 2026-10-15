@@ -146,9 +146,9 @@ body.utmatra-drawer-open {
 	color:       var(--utmatra-text);
 }
 
-/* Brand lockup: logotype | descriptor. */
-/* Baseline-aligned: the descriptor sits on the wordmark's baseline,
-   not the image's centre (the lowercase letters sit low in the logo). */
+/* Brand lockup: logotype | descriptor, baseline-aligned so the descriptor
+   sits on the wordmark's baseline, not the image's centre (the lowercase
+   letters sit low in the logo). */
 .utmatra-wrap .utmatra-header h1.utmatra-brand {
 	display:       flex;
 	flex-wrap:     wrap;

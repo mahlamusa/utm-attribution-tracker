@@ -14,6 +14,16 @@ TEXT_DOMAIN="utm-attribution-tracker"
 
 cd "$ROOT"
 
+echo "==> Checking for pre-rebrand identifiers..."
+# The rebrand renamed every utmat identifier to utmatra across PHP, JS, CSS
+# and the readme. Their contracts (cookies, script globals, REST routes, data
+# attributes) fail silently when one side drifts back to an old name, so any
+# tracked match stops the build. This file is excluded: it holds the pattern.
+if git -C "$ROOT" grep -nIiP 'utmat(?!ra)|UTM_ATTRIBUTION_TRACKER_' -- . ':!bin/build.sh'; then
+    echo "ERROR: Pre-rebrand utmat identifiers found (listed above); rename them to utmatra." >&2
+    exit 1
+fi
+
 echo "==> Regenerating translations template (.pot)..."
 # Try the LocalWP wrapper first (so this works inside ~/Local Sites/), then the
 # global wp-cli, then a vendor/bin/wp if one is ever pulled in.
