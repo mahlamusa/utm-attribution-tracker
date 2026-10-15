@@ -4,7 +4,7 @@
  * (WooCommerce order or form lead).
  *
  * Disabled by default (the `utmatra_webhook_url` option is empty). When an
- * attributed WooCommerce order is placed (see Integrations\WooCommerce) or
+ * attributed WooCommerce order is paid (see Integrations\WooCommerce) or
  * an attributed form submission is recorded (the `utmatra_lead_recorded`
  * action fired by Insights\Recorder), the payload — order total, currency
  * and the first/last-touch attribution sets for orders; the form's field
@@ -243,6 +243,7 @@ class ConversionWebhook {
 	 * Store the outcome of the most recent delivery attempt.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 * @param bool   $ok     Whether delivery succeeded (2xx response).
 	 * @param string $detail A short human-readable detail (status code or error message).
 	 * @return void

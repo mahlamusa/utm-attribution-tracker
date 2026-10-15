@@ -21,6 +21,7 @@ namespace Utmatra\Integrations;
 
 use Utmatra\Insights\Recorder;
 use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Scheduler;
 use Utmatra\Tracking\Attribution;
 use Utmatra\Tracking\Tracker;
 use Utmatra\Tracking\TrafficSource;
@@ -76,6 +77,28 @@ class WooCommerce {
 	public const META_CONVERTED = '_utmatra_converted';
 
 	/**
+	 * Order meta flag set at checkout: record the conversion once paid.
+	 *
+	 * Only orders carrying it are recorded on payment, so orders placed
+	 * before conversions moved to payment (already recorded at checkout,
+	 * no flag) are never counted a second time.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const META_AWAITING = '_utmatra_awaiting_payment';
+
+	/**
+	 * Action Scheduler hook that delivers the order webhook asynchronously.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @var string
+	 */
+	public const WEBHOOK_HOOK = 'utmatra_send_order_webhook';
+
+	/**
 	 * Register WooCommerce hooks — only when WooCommerce is active.
 	 *
 	 * Hooked on `plugins_loaded` priority 20: this plugin boots at priority 10
@@ -84,6 +107,7 @@ class WooCommerce {
 	 * single hook when WooCommerce is absent.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Hooks paid-conversion recording and the async order webhook.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -99,10 +123,14 @@ class WooCommerce {
 
 		// The conversion is recorded only once the order is paid: online
 		// gateways call payment_complete(), offline methods (cash on delivery,
-		// or BACS once marked paid) move the order to processing/completed.
+		// or BACS once marked paid) move the order to a paid status.
 		add_action( 'woocommerce_payment_complete', array( self::class, 'record_paid_conversion' ) );
-		add_action( 'woocommerce_order_status_processing', array( self::class, 'record_paid_conversion' ) );
-		add_action( 'woocommerce_order_status_completed', array( self::class, 'record_paid_conversion' ) );
+		add_action( 'woocommerce_order_status_changed', array( self::class, 'record_on_paid_status' ), 10, 3 );
+
+		// Order webhook delivery, queued on Action Scheduler by
+		// record_paid_conversion() so a slow receiver never blocks a gateway
+		// callback or an admin bulk status change.
+		add_action( self::WEBHOOK_HOOK, array( self::class, 'send_order_webhook' ) );
 
 		// Order edit screen metabox (legacy post table and HPOS).
 		add_action( 'add_meta_boxes', array( self::class, 'register_metabox' ) );
@@ -249,7 +277,8 @@ class WooCommerce {
 	}
 
 	/**
-	 * Attach attribution meta and the visitor id to an order at checkout.
+	 * Attach attribution meta and the visitor id to an order at checkout,
+	 * and flag it to have its conversion recorded once paid (META_AWAITING).
 	 *
 	 * Skips silently when the visitor has no attribution cookie, and when the
 	 * order already carries last-touch meta (double-write guard: the classic
@@ -284,6 +313,7 @@ class WooCommerce {
 		if ( '' !== $visitor_id ) {
 			$order->update_meta_data( self::META_VISITOR, $visitor_id );
 		}
+		$order->update_meta_data( self::META_AWAITING, 1 );
 
 		if ( $save ) {
 			$order->save();
@@ -291,18 +321,42 @@ class WooCommerce {
 	}
 
 	/**
+	 * Record the conversion when an order moves to a paid status.
+	 *
+	 * Hooked on `woocommerce_order_status_changed`, so any status in
+	 * wc_get_is_paid_statuses() counts — processing and completed by
+	 * default, plus custom paid statuses an order is moved to by hand.
+	 *
+	 * @since 1.0.0
+	 * @param int|string $order_id The order id.
+	 * @param string     $from     The previous status (unused).
+	 * @param string     $to       The new status, without the `wc-` prefix.
+	 * @return void
+	 */
+	public static function record_on_paid_status( $order_id, $from, $to ): void {
+		if ( in_array( (string) $to, wc_get_is_paid_statuses(), true ) ) {
+			self::record_paid_conversion( $order_id );
+		}
+	}
+
+	/**
 	 * Record the conversion for a paid order — exactly once.
 	 *
-	 * Hooked on `woocommerce_payment_complete` and the processing/completed
-	 * status transitions, which can each fire for the same order, so the
-	 * META_CONVERTED flag makes every call after the first a no-op. Orders
-	 * without attribution meta (no cookie at checkout) are skipped.
+	 * Hooked on `woocommerce_payment_complete`, and called by
+	 * record_on_paid_status(); both can fire for the same order, so the
+	 * META_CONVERTED flag makes every call after the first a no-op. Only
+	 * orders flagged META_AWAITING at checkout are recorded — orders from
+	 * before this change, and orders created outside checkout (admin, REST,
+	 * subscription renewals that copy the parent's meta), are skipped.
 	 *
 	 * Everything is built from the order meta stored at checkout, never from
 	 * the current request: the payment confirmation may be a gateway's
-	 * server-to-server call carrying no visitor cookie. The conversion row is
-	 * inserted via Tracker::record() directly, bypassing is_duplicate() — each
-	 * order is a distinct conversion and must never be deduplicated away.
+	 * server-to-server call carrying no visitor cookie, so the row's referrer
+	 * is left empty rather than recording the gateway or admin screen. The
+	 * conversion row is inserted via Tracker::record() directly, bypassing
+	 * is_duplicate() — each order is a distinct conversion. The webhook is
+	 * queued as an async action (sent inline when Action Scheduler is not
+	 * loaded).
 	 *
 	 * @since 1.0.0
 	 * @param int|string $order_id The paid order's id.
@@ -310,19 +364,22 @@ class WooCommerce {
 	 */
 	public static function record_paid_conversion( $order_id ): void {
 		$order = wc_get_order( $order_id );
-		if ( ! $order instanceof WC_Order || $order->get_meta( self::META_CONVERTED ) ) {
+		if ( ! $order instanceof WC_Order || $order->get_meta( self::META_CONVERTED ) || ! $order->get_meta( self::META_AWAITING ) ) {
+			return;
+		}
+		if ( ! in_array( $order->get_created_via(), array( 'checkout', 'store-api' ), true ) ) {
 			return;
 		}
 
-		$first = $order->get_meta( self::META_FIRST );
-		$last  = $order->get_meta( self::META_LAST );
+		$last = $order->get_meta( self::META_LAST );
 		if ( ! is_array( $last ) || empty( $last ) ) {
 			return;
 		}
-		$first = is_array( $first ) ? $first : array();
 
-		// Flag first and persist, so a concurrent status hook cannot record twice.
+		// Flag first and persist: this narrows (but cannot fully close) the
+		// window in which two concurrent payment callbacks both record.
 		$order->update_meta_data( self::META_CONVERTED, time() );
+		$order->delete_meta_data( self::META_AWAITING );
 		$order->save();
 
 		$event = array(
@@ -331,6 +388,7 @@ class WooCommerce {
 			'touch'         => 'last',
 			'order_total'   => (float) $order->get_total(),
 			'destination'   => $order->get_checkout_order_received_url(),
+			'referrer'      => '',
 			'visitor_id'    => (string) $order->get_meta( self::META_VISITOR ),
 			// The checkout's own referrer is the site, so the row inherits
 			// the last touch's channel instead of being classified fresh.
@@ -360,21 +418,49 @@ class WooCommerce {
 				'posted'     => $last,
 				'created_at' => time(),
 				// The order conversion row and the conversion webhook are
-				// both sent here — without this flag Recorder::record() would
-				// add a second `lead` row and a second POST per order.
+				// both handled here — without this flag Recorder::record()
+				// would add a second `lead` row and a second POST per order.
 				'is_lead'    => false,
 			)
 		);
 
-		if ( '' !== ConversionWebhook::url() ) {
-			ConversionWebhook::send_conversion(
-				$order->get_id(),
-				(float) $order->get_total(),
-				$order->get_currency(),
-				$first,
-				$last
-			);
+		if ( '' === ConversionWebhook::url() ) {
+			return;
 		}
+		if ( function_exists( 'as_enqueue_async_action' ) ) {
+			as_enqueue_async_action( self::WEBHOOK_HOOK, array( (int) $order->get_id() ), Scheduler::GROUP );
+		} else {
+			self::send_order_webhook( $order->get_id() );
+		}
+	}
+
+	/**
+	 * Deliver the conversion webhook for a recorded order.
+	 *
+	 * The WEBHOOK_HOOK action callback (and the inline fallback without
+	 * Action Scheduler). Reads the attribution stored on the order, so it is
+	 * independent of the request that runs it.
+	 *
+	 * @since 1.0.0
+	 * @param int|string $order_id The order id.
+	 * @return void
+	 */
+	public static function send_order_webhook( $order_id ): void {
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order || '' === ConversionWebhook::url() ) {
+			return;
+		}
+
+		$first = $order->get_meta( self::META_FIRST );
+		$last  = $order->get_meta( self::META_LAST );
+
+		ConversionWebhook::send_conversion(
+			$order->get_id(),
+			(float) $order->get_total(),
+			$order->get_currency(),
+			is_array( $first ) ? $first : array(),
+			is_array( $last ) ? $last : array()
+		);
 	}
 
 	/**
