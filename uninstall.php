@@ -68,7 +68,8 @@ function utmatra_uninstall_site(): void {
 		$utmatra_as_table = $wpdb->prefix . 'actionscheduler_actions';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		if ( $utmatra_as_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $utmatra_as_table ) ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$utmatra_as_table = esc_sql( $utmatra_as_table );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- table name is the site prefix plus a fixed string, escaped above.
 			$wpdb->query( $wpdb->prepare( "DELETE FROM `{$utmatra_as_table}` WHERE hook IN ( %s, %s ) AND status = %s", 'utmatra_prune_events', 'utmatra_weekly_report', 'pending' ) );
 		}
 	}
