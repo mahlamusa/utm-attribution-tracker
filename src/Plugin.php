@@ -94,8 +94,11 @@ class Plugin {
 		// Daily retention pruning.
 		add_action( Retention::HOOK, array( Retention::class, 'prune' ) );
 
-		// Weekly email report (cron is only scheduled while the toggle is on).
+		// Weekly email report (only scheduled while the toggle is on).
 		add_action( WeeklyEmail::HOOK, array( WeeklyEmail::class, 'send' ) );
+
+		// Recreate any missing recurring job (throttled to twice a day).
+		add_action( 'action_scheduler_init', array( Scheduler::class, 'heal' ) );
 
 		// Lead webhook: deliver every attributed form submission recorded by
 		// the Insights\Recorder to the configured webhook URL.
@@ -244,6 +247,9 @@ class Plugin {
 			add_option( 'utmatra_salt', wp_generate_password( 64, true, true ) );
 		}
 		LinkManager::seed_defaults();
+		// Heal on the next request too, so a reactivation restores the
+		// weekly report (deactivation removed it) without a settings save.
+		delete_transient( Scheduler::HEAL_TRANSIENT );
 		Retention::schedule();
 		Rewrites::add_rules();
 		flush_rewrite_rules();

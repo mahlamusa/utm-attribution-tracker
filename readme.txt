@@ -52,7 +52,8 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 * **WP Consent API integration** — the attribution cookie is gated in the visitor's browser on a configurable consent category, deleted on withdrawal, and declared to the API so consent banners can list it.
 * **Data retention** — events are pruned automatically after a configurable retention window (180 days by default, 0 = keep forever) from the dashboard settings card.
 * **Suggested privacy policy text** — provided under Settings → Privacy → Policy Guide.
-* **No external dependencies** — no Composer, no npm build step, no CDN calls. Chart.js and the QR library ship bundled with the plugin.
+* **No external services** — no CDN calls and no third-party analytics. Chart.js, the QR library and Action Scheduler ship bundled with the plugin.
+* **Reliable background jobs** — retention pruning and the weekly report run on Action Scheduler (the job queue WooCommerce uses), listed under Tools → Scheduled Actions in the `utmatra` group, and they reschedule themselves if they go missing (after a reactivation, or on a multisite subsite).
 
 == Installation ==
 

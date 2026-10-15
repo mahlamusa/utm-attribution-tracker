@@ -6,27 +6,27 @@
 # Run via: npm run wporg:publish        (uses Stable tag from readme.txt)
 #          npm run wporg:publish -- 1.1.0    (explicit version override)
 #
-# There is no Composer vendor/ to
-# build and no npm/vite dist/ to compile — this plugin ships plain PHP/CSS/JS
-# as written, with Chart.js vendored directly in assets/js/vendor/. The only
-# build artifact is the translations .pot, regenerated fresh and overlaid
-# into the stage (it isn't committed, so a plain `git archive` wouldn't pick
-# up the latest strings). Since .gitattributes already keeps every dev-only
-# path (bin/, package.json, .claude/, etc.) out of `git archive` entirely,
-# trunk/ and tags/<version>/ end up identical — no separate tag-slimming pass
-# is needed.
+# There is no npm/vite dist/ to compile — this plugin ships plain PHP/CSS/JS
+# as written, with Chart.js vendored directly in assets/js/vendor/. Two
+# things are built into the stage rather than committed: the translations
+# .pot (regenerated fresh and overlaid), and the production Composer vendor/
+# (Action Scheduler), installed by bin/stage-composer.sh. Since
+# .gitattributes already keeps every dev-only path (bin/, package.json,
+# composer.json, .claude/, etc.) out of `git archive` entirely, trunk/ and
+# tags/<version>/ end up identical — no separate tag-slimming pass is needed.
 #
 # Pipeline:
 #   1. Resolve + validate version, assets, working tree.
 #   2. Refresh the .pot (bin/build.sh).
 #   3. Check out / refresh the wp.org SVN working copy at /tmp/<slug>.
 #   4. git archive HEAD -> /tmp/<slug>-clean, overlay the freshly built .pot,
-#      rsync the stage into trunk/. Sync .wordpress.org/ into assets/.
+#      install the production vendor/ (bin/stage-composer.sh), rsync the
+#      stage into trunk/. Sync .wordpress.org/ into assets/.
 #   5. svn cp trunk -> tags/<version>.
 #   6. Print `svn status` and the exact `svn ci` command. STOPS HERE — you run
 #      `svn commit` so the wp.org credential prompt is interactive.
 #
-# Requires: bash 4+, git, svn (>= 1.7), rsync, and a WP-CLI binary
+# Requires: bash 4+, git, svn (>= 1.7), rsync, composer, and a WP-CLI binary
 # (wpp / wp / vendor/bin/wp — searched in that order).
 #
 
@@ -161,6 +161,8 @@ git -C "$GITPATH" archive HEAD | tar x --directory="$TMP_DIR"
 echo "==> Overlaying freshly regenerated .pot..."
 mkdir -p "$TMP_DIR/languages"
 cp "$GITPATH/$POT_FILE" "$TMP_DIR/$POT_FILE"
+
+bash "$GITPATH/bin/stage-composer.sh" "$TMP_DIR"
 
 # ---------------------------------------------------------------------------
 # 7. Sync trunk/ and assets/. rsync -rc uses content checksums (not just mtime)

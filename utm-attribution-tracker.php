@@ -25,7 +25,14 @@ define( 'UTMATRA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'UTMATRA_URL', plugin_dir_url( __FILE__ ) );
 define( 'UTMATRA_BASENAME', plugin_basename( __FILE__ ) );
 
-// Load all classes via bootstrap (no Composer required).
+// Action Scheduler (bundled via Composer) runs the recurring jobs. It must
+// load with the plugin file so it can register itself and use the newest
+// copy among all active plugins (WooCommerce ships one too).
+if ( file_exists( UTMATRA_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+	require_once UTMATRA_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
+
+// Load all classes via bootstrap.
 require_once UTMATRA_PATH . 'src/Bootstrap.php';
 Utmatra\Bootstrap::load();
 

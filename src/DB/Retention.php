@@ -1,6 +1,6 @@
 <?php
 /**
- * Retention — prunes old event rows on a daily cron.
+ * Retention — prunes old event rows on a daily Action Scheduler action.
  *
  * The retention window comes from the `utmatra_retention_days` option
  * (default 180), filterable via the `utmatra_retention_days` filter.
@@ -11,6 +11,8 @@
 
 namespace Utmatra\DB;
 
+use Utmatra\Scheduler;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -19,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 class Retention {
 
 	/**
-	 * Cron hook name for the daily prune event.
+	 * Action hook name for the daily prune job.
 	 *
 	 * @var string
 	 */
@@ -40,25 +42,25 @@ class Retention {
 	private const DEFAULT_DAYS = 180;
 
 	/**
-	 * Schedule the daily prune event if not already scheduled.
+	 * Schedule the daily prune job if not already scheduled.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Uses Action Scheduler instead of WP-Cron.
 	 * @return void
 	 */
 	public static function schedule(): void {
-		if ( ! wp_next_scheduled( self::HOOK ) ) {
-			wp_schedule_event( time(), 'daily', self::HOOK );
-		}
+		Scheduler::ensure( self::HOOK, DAY_IN_SECONDS );
 	}
 
 	/**
-	 * Clear the scheduled prune event.
+	 * Remove the scheduled prune job.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Uses Action Scheduler instead of WP-Cron.
 	 * @return void
 	 */
 	public static function unschedule(): void {
-		wp_clear_scheduled_hook( self::HOOK );
+		Scheduler::clear( self::HOOK );
 	}
 
 	/**

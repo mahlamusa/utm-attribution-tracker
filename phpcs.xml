@@ -7,6 +7,9 @@
 	<file>src</file>
 	<file>views</file>
 
+	<!-- Bundled third-party libraries (Action Scheduler) are not ours to lint. -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+
 	<arg value="sp"/>
 	<arg name="extensions" value="php"/>
 	<arg name="parallel" value="4"/>

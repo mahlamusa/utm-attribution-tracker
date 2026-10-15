@@ -53,9 +53,25 @@ function utmatra_uninstall_site(): void {
 		)
 	);
 
-	// Clear the retention and weekly report cron events.
-	wp_clear_scheduled_hook( 'utmatra_prune_events' );
-	wp_clear_scheduled_hook( 'utmatra_weekly_report' );
+	// Remove the retention and weekly report jobs (and any legacy cron events).
+	foreach ( array( 'utmatra_prune_events', 'utmatra_weekly_report' ) as $utmatra_hook ) {
+		wp_clear_scheduled_hook( $utmatra_hook );
+		if ( function_exists( 'as_unschedule_all_actions' ) ) {
+			as_unschedule_all_actions( $utmatra_hook, array(), 'utmatra' );
+		}
+	}
+
+	// The plugin is not loaded during uninstall, so Action Scheduler is only
+	// available when another plugin (e.g. WooCommerce) ships it; otherwise
+	// delete the pending rows directly when its tables exist.
+	if ( ! function_exists( 'as_unschedule_all_actions' ) ) {
+		$utmatra_as_table = $wpdb->prefix . 'actionscheduler_actions';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		if ( $utmatra_as_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $utmatra_as_table ) ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->query( $wpdb->prepare( "DELETE FROM `{$utmatra_as_table}` WHERE hook IN ( %s, %s ) AND status = %s", 'utmatra_prune_events', 'utmatra_weekly_report', 'pending' ) );
+		}
+	}
 }
 
 if ( is_multisite() ) {

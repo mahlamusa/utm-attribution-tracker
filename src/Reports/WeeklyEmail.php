@@ -4,7 +4,7 @@
  *
  * Disabled by default (the `utmatra_weekly_email` option, default OFF —
  * no unsolicited mail). When enabled from the dashboard settings card a
- * weekly cron event (`utmatra_weekly_report`) emails the site admin a
+ * weekly Action Scheduler action (`utmatra_weekly_report`) emails the site admin a
  * plain-HTML summary of the past 7 days: total clicks, top 5 campaigns,
  * top 5 sources, and revenue by campaign when WooCommerce is active.
  *
@@ -17,6 +17,7 @@
 namespace Utmatra\Reports;
 
 use Utmatra\DB\Schema;
+use Utmatra\Scheduler;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -58,15 +59,15 @@ class WeeklyEmail {
 	/**
 	 * Schedule the weekly report event if not already scheduled.
 	 *
-	 * Called from the settings endpoint when the toggle is switched on.
+	 * Called from the settings endpoint when the toggle is switched on, and
+	 * by Scheduler::heal() while the toggle is on.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Uses Action Scheduler instead of WP-Cron.
 	 * @return void
 	 */
 	public static function schedule(): void {
-		if ( ! wp_next_scheduled( self::HOOK ) ) {
-			wp_schedule_event( time() + WEEK_IN_SECONDS, 'weekly', self::HOOK );
-		}
+		Scheduler::ensure( self::HOOK, WEEK_IN_SECONDS, WEEK_IN_SECONDS );
 	}
 
 	/**
@@ -76,10 +77,11 @@ class WeeklyEmail {
 	 * from Plugin::deactivate().
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Uses Action Scheduler instead of WP-Cron.
 	 * @return void
 	 */
 	public static function unschedule(): void {
-		wp_clear_scheduled_hook( self::HOOK );
+		Scheduler::clear( self::HOOK );
 	}
 
 	/**

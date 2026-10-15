@@ -2,13 +2,15 @@
 #
 # Build a distributable Utmatra release zip.
 #
-# The plugin has no Composer or npm dependencies, so packaging is just:
-#   1. Run build.sh (regenerates the .pot — the only build artifact).
+# Steps:
+#   1. Run build.sh (rebrand guard + regenerates the .pot).
 #   2. git archive HEAD -> stage (honors .gitattributes export-ignore, so
 #      dev-only files like bin/, package.json, .claude/ never enter the zip).
 #   3. Overlay the freshly regenerated languages/*.pot (not committed, so
 #      git archive alone wouldn't pick up the latest strings).
-#   4. Zip the stage into releases/utm-attribution-tracker-<version>.zip.
+#   4. Install production Composer dependencies (Action Scheduler) into the
+#      stage via bin/stage-composer.sh — vendor/ is not tracked in git.
+#   5. Zip the stage into releases/utm-attribution-tracker-<version>.zip.
 
 set -euo pipefail
 
@@ -44,6 +46,8 @@ git archive HEAD | tar -x -C "$STAGE_DIR"
 echo "==> Overlaying freshly regenerated .pot..."
 mkdir -p "$STAGE_DIR/languages"
 cp "$ROOT/$POT_FILE" "$STAGE_DIR/$POT_FILE"
+
+"$SCRIPT_DIR/stage-composer.sh" "$STAGE_DIR"
 
 echo "==> Writing zip..."
 mkdir -p "$ROOT/releases"
