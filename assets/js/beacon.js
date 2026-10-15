@@ -364,7 +364,10 @@
 			parseInt( config.cookieDays, 10 ) || 90,
 			!! config.secure
 		);
-		visitorVid = vid;
+		// Only an id the browser actually kept is sent: a browser refusing
+		// cookies would otherwise report a fresh id on every request, and
+		// the server would stop deduplicating its reloads.
+		visitorVid = readCookie( VID_COOKIE ) === vid ? vid : '';
 	}
 
 	/**

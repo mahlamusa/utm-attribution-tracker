@@ -499,6 +499,7 @@ class Attribution {
 	 * write), so the recomputation always has its input.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 * @param string $set Which set to extract: 'first' or 'last'.
 	 * @return array<string, string|int>
 	 */

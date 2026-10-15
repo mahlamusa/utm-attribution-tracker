@@ -115,6 +115,7 @@ class ContactForm7 {
 	 * not recognise) is looked up here.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 *
 	 * @param string|null $output The tag output resolved so far, null when unrecognised.
 	 * @param string      $name   The tag name including its leading underscore, e.g. `_utm_source`.

@@ -361,6 +361,7 @@ class Tracker {
 	 * both writers stay symmetrical.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 * @param array<string, string> $params  Sanitized whitelisted UTM/click-ID params from the current request.
 	 * @param string                $landing The current request URL (already esc_url_raw'd), stored as the landing page.
 	 * @return void
@@ -585,6 +586,7 @@ class Tracker {
 	 * to store.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character; sets IP-only and visitor dedup markers.
 	 * @param array<string, mixed> $data Event fields.
 	 * @return void
 	 */
@@ -680,9 +682,14 @@ class Tracker {
 			$formats
 		);
 
+		// Two markers: the IP-only one matches later requests that carry no
+		// established visitor id; the visitor one matches the same browser.
 		$window = self::dedup_window();
 		if ( empty( $data['is_conversion'] ) && false !== $inserted && $window > 0 ) {
 			set_transient( 'utmatra_dd_' . self::dedup_key( $data ), 1, $window );
+			if ( '' !== $vid ) {
+				set_transient( 'utmatra_dd_' . self::dedup_key( $data, $vid ), 1, $window );
+			}
 		}
 	}
 
@@ -690,24 +697,35 @@ class Tracker {
 	 * Whether an identical event was already recorded within the dedup window.
 	 *
 	 * Identity = same hashed client IP + same link_id + same set of
-	 * UTM/click-ID values. Checked against a transient
-	 * (`utmatra_dd_{md5}`) so no table scan is needed; record() sets the
-	 * transient after a successful insert. A window of 0 disables dedup.
-	 * Conversion rows are exempt: an order is always a distinct conversion,
-	 * so `is_conversion` truthy is never a duplicate.
+	 * UTM/click-ID values, plus the visitor id when the request carries an
+	 * established one. Checked against a transient (`utmatra_dd_{md5}`) so
+	 * no table scan is needed; record() sets an IP-only marker and, for rows
+	 * with a visitor id, a visitor marker after a successful insert. A window
+	 * of 0 disables dedup. Conversion rows are exempt: an order is always a
+	 * distinct conversion, so `is_conversion` truthy is never a duplicate.
+	 *
+	 * The visitor id counts only when it already existed before this request
+	 * — the incoming `utmatra_vid` cookie by default, or the beacon's `vid`,
+	 * which it sends only once its cookie has stuck. So two browsers behind
+	 * one IP each record their own touch, while a browser that refuses
+	 * cookies (a fresh id on every request) still dedups by IP, and the PHP
+	 * fallback and the beacon still match on uncached pages.
 	 *
 	 * @since 1.0.0
-	 * @param array<string, mixed> $data Event fields (same shape as record()).
+	 * @since 1.0.0 Adds the established visitor id to the identity.
+	 * @param array<string, mixed> $data       Event fields (same shape as record()).
+	 * @param string|null          $visitor_id Established visitor id; null reads the incoming cookie.
 	 * @return bool
 	 */
-	public static function is_duplicate( array $data ): bool {
+	public static function is_duplicate( array $data, ?string $visitor_id = null ): bool {
 		if ( ! empty( $data['is_conversion'] ) ) {
 			return false;
 		}
 		if ( self::dedup_window() <= 0 ) {
 			return false;
 		}
-		return false !== get_transient( 'utmatra_dd_' . self::dedup_key( $data ) );
+		$visitor_id = null === $visitor_id ? Attribution::visitor_id() : $visitor_id;
+		return false !== get_transient( 'utmatra_dd_' . self::dedup_key( $data, $visitor_id ) );
 	}
 
 	/**
@@ -719,17 +737,16 @@ class Tracker {
 	 * referrer host: a Google landing and a Facebook landing from one IP
 	 * within the window are two visits, reloads of the same landing are one.
 	 *
-	 * When the event carries a visitor id it is part of the key too, so two
-	 * browsers behind one IP (an office, campus or carrier NAT) that hit the
-	 * same tagged URL within the window each record their own touch. Without
-	 * a visitor id (cookie gate closed) the key stays IP-based.
+	 * A non-empty visitor id makes it a per-browser key (see is_duplicate()
+	 * for which id counts); an empty one leaves the key IP-based.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Includes the visitor id when present.
-	 * @param array<string, mixed> $data Event fields.
+	 * @since 1.0.0 Takes an optional visitor id.
+	 * @param array<string, mixed> $data       Event fields.
+	 * @param string               $visitor_id Visitor id to key on, or '' for the IP-only key.
 	 * @return string
 	 */
-	private static function dedup_key( array $data ): string {
+	private static function dedup_key( array $data, string $visitor_id = '' ): string {
 		$subset = array();
 		foreach ( self::param_whitelist() as $key ) {
 			if ( isset( $data[ $key ] ) && '' !== $data[ $key ] ) {
@@ -739,7 +756,6 @@ class Tracker {
 		if ( 'visit' === ( $data['link_id'] ?? '' ) ) {
 			$subset['rh'] = strtolower( (string) wp_parse_url( (string) ( $data['referrer'] ?? '' ), PHP_URL_HOST ) );
 		}
-		$visitor_id = (string) ( $data['visitor_id'] ?? '' );
 		if ( '' !== $visitor_id ) {
 			$subset['vid'] = $visitor_id;
 		}

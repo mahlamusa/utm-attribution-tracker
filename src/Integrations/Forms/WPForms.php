@@ -124,6 +124,7 @@ class WPForms {
 	 * cookie for a tag used without a matching field.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Truncates by character, not byte.
 	 *
 	 * @param mixed  $value     Value resolved so far.
 	 * @param string $tag_name  Smart tag name.

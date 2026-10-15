@@ -170,7 +170,9 @@ class CollectController {
 
 		$data['visitor_id'] = wp_is_uuid( $vid, 4 ) ? $vid : '';
 
-		if ( Tracker::is_duplicate( $data ) ) {
+		// The beacon sends vid only once its cookie has stuck, so it is an
+		// established id; the fetch fallback carries no cookies to read.
+		if ( Tracker::is_duplicate( $data, $data['visitor_id'] ) ) {
 			return new WP_REST_Response( array( 'recorded' => false ), 200 );
 		}
 
