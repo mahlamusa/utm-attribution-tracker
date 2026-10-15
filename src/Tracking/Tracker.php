@@ -205,7 +205,7 @@ class Tracker {
 		if ( $include_query_vars ) {
 			$wp = ( isset( $GLOBALS['wp'] ) && $GLOBALS['wp'] instanceof WP ) ? $GLOBALS['wp'] : new WP();
 			/** This filter is documented in wp-includes/class-wp.php */
-			$query_vars = apply_filters( 'query_vars', $wp->public_query_vars );
+			$query_vars = apply_filters( 'query_vars', $wp->public_query_vars ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core hook, applied read-only to learn the reserved names.
 			$reserved   = array_merge( $reserved, is_array( $query_vars ) ? $query_vars : array() );
 		}
 

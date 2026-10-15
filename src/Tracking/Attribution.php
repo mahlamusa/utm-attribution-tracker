@@ -413,13 +413,14 @@ class Attribution {
 
 		$category = self::consent_category();
 		$days     = self::cookie_days();
+		/* translators: %d: number of days the attribution cookies live. */
+		$lifetime = sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days );
 
 		wp_add_cookie_info(
 			self::COOKIE_NAME,
 			'UTM & Attribution Tracker',
 			'either' === $category ? 'marketing' : $category,
-			/* translators: %d: number of days the attribution cookie lives. */
-			sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days ),
+			$lifetime,
 			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utm-attribution-tracker' )
 		);
 
@@ -427,8 +428,7 @@ class Attribution {
 			self::VISITOR_COOKIE_NAME,
 			'UTM & Attribution Tracker',
 			'either' === $category ? 'marketing' : $category,
-			/* translators: %d: number of days the visitor id cookie lives. */
-			sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days ),
+			$lifetime,
 			__( "Random visitor id that links a visitor's tagged visits to their later orders and form submissions.", 'utm-attribution-tracker' )
 		);
 	}

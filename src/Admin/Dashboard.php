@@ -25,6 +25,18 @@ class Dashboard {
 	private const PAGE_SLUG = 'utm-attribution-tracker';
 
 	/**
+	 * Admin menu icon: a hollow first-touch ring, a route and a solid
+	 * conversion disc, as a base64 SVG data URI.
+	 *
+	 * Single fill colour so core's svg-painter recolours it for the default,
+	 * hover and current menu states.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	private const MENU_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjYTdhYWFkIj48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik00IDBhNCA0IDAgMSAxIDAgOCA0IDQgMCAwIDEgMC04em0wIDJhMiAyIDAgMSAwIDAgNCAyIDIgMCAwIDAgMC00eiIvPjxwYXRoIGQ9Ik04IDNoOXY4SDV2NGgxMXYySDNWOWgxMlY1SDh6Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy41Ii8+PC9zdmc+Cg==';
+
+	/**
 	 * The hook suffix returned by add_menu_page.
 	 * Used to target asset enqueuing precisely.
 	 *
@@ -36,6 +48,7 @@ class Dashboard {
 	 * Register the top-level menu page.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Uses the plugin's own SVG menu icon instead of a dashicon.
 	 * @return void
 	 */
 	public static function register_menu(): void {
@@ -45,7 +58,7 @@ class Dashboard {
 			'manage_options',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
-			'dashicons-chart-area',
+			self::MENU_ICON,
 			30
 		);
 	}

@@ -44,7 +44,7 @@ UTM & Attribution Tracker gives you self-hosted, privacy-respecting campaign tra
 
 **Forms & integrations:**
 
-* **Form attribution capture** — add a hidden field named `utm_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7 and Gravity Forms, plus Ninja Forms and Elementor Pro Forms.
+* **Form attribution capture** — add a hidden field named `utm_source` (or any other tracked parameter) to any form and it is auto-filled from the attribution cookie. Zero-config adapters for Contact Form 7, Gravity Forms, Ninja Forms, Elementor Pro Forms, WPForms, Fluent Forms, Formidable Forms, Forminator and Bricks forms.
 
 **Privacy & housekeeping:**
 
@@ -178,7 +178,7 @@ Yes. Behind a proxy (Cloudflare, Varnish, a load balancer), `REMOTE_ADDR` is the
 
 Values are normalized for consistent reporting: lowercased, with whitespace replaced by `-`. Analytics tools treat `Newsletter`, `newsletter`, and `News letter` as three different sources, silently fragmenting reports. Normalization (applied in the form and again server-side) keeps every report row canonical.
 
-== Filter reference ==
+== Filter and action reference ==
 
 All filters shipped by the plugin:
 
@@ -197,6 +197,10 @@ All filters shipped by the plugin:
 * **`utmat_search_engine_hosts`** *(string[])* — the referrer hosts classified as search engines. An entry with a dot matches the host and its subdomains; an entry without a dot (`google`) matches any label of the host.
 * **`utmat_social_network_hosts`** *(string[])* — the referrer hosts classified as social networks, same matching rule.
 * **`utmat_ai_assistant_hosts`** *(string[])* — the referrer hosts classified as AI assistants, same matching rule; checked before the search-engine list.
+
+Actions:
+
+* **`utmat_lead_recorded`** *(receives the integration slug and the lead record)* — fires after an attributed form submission has been recorded as a lead conversion. The record holds `form_id`, `form_title`, `posted` (the attribution data), `created_at`, `page_url` and `fields` (the cleaned submitted values, which the plugin itself never stores). The lead webhook listens on this action.
 
 == REST API ==
 
@@ -226,6 +230,15 @@ Logged-in administrators can also call the routes from the dashboard (cookie plu
 
 = 1.0.0 =
 * Initial release.
+* Cache-proof tracking beacon with a no-JS PHP fallback, bot filtering and click deduplication.
+* First/last-touch attribution cookie, gated on the WP Consent API.
+* Channel classification, including AI assistants, and untagged landing-visit recording.
+* Pretty short links with QR codes, the [utmat_link] shortcode, UTM naming presets and a build-a-URL mode.
+* Custom URL parameters captured alongside UTM tags.
+* WooCommerce revenue attribution and form lead capture for Contact Form 7, Gravity Forms, Ninja Forms, Elementor Pro, WPForms, Fluent Forms, Formidable, Forminator and Bricks.
+* Lead and order webhooks for Zapier, Make, HubSpot and GoHighLevel.
+* Customer journeys built from a consent-gated visitor id, and a read-only REST API.
+* Tabbed dashboard with CSV export, weekly email summary, Tracking Doctor diagnostics and data retention.
 
 == Upgrade Notice ==
 
