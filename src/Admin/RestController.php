@@ -735,8 +735,9 @@ class RestController {
 	 * When valid `since` and `until` dates (Y-m-d, since <= until) are both
 	 * supplied, the period is the number of days `since` lies before `until`
 	 * (0 for a single day), capped at 365; otherwise falls back to the
-	 * `period` integer parameter, clamped to [1, 365]. `$now_local` must already reflect {@see resolve_now_local()}
-	 * (its date is the effective `until` when a custom range is in play).
+	 * `period` integer parameter, clamped to [1, 365]. `$now_local` must
+	 * already reflect {@see resolve_now_local()} (its date is the effective
+	 * `until` when a custom range is in play).
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 A single-day custom range resolves to 0, not 1.
@@ -1815,7 +1816,8 @@ class RestController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Caps the slug at 64 characters, the click column width,
-	 *              suffixing a derived slug that collides after the cut.
+	 *              suffixing a derived slug that collides with a different
+	 *              label after the cut.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1828,10 +1830,12 @@ class RestController {
 		// reserved and duplicate checks.
 		if ( strlen( $id ) > 64 ) {
 			$id = rtrim( substr( $id, 0, 64 ), '-_' );
-			// Two long labels can share their first 64 characters (a
-			// duplicated link adds " (copy)" at the end), so a derived slug
-			// that collides after the cut gets a numeric suffix instead.
-			if ( '' === $id_param && null !== LinkManager::get( $id ) ) {
+			// Two different long labels can share their first 64 characters
+			// (a duplicated link adds " (copy)" at the end), so a derived slug
+			// that collides with another label after the cut gets a numeric
+			// suffix. The same label again still fails as a duplicate.
+			$existing = '' === $id_param ? LinkManager::get( $id ) : null;
+			if ( null !== $existing && ( $existing['label'] ?? '' ) !== $label ) {
 				$base = rtrim( substr( $id, 0, 60 ), '-_' );
 				for ( $n = 2; $n < 100; $n++ ) {
 					$id = $base . '-' . $n;
