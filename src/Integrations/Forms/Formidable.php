@@ -31,6 +31,7 @@ defined( 'ABSPATH' ) || exit;
  * Formidable
  *
  * @since 1.0.0
+ * @since 1.0.0 Records a saved draft once the same visitor submits it.
  */
 class Formidable {
 
@@ -147,9 +148,17 @@ class Formidable {
 		$status = is_object( $entry ) ? (int) ( $entry->is_draft ?? self::SUBMITTED_STATUS ) : self::SUBMITTED_STATUS;
 
 		if ( self::DRAFT_STATUS === $status ) {
-			// Pro drafts can live longer; a draft submitted after this
-			// expires simply records no lead.
-			set_transient( self::DRAFT_TRANSIENT . absint( $entry_id ), 1, 30 * DAY_IN_SECONDS );
+			// Remember who saved it, so only the same visitor's submission
+			// records the lead. Pro drafts can live longer than the 30 days;
+			// a draft submitted after the mark expires records no lead.
+			set_transient(
+				self::DRAFT_TRANSIENT . absint( $entry_id ),
+				array(
+					'visitor_id' => Attribution::visitor_id(),
+					'posted'     => Attribution::get_last(),
+				),
+				30 * DAY_IN_SECONDS
+			);
 			return;
 		}
 		if ( self::SUBMITTED_STATUS !== $status ) {
@@ -164,9 +173,13 @@ class Formidable {
 	 *
 	 * Fires on `frm_after_update_entry`. Formidable Pro submits a saved
 	 * draft by updating the entry, so `frm_after_create_entry` never fires
-	 * for it. Acts only on entries record_lead() marked as drafts, so an
-	 * admin editing an entry never records a lead. The mark is cleared
-	 * before recording, so a repeated update cannot record twice.
+	 * for it. Acts only on entries record_lead() marked as drafts, and only
+	 * when the request comes from the visitor who saved the draft: the same
+	 * visitor id, or the same last touch when no visitor id was set. Anyone
+	 * else updating it (an admin edit, an add-on, the visitor on another
+	 * device) clears the mark and records nothing, since the lead would
+	 * carry that request's attribution. The mark is cleared before
+	 * recording, so a repeated update cannot record twice.
 	 *
 	 * @since 1.0.0
 	 *
@@ -176,8 +189,9 @@ class Formidable {
 	 * @return void
 	 */
 	public static function record_submitted_draft( $entry_id, $form_id ): void {
-		$key = self::DRAFT_TRANSIENT . absint( $entry_id );
-		if ( ! get_transient( $key ) || ! class_exists( 'FrmForm' ) || ! class_exists( 'FrmField' ) || ! class_exists( 'FrmEntry' ) ) {
+		$key  = self::DRAFT_TRANSIENT . absint( $entry_id );
+		$mark = get_transient( $key );
+		if ( ! is_array( $mark ) || ! class_exists( 'FrmForm' ) || ! class_exists( 'FrmField' ) || ! class_exists( 'FrmEntry' ) ) {
 			return;
 		}
 
@@ -192,11 +206,23 @@ class Formidable {
 			return;
 		}
 
+		$saved_by = (string) ( $mark['visitor_id'] ?? '' );
+		$same     = '' !== $saved_by
+			? Attribution::visitor_id() === $saved_by
+			: Attribution::get_last() === ( $mark['posted'] ?? null );
+		if ( ! $same ) {
+			return;
+		}
+
 		self::record( $entry, $form_id );
 	}
 
 	/**
 	 * Pass a submitted entry to the recent-leads recorder.
+	 *
+	 * The submitted values of the form's own fields are passed as `fields`,
+	 * keyed by field label; hidden fields, uploads, passwords and non-input
+	 * elements are left out.
 	 *
 	 * @since 1.0.0
 	 *
