@@ -1814,7 +1814,8 @@ class RestController {
 	 * use, or the destination is not a valid http(s) URL.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Caps the slug at 64 characters, the click column width.
+	 * @since 1.0.0 Caps the slug at 64 characters, the click column width,
+	 *              suffixing a derived slug that collides after the cut.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1825,7 +1826,21 @@ class RestController {
 		// Clicks store link_id in a VARCHAR(64) column, so a longer slug would
 		// redirect but never match its own click rows. Cap it here, before the
 		// reserved and duplicate checks.
-		$id = rtrim( substr( $id, 0, 64 ), '-_' );
+		if ( strlen( $id ) > 64 ) {
+			$id = rtrim( substr( $id, 0, 64 ), '-_' );
+			// Two long labels can share their first 64 characters (a
+			// duplicated link adds " (copy)" at the end), so a derived slug
+			// that collides after the cut gets a numeric suffix instead.
+			if ( '' === $id_param && null !== LinkManager::get( $id ) ) {
+				$base = rtrim( substr( $id, 0, 60 ), '-_' );
+				for ( $n = 2; $n < 100; $n++ ) {
+					$id = $base . '-' . $n;
+					if ( null === LinkManager::get( $id ) ) {
+						break;
+					}
+				}
+			}
+		}
 
 		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
 			return new WP_REST_Response(
