@@ -85,7 +85,7 @@ class GravityForms {
 	}
 
 	/**
-	 * Replace the submitted attribution fields with the submitter's own values.
+	 * Replace the plugin's attribution prefills with the submitter's own values.
 	 *
 	 * The population filters above run when the form is rendered, so a page
 	 * cache serves the first visitor's attribution to everyone. Fires on
@@ -93,8 +93,11 @@ class GravityForms {
 	 * are sent: every single-input field populated dynamically under a
 	 * recognised attribution name gets the submitter's value from the
 	 * attribution cookie, or, when the cookie carries none, the field's own
-	 * default value. Built from the Gravity Forms developer documentation;
-	 * untested locally because Gravity Forms is a paid plugin.
+	 * default value. A field whose parameter the site supplied itself (in
+	 * the page's query string or the form's `field_values`) is left alone,
+	 * as Gravity Forms populated it ahead of the cookie. Built from the
+	 * Gravity Forms developer documentation; untested locally because
+	 * Gravity Forms is a paid plugin.
 	 *
 	 * @since 1.0.0
 	 * @param array $form The form being submitted.
@@ -105,8 +108,9 @@ class GravityForms {
 			return;
 		}
 
-		$map   = Attribution::field_map();
-		$names = Attribution::field_names();
+		$map      = Attribution::field_map();
+		$names    = Attribution::field_names();
+		$supplied = self::supplied_values();
 
 		foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
 			if ( ! is_object( $field ) || empty( $field->allowsPrepopulate ) || ! empty( $field->inputs ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
@@ -114,7 +118,7 @@ class GravityForms {
 			}
 
 			$name = (string) ( $field->inputName ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
-			if ( ! in_array( $name, $names, true ) ) {
+			if ( ! in_array( $name, $names, true ) || '' !== ( $supplied[ $name ] ?? '' ) ) {
 				continue;
 			}
 
@@ -125,6 +129,42 @@ class GravityForms {
 			// of $_POST, which Gravity Forms unslashes when it reads it.
 			$_POST[ 'input_' . $field->id ] = wp_slash( $map[ $name ] ?? (string) $default ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		}
+	}
+
+	/**
+	 * Parameter values the site supplied for dynamic population itself.
+	 *
+	 * Gravity Forms populates a field from the page's query string or the
+	 * form's `field_values` (shortcode attribute or block setting) before
+	 * the cookie filter runs. At submit the query string is on the request
+	 * (a classic post goes back to the page URL) or on the referring page
+	 * (an AJAX post), and Gravity Forms posts the `field_values` back as
+	 * `gform_field_values`.
+	 *
+	 * @since 1.0.0
+	 * @return array<string, mixed> Parameter name => supplied value.
+	 */
+	private static function supplied_values(): array {
+		$values = array();
+
+		// Read only to decide whether to leave a field alone; Gravity Forms
+		// verifies its own submission.
+		// phpcs:disable WordPress.Security.NonceVerification
+		$field_values = isset( $_POST['gform_field_values'] ) && is_string( $_POST['gform_field_values'] ) ? sanitize_text_field( wp_unslash( $_POST['gform_field_values'] ) ) : '';
+		$sources      = array(
+			(string) wp_parse_url( (string) wp_get_referer(), PHP_URL_QUERY ),
+			isset( $_SERVER['QUERY_STRING'] ) ? sanitize_text_field( wp_unslash( $_SERVER['QUERY_STRING'] ) ) : '',
+			str_replace( '&amp;', '&', $field_values ),
+		);
+		// phpcs:enable WordPress.Security.NonceVerification
+
+		foreach ( $sources as $query ) {
+			$parsed = array();
+			wp_parse_str( $query, $parsed );
+			$values = array_merge( $values, array_filter( $parsed, 'is_string' ) );
+		}
+
+		return $values;
 	}
 
 	/**

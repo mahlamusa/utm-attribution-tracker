@@ -102,7 +102,7 @@ class NinjaForms {
 	 *
 	 * @since 1.0.0
 	 * @param array $form_data Submission data (`id`, `fields` keyed by field ID, etc.).
-	 * @return array The submission data with the attribution field values replaced.
+	 * @return array|mixed The submission data with the attribution field values replaced, or the input unchanged when it is not usable.
 	 */
 	public static function override_prefills( $form_data ) {
 		if ( ! is_array( $form_data ) || empty( $form_data['id'] ) || ! is_array( $form_data['fields'] ?? null ) ) {

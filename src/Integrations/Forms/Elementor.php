@@ -60,8 +60,8 @@ class Elementor {
 	 * Record a lead for the recent-leads dashboard widget on successful submission.
 	 *
 	 * Fires on `elementor_pro/forms/new_record` — the hook Elementor Pro
-	 * runs once a submission passes validation and its record is created,
-	 * before the form's configured actions (email, webhook, etc.) run.
+	 * runs once a submission passes validation and the form's configured
+	 * actions (email, webhook, etc.) have run.
 	 * Skips silently when the visitor carries no attribution data (nothing
 	 * to classify) or when $record doesn't expose get_form_settings()
 	 * (a shape change in a future Elementor Pro version). The submitted
@@ -72,6 +72,7 @@ class Elementor {
 	 * Elementor Pro is a paid plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Corrects when the hook fires relative to the form actions.
 	 * @param mixed $record  The Elementor Pro form record instance (`Elementor\Pro\Modules\Forms\Classes\Form_Record`).
 	 * @param mixed $handler The Elementor Pro Ajax handler instance (unused).
 	 * @return void
@@ -175,7 +176,9 @@ class Elementor {
 	 * submission is saved or any action (email, webhook) runs: every Hidden
 	 * field whose Field ID is a recognised attribution name gets the
 	 * submitter's value from the attribution cookie, or, when the cookie
-	 * carries none, the field's own default value. Built from the
+	 * carries none, the field's own default value. A default set by a
+	 * dynamic tag is left as submitted when the cookie carries no value,
+	 * since it cannot be resolved again in the AJAX request. Built from the
 	 * Elementor Pro Form_Record documentation; untested locally because
 	 * Elementor Pro is a paid plugin.
 	 *
@@ -193,17 +196,27 @@ class Elementor {
 		$defaults = array();
 
 		foreach ( (array) $record->get_form_settings( 'form_fields' ) as $item ) {
-			$id = ! empty( $item['custom_id'] ) ? $item['custom_id'] : ( $item['_id'] ?? '' );
-
-			$defaults[ $id ] = (string) ( $item['field_value'] ?? '' );
-		}
-
-		foreach ( (array) $record->get( 'fields' ) as $id => $field ) {
-			if ( 'hidden' !== ( $field['type'] ?? '' ) || ! in_array( (string) $id, $names, true ) ) {
+			if ( ! is_array( $item ) ) {
 				continue;
 			}
 
-			$value = $map[ $id ] ?? ( $defaults[ $id ] ?? '' );
+			$id = ! empty( $item['custom_id'] ) ? $item['custom_id'] : ( $item['_id'] ?? '' );
+
+			// A dynamic-tag default (e.g. Request Parameter) cannot be
+			// re-resolved in the AJAX submit request, so it is marked null
+			// and the submitted value stands when there is no cookie value.
+			$defaults[ $id ] = empty( $item['__dynamic__']['field_value'] ) ? (string) ( $item['field_value'] ?? '' ) : null;
+		}
+
+		foreach ( (array) $record->get( 'fields' ) as $id => $field ) {
+			if ( ! is_array( $field ) || 'hidden' !== ( $field['type'] ?? '' ) || ! in_array( (string) $id, $names, true ) ) {
+				continue;
+			}
+
+			$value = $map[ $id ] ?? ( array_key_exists( $id, $defaults ) ? $defaults[ $id ] : '' );
+			if ( null === $value ) {
+				continue;
+			}
 
 			$record->update_field( $id, 'value', $value );
 			$record->update_field( $id, 'raw_value', $value );

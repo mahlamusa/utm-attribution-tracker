@@ -104,22 +104,23 @@ class ContactForm7 {
 	}
 
 	/**
-	 * Replace the submitted attribution fields with the submitter's own values.
+	 * Replace the appended attribution fields with the submitter's own values.
 	 *
 	 * The fields from add_hidden_fields() carry the attribution of whoever
 	 * rendered the page, so a page cache serves that visitor's campaign to
 	 * everyone, and the beacon keeps it because it only fills empty fields.
 	 * On submit, each appended field present in the posted data is set to
-	 * the submitter's value from the attribution cookie, or, when the cookie
-	 * carries none, back to the default of a form tag of the same name
-	 * (empty for the appended fields). Mail tags, Flamingo and later hooks
-	 * all read the posted data, so they get the corrected value.
+	 * the submitter's value from the attribution cookie, or emptied when the
+	 * cookie carries none. A name the form itself defines as a form tag is
+	 * left alone: that tag's input follows the appended one, so its value is
+	 * the one CF7 received. Mail tags, Flamingo and later hooks all read the
+	 * posted data, so they get the corrected value.
 	 *
 	 * @since 1.0.0
 	 *
 	 * @param array<string, mixed> $posted_data The sanitized posted data.
 	 *
-	 * @return array<string, mixed>
+	 * @return array<string, mixed>|mixed The posted data, or the input unchanged when it is not an array.
 	 */
 	public static function override_posted_fields( $posted_data ) {
 		if ( ! is_array( $posted_data ) ) {
@@ -128,20 +129,13 @@ class ContactForm7 {
 
 		$map          = Attribution::field_map();
 		$contact_form = WPCF7_ContactForm::get_current();
+		$tag_names    = $contact_form ? wp_list_pluck( $contact_form->scan_form_tags(), 'name' ) : array();
 
 		foreach ( Attribution::touch_keys() as $param ) {
 			$name = Attribution::field_name( $param );
-			if ( ! array_key_exists( $name, $posted_data ) ) {
-				continue;
+			if ( array_key_exists( $name, $posted_data ) && ! in_array( $name, $tag_names, true ) ) {
+				$posted_data[ $name ] = $map[ $name ] ?? '';
 			}
-
-			$default = '';
-			if ( $contact_form ) {
-				$tags    = $contact_form->scan_form_tags( array( 'name' => $name ) );
-				$default = isset( $tags[0] ) ? (string) ( $tags[0]->values[0] ?? '' ) : '';
-			}
-
-			$posted_data[ $name ] = $map[ $name ] ?? $default;
 		}
 
 		return $posted_data;
