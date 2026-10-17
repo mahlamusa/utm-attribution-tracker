@@ -6,7 +6,9 @@
  * (`{utmatra:utm_source}` … `{utmatra:landing}`, plus `_first` variants) so a
  * user can add a Hidden field whose default value is one of these tags to
  * capture attribution — values are resolved server-side, at form render,
- * from the Attribution cookie reader.
+ * from the Attribution cookie reader. On submit those fields are set again
+ * from the submitter's own cookie, so a page cache cannot pass one
+ * visitor's prefilled values to everyone.
  *
  * Ninja Forms resolves merge tags through a class extending
  * `NF_Abstracts_MergeTags`, registered on `Ninja_Forms()->merge_tags`. That
@@ -39,6 +41,7 @@ defined( 'ABSPATH' ) || exit;
  * NinjaForms
  *
  * @since 1.0.0
+ * @since 1.0.0 Replaces cached attribution prefills with the submitter's own values.
  */
 class NinjaForms {
 
@@ -65,6 +68,7 @@ class NinjaForms {
 	 * already fired and only deferred to it otherwise.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the submit-time override of the attribution fields.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -81,7 +85,47 @@ class NinjaForms {
 		} else {
 			add_action( 'ninja_forms_loaded', array( self::class, 'register_merge_tags' ) );
 		}
+		add_filter( 'ninja_forms_submit_data', array( self::class, 'override_prefills' ) );
 		add_action( 'ninja_forms_after_submission', array( self::class, 'record_lead' ) );
+	}
+
+	/**
+	 * Replace the submitted attribution fields with the submitter's own values.
+	 *
+	 * The merge tags resolve when the form is rendered, so a page cache
+	 * serves the first visitor's attribution to everyone. Filters
+	 * `ninja_forms_submit_data`, before Ninja Forms processes, saves or
+	 * emails the submission: every field whose default value is exactly one
+	 * of the `{utmatra:<param>}` merge tags gets the submitter's value from
+	 * the attribution cookie, or an empty string when the cookie carries
+	 * none (what the tag itself resolves to).
+	 *
+	 * @since 1.0.0
+	 * @param array $form_data Submission data (`id`, `fields` keyed by field ID, etc.).
+	 * @return array The submission data with the attribution field values replaced.
+	 */
+	public static function override_prefills( $form_data ) {
+		if ( ! is_array( $form_data ) || empty( $form_data['id'] ) || ! is_array( $form_data['fields'] ?? null ) ) {
+			return $form_data;
+		}
+
+		$params = self::merge_tag_params();
+		$map    = Attribution::field_map();
+
+		// A form rendered twice on a page submits an `{form}_{instance}` ID;
+		// the int cast keeps the form ID.
+		foreach ( (array) Ninja_Forms()->form( (int) $form_data['id'] )->get_fields() as $id => $field ) {
+			if ( ! isset( $form_data['fields'][ $id ] ) ) {
+				continue;
+			}
+
+			$default = (string) $field->get_setting( 'default' );
+			if ( preg_match( '/^\{utmatra:([a-z0-9_]+)\}$/', $default, $matches ) && isset( $params[ $matches[1] ] ) ) {
+				$form_data['fields'][ $id ]['value'] = $map[ $params[ $matches[1] ] ] ?? '';
+			}
+		}
+
+		return $form_data;
 	}
 
 	/**

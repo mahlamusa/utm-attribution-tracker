@@ -7,6 +7,8 @@
  * `_first` variants) so users can add a Hidden field with "Allow field to
  * be populated dynamically" and the matching parameter name to capture
  * attribution — values come from the Attribution cookie reader server-side.
+ * On submit those fields are set again from the submitter's own cookie, so
+ * a page cache cannot pass one visitor's prefilled values to everyone.
  *
  * Hooks register only when Gravity Forms is active (`GFForms` class exists,
  * checked at `plugins_loaded` priority 20). Without Gravity Forms the class
@@ -27,6 +29,7 @@ defined( 'ABSPATH' ) || exit;
  * GravityForms
  *
  * @since 1.0.0
+ * @since 1.0.0 Replaces cached attribution prefills with the submitter's own values.
  */
 class GravityForms {
 
@@ -52,6 +55,7 @@ class GravityForms {
 	 * escaping them here too would double-encode.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the submit-time override of the attribution fields.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -76,7 +80,51 @@ class GravityForms {
 			);
 		}
 
+		add_action( 'gform_pre_submission', array( self::class, 'override_prefills' ) );
 		add_action( 'gform_after_submission', array( self::class, 'record_lead' ), 10, 2 );
+	}
+
+	/**
+	 * Replace the submitted attribution fields with the submitter's own values.
+	 *
+	 * The population filters above run when the form is rendered, so a page
+	 * cache serves the first visitor's attribution to everyone. Fires on
+	 * `gform_pre_submission`, before the entry is saved and notifications
+	 * are sent: every single-input field populated dynamically under a
+	 * recognised attribution name gets the submitter's value from the
+	 * attribution cookie, or, when the cookie carries none, the field's own
+	 * default value. Built from the Gravity Forms developer documentation;
+	 * untested locally because Gravity Forms is a paid plugin.
+	 *
+	 * @since 1.0.0
+	 * @param array $form The form being submitted.
+	 * @return void
+	 */
+	public static function override_prefills( $form ): void {
+		if ( ! is_array( $form ) ) {
+			return;
+		}
+
+		$map   = Attribution::field_map();
+		$names = Attribution::field_names();
+
+		foreach ( (array) ( $form['fields'] ?? array() ) as $field ) {
+			if ( ! is_object( $field ) || empty( $field->allowsPrepopulate ) || ! empty( $field->inputs ) ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
+				continue;
+			}
+
+			$name = (string) ( $field->inputName ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
+			if ( ! in_array( $name, $names, true ) ) {
+				continue;
+			}
+
+			$default = method_exists( $field, 'get_value_default' ) ? $field->get_value_default() : ( $field->defaultValue ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
+
+			// The submitted value is replaced, not read, so no nonce applies;
+			// Gravity Forms verifies its own submission. Slashed like the rest
+			// of $_POST, which Gravity Forms unslashes when it reads it.
+			$_POST[ 'input_' . $field->id ] = wp_slash( $map[ $name ] ?? (string) $default ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		}
 	}
 
 	/**

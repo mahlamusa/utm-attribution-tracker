@@ -7,6 +7,8 @@
  * from HandL's `lite/elementor.php` (`elementor_pro/forms/render/item/hidden`)
  * and adapted to read from Attribution::field_map() instead of raw
  * per-param cookies, matching the adaptation already made for NinjaForms.
+ * On submit those fields are set again from the submitter's own cookie, so
+ * a page cache cannot pass one visitor's prefilled values to everyone.
  *
  * @package Utmatra\Integrations\Forms
  */
@@ -22,6 +24,7 @@ defined( 'ABSPATH' ) || exit;
  * Elementor
  *
  * @since 1.0.0
+ * @since 1.0.0 Replaces cached attribution prefills with the submitter's own values.
  */
 class Elementor {
 
@@ -40,6 +43,7 @@ class Elementor {
 	 * Elementor Pro are both active.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the submit-time override of the attribution fields.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -48,6 +52,7 @@ class Elementor {
 		}
 
 		add_filter( 'elementor_pro/forms/render/item/hidden', array( self::class, 'fill_hidden_field' ), 10, 3 );
+		add_action( 'elementor_pro/forms/process', array( self::class, 'override_hidden_fields' ) );
 		add_action( 'elementor_pro/forms/new_record', array( self::class, 'record_lead' ), 10, 2 );
 	}
 
@@ -159,6 +164,50 @@ class Elementor {
 		}
 
 		return $item;
+	}
+
+	/**
+	 * Replace the submitted attribution Hidden fields with the submitter's own values.
+	 *
+	 * The fill in fill_hidden_field() runs when the form is rendered, so a
+	 * page cache serves the first visitor's attribution to everyone. Fires on
+	 * `elementor_pro/forms/process`, after validation and before the
+	 * submission is saved or any action (email, webhook) runs: every Hidden
+	 * field whose Field ID is a recognised attribution name gets the
+	 * submitter's value from the attribution cookie, or, when the cookie
+	 * carries none, the field's own default value. Built from the
+	 * Elementor Pro Form_Record documentation; untested locally because
+	 * Elementor Pro is a paid plugin.
+	 *
+	 * @since 1.0.0
+	 * @param mixed $record The Elementor Pro form record instance (`Form_Record`).
+	 * @return void
+	 */
+	public static function override_hidden_fields( $record ): void {
+		if ( ! is_object( $record ) || ! method_exists( $record, 'get' ) || ! method_exists( $record, 'update_field' ) || ! method_exists( $record, 'get_form_settings' ) ) {
+			return;
+		}
+
+		$map      = Attribution::field_map();
+		$names    = Attribution::field_names();
+		$defaults = array();
+
+		foreach ( (array) $record->get_form_settings( 'form_fields' ) as $item ) {
+			$id = ! empty( $item['custom_id'] ) ? $item['custom_id'] : ( $item['_id'] ?? '' );
+
+			$defaults[ $id ] = (string) ( $item['field_value'] ?? '' );
+		}
+
+		foreach ( (array) $record->get( 'fields' ) as $id => $field ) {
+			if ( 'hidden' !== ( $field['type'] ?? '' ) || ! in_array( (string) $id, $names, true ) ) {
+				continue;
+			}
+
+			$value = $map[ $id ] ?? ( $defaults[ $id ] ?? '' );
+
+			$record->update_field( $id, 'value', $value );
+			$record->update_field( $id, 'raw_value', $value );
+		}
 	}
 
 	/**
