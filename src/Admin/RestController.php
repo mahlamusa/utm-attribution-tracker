@@ -325,46 +325,36 @@ class RestController {
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
 					'retention_days'   => array(
-						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
 					'weekly_email'     => array(
-						'default'           => false,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'cookie_days'      => array(
-						'default'           => 90,
 						'sanitize_callback' => 'absint',
 					),
 					'webhook_url'      => array(
-						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'webhook_preset'   => array(
-						'default'           => 'generic',
 						'sanitize_callback' => 'sanitize_key',
 						'validate_callback' => static function ( $value ) {
 							return in_array( $value, ConversionWebhook::PRESETS, true );
 						},
 					),
 					'webhook_orders'   => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'webhook_leads'    => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'consent_category' => array(
-						'default'           => 'marketing',
 						'sanitize_callback' => 'sanitize_key',
 					),
 					'track_visits'     => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'custom_params'    => array(
-						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
@@ -1376,32 +1366,41 @@ class RestController {
 	 * here, at save time; Scheduler::heal() only recreates it if it goes
 	 * missing.
 	 *
+	 * Only the settings actually sent are changed: a parameter missing from
+	 * the request keeps its stored value, so a partial API call (e.g. only
+	 * `weekly_email`) never resets the others to defaults.
+	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Keeps the stored value of any setting not sent.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
-		$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
-		if ( $custom_names instanceof WP_REST_Response ) {
-			return $custom_names;
+		$custom_names = Tracker::custom_params();
+		if ( $request->has_param( 'custom_params' ) ) {
+			$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
+			if ( $custom_names instanceof WP_REST_Response ) {
+				return $custom_names;
+			}
 		}
 
-		$retention = absint( $request->get_param( 'retention_days' ) );
-		$weekly    = (bool) $request->get_param( 'weekly_email' );
-		$cookie    = absint( $request->get_param( 'cookie_days' ) );
+		$events    = ConversionWebhook::events();
+		$retention = $request->has_param( 'retention_days' ) ? absint( $request->get_param( 'retention_days' ) ) : (int) get_option( 'utmatra_retention_days', 180 );
+		$weekly    = $request->has_param( 'weekly_email' ) ? (bool) $request->get_param( 'weekly_email' ) : WeeklyEmail::enabled();
+		$cookie    = $request->has_param( 'cookie_days' ) ? absint( $request->get_param( 'cookie_days' ) ) : (int) get_option( 'utmatra_cookie_days', 90 );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
-		$webhook   = esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) );
-		$preset    = self::param_string( $request, 'webhook_preset' );
+		$webhook   = $request->has_param( 'webhook_url' ) ? esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
+		$preset    = $request->has_param( 'webhook_preset' ) ? self::param_string( $request, 'webhook_preset' ) : ConversionWebhook::preset();
 		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
 			$preset = 'generic';
 		}
-		$orders  = (bool) $request->get_param( 'webhook_orders' );
-		$leads   = (bool) $request->get_param( 'webhook_leads' );
-		$consent = self::param_string( $request, 'consent_category' );
+		$orders  = $request->has_param( 'webhook_orders' ) ? (bool) $request->get_param( 'webhook_orders' ) : (bool) $events['orders'];
+		$leads   = $request->has_param( 'webhook_leads' ) ? (bool) $request->get_param( 'webhook_leads' ) : (bool) $events['leads'];
+		$consent = $request->has_param( 'consent_category' ) ? self::param_string( $request, 'consent_category' ) : Attribution::consent_category();
 		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
 			$consent = 'marketing';
 		}
-		$visits = (bool) $request->get_param( 'track_visits' );
+		$visits = $request->has_param( 'track_visits' ) ? (bool) $request->get_param( 'track_visits' ) : 1 === (int) get_option( 'utmatra_track_visits', 1 );
 
 		update_option( 'utmatra_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
