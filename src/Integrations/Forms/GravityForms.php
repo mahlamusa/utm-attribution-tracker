@@ -7,8 +7,9 @@
  * `_first` variants) so users can add a Hidden field with "Allow field to
  * be populated dynamically" and the matching parameter name to capture
  * attribution — values come from the Attribution cookie reader server-side.
- * On submit those fields are set again from the submitter's own cookie, so
- * a page cache cannot pass one visitor's prefilled values to everyone.
+ * On submit those fields are set again from the submitter's own request
+ * and cookie, so a page cache cannot pass one visitor's prefilled values
+ * to everyone.
  *
  * Hooks register only when Gravity Forms is active (`GFForms` class exists,
  * checked at `plugins_loaded` priority 20). Without Gravity Forms the class
@@ -95,18 +96,20 @@ class GravityForms {
 	 * attribution cookie, or, when the cookie carries none, the field's own
 	 * default value. A parameter the site supplied itself (in the page's
 	 * query string or the form's `field_values`) takes that value instead,
-	 * as Gravity Forms populates it ahead of the cookie; a page cache that
-	 * ignores UTM parameters may still have served another visitor's value
-	 * in that case. Built from the
-	 * Gravity Forms developer documentation; untested locally because
-	 * Gravity Forms is a paid plugin.
+	 * as Gravity Forms populates it ahead of the cookie. Only browser form
+	 * posts are corrected: they always carry the form's `state_{id}` input,
+	 * while a REST or GFAPI submission sends the values its caller chose.
+	 * Built from the Gravity Forms developer documentation; untested
+	 * locally because Gravity Forms is a paid plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Takes site-supplied parameters and skips non-browser submissions.
 	 * @param array $form The form being submitted.
 	 * @return void
 	 */
 	public static function override_prefills( $form ): void {
-		if ( ! is_array( $form ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- presence check only; Gravity Forms verifies its own submission.
+		if ( ! is_array( $form ) || ! isset( $_POST[ 'state_' . ( $form['id'] ?? '' ) ] ) ) {
 			return;
 		}
 
@@ -145,6 +148,7 @@ class GravityForms {
 	 * `gform_field_values`.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Parses each source before sanitizing and keeps the query string over field_values.
 	 * @return array<string, string> Parameter name => sanitized value, query string over field_values.
 	 */
 	private static function supplied_values(): array {
@@ -165,8 +169,9 @@ class GravityForms {
 			$parsed = array();
 			wp_parse_str( $query, $parsed );
 			foreach ( $parsed as $key => $value ) {
-				if ( is_string( $value ) && '' !== $value ) {
-					$values[ $key ] = mb_substr( sanitize_text_field( $value ), 0, 255 );
+				$value = is_string( $value ) ? mb_substr( sanitize_text_field( $value ), 0, 255 ) : '';
+				if ( '' !== $value ) {
+					$values[ $key ] = $value;
 				}
 			}
 		}
