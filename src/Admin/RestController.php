@@ -739,6 +739,7 @@ class RestController {
 	 * (its date is the effective `until` when a custom range is in play).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 A single-day custom range resolves to 0, not 1.
 	 * @param WP_REST_Request   $request   REST request.
 	 * @param DateTimeImmutable $now_local Resolved reference instant.
 	 * @return int
@@ -752,7 +753,9 @@ class RestController {
 			if ( false !== $since_date && $since_date->format( 'Y-m-d' ) <= $now_local->format( 'Y-m-d' ) ) {
 				$days = (int) $since_date->setTime( 0, 0, 0 )->diff( $now_local->setTime( 0, 0, 0 ) )->days;
 				if ( $days >= 0 ) {
-					return max( 1, min( 365, $days ) );
+					// 0 is a single-day range (since equals until); flooring it at 1
+					// would pull in the day before.
+					return min( 365, $days );
 				}
 			}
 		}
