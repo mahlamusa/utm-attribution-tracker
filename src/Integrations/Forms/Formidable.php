@@ -121,10 +121,10 @@ class Formidable {
 	 * Fires on `frm_after_create_entry`, once the entry has been saved.
 	 * Repeater rows (child entries) are skipped — the parent entry is the
 	 * lead. A saved draft (Formidable Pro) is not a lead yet: it is marked
-	 * so record_submitted_draft() records it once it is submitted. Any other
-	 * non-submitted status (spam) is skipped. Skips silently when the
-	 * visitor carries no attribution data, so a draft saved without
-	 * attribution is never marked.
+	 * so record_submitted_draft() records it once the same visitor
+	 * submits it. Any other non-submitted status (spam) is skipped. Skips
+	 * silently when the visitor carries no attribution data, so a draft
+	 * saved without attribution is never marked.
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Defers draft entries until they are submitted.

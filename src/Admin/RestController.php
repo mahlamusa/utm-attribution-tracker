@@ -1838,8 +1838,11 @@ class RestController {
 			if ( null !== $existing && ( $existing['label'] ?? '' ) !== $label ) {
 				$base = rtrim( substr( $id, 0, 60 ), '-_' );
 				for ( $n = 2; $n < 100; $n++ ) {
-					$id = $base . '-' . $n;
-					if ( null === LinkManager::get( $id ) ) {
+					$id    = $base . '-' . $n;
+					$taken = LinkManager::get( $id );
+					// A slug already holding this label falls through to the
+					// duplicate error below.
+					if ( null === $taken || ( $taken['label'] ?? '' ) === $label ) {
 						break;
 					}
 				}
