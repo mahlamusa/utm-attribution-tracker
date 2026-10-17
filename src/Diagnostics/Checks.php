@@ -371,6 +371,7 @@ class Checks {
 	 * WooCommerce order attribution — samples the last 10 orders.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Checks the stored attribution array without a string cast.
 	 * @return array{id: string, label: string, status: string, message: string, details: array}
 	 */
 	public static function woocommerce(): array {
@@ -407,7 +408,8 @@ class Checks {
 		$total     = count( $orders );
 		$attribute = 0;
 		foreach ( $orders as $order ) {
-			if ( '' !== (string) $order->get_meta( '_utmatra_last', true ) ) {
+			// Stored as an array; a string cast warns and always reads "Array".
+			if ( ! empty( $order->get_meta( '_utmatra_last', true ) ) ) {
 				++$attribute;
 			}
 		}
