@@ -733,9 +733,9 @@ class RestController {
 	 * Resolve the period length in days for a stats/export request.
 	 *
 	 * When valid `since` and `until` dates (Y-m-d, since <= until) are both
-	 * supplied, the period is the inclusive day-count between them; otherwise
-	 * falls back to the `period` integer parameter, clamped to [1, 365] as
-	 * before. `$now_local` must already reflect {@see resolve_now_local()}
+	 * supplied, the period is the number of days `since` lies before `until`
+	 * (0 for a single day), capped at 365; otherwise falls back to the
+	 * `period` integer parameter, clamped to [1, 365]. `$now_local` must already reflect {@see resolve_now_local()}
 	 * (its date is the effective `until` when a custom range is in play).
 	 *
 	 * @since 1.0.0
