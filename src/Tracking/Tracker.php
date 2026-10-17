@@ -823,6 +823,8 @@ class Tracker {
 	 * bot. Override the verdict via the `utmatra_is_bot` filter.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 No longer flags the Pinterest in-app browser; `bot` still
+	 *              catches Pinterest's crawlers.
 	 * @param string $ua The user agent string.
 	 * @return bool
 	 */
@@ -856,7 +858,6 @@ class Tracker {
 				'skypeuripreview',
 				'embedly',
 				'vkshare',
-				'pinterest',
 				'bingpreview',
 			);
 			$haystack = strtolower( $ua );
