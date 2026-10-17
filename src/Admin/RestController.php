@@ -325,46 +325,36 @@ class RestController {
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
 					'retention_days'   => array(
-						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
 					'weekly_email'     => array(
-						'default'           => false,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'cookie_days'      => array(
-						'default'           => 90,
 						'sanitize_callback' => 'absint',
 					),
 					'webhook_url'      => array(
-						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 					'webhook_preset'   => array(
-						'default'           => 'generic',
 						'sanitize_callback' => 'sanitize_key',
 						'validate_callback' => static function ( $value ) {
 							return in_array( $value, ConversionWebhook::PRESETS, true );
 						},
 					),
 					'webhook_orders'   => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'webhook_leads'    => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'consent_category' => array(
-						'default'           => 'marketing',
 						'sanitize_callback' => 'sanitize_key',
 					),
 					'track_visits'     => array(
-						'default'           => true,
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'custom_params'    => array(
-						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
@@ -743,12 +733,14 @@ class RestController {
 	 * Resolve the period length in days for a stats/export request.
 	 *
 	 * When valid `since` and `until` dates (Y-m-d, since <= until) are both
-	 * supplied, the period is the inclusive day-count between them; otherwise
-	 * falls back to the `period` integer parameter, clamped to [1, 365] as
-	 * before. `$now_local` must already reflect {@see resolve_now_local()}
-	 * (its date is the effective `until` when a custom range is in play).
+	 * supplied, the period is the number of days `since` lies before `until`
+	 * (0 for a single day), capped at 365; otherwise falls back to the
+	 * `period` integer parameter, clamped to [1, 365]. `$now_local` must
+	 * already reflect {@see resolve_now_local()} (its date is the effective
+	 * `until` when a custom range is in play).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 A single-day custom range resolves to 0, not 1.
 	 * @param WP_REST_Request   $request   REST request.
 	 * @param DateTimeImmutable $now_local Resolved reference instant.
 	 * @return int
@@ -762,7 +754,9 @@ class RestController {
 			if ( false !== $since_date && $since_date->format( 'Y-m-d' ) <= $now_local->format( 'Y-m-d' ) ) {
 				$days = (int) $since_date->setTime( 0, 0, 0 )->diff( $now_local->setTime( 0, 0, 0 ) )->days;
 				if ( $days >= 0 ) {
-					return max( 1, min( 365, $days ) );
+					// 0 is a single-day range (since equals until); flooring it at 1
+					// would pull in the day before.
+					return min( 365, $days );
 				}
 			}
 		}
@@ -1376,32 +1370,41 @@ class RestController {
 	 * here, at save time; Scheduler::heal() only recreates it if it goes
 	 * missing.
 	 *
+	 * Only the settings actually sent are changed: a parameter missing from
+	 * the request keeps its stored value, so a partial API call (e.g. only
+	 * `weekly_email`) never resets the others to defaults.
+	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Keeps the stored value of any setting not sent.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
-		$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
-		if ( $custom_names instanceof WP_REST_Response ) {
-			return $custom_names;
+		$custom_names = Tracker::custom_params();
+		if ( $request->has_param( 'custom_params' ) ) {
+			$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
+			if ( $custom_names instanceof WP_REST_Response ) {
+				return $custom_names;
+			}
 		}
 
-		$retention = absint( $request->get_param( 'retention_days' ) );
-		$weekly    = (bool) $request->get_param( 'weekly_email' );
-		$cookie    = absint( $request->get_param( 'cookie_days' ) );
+		$events    = ConversionWebhook::events();
+		$retention = $request->has_param( 'retention_days' ) ? absint( $request->get_param( 'retention_days' ) ) : (int) get_option( 'utmatra_retention_days', 180 );
+		$weekly    = $request->has_param( 'weekly_email' ) ? (bool) $request->get_param( 'weekly_email' ) : WeeklyEmail::enabled();
+		$cookie    = $request->has_param( 'cookie_days' ) ? absint( $request->get_param( 'cookie_days' ) ) : (int) get_option( 'utmatra_cookie_days', 90 );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
-		$webhook   = esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) );
-		$preset    = self::param_string( $request, 'webhook_preset' );
+		$webhook   = $request->has_param( 'webhook_url' ) ? esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
+		$preset    = $request->has_param( 'webhook_preset' ) ? self::param_string( $request, 'webhook_preset' ) : ConversionWebhook::preset();
 		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
 			$preset = 'generic';
 		}
-		$orders  = (bool) $request->get_param( 'webhook_orders' );
-		$leads   = (bool) $request->get_param( 'webhook_leads' );
-		$consent = self::param_string( $request, 'consent_category' );
+		$orders  = $request->has_param( 'webhook_orders' ) ? (bool) $request->get_param( 'webhook_orders' ) : (bool) $events['orders'];
+		$leads   = $request->has_param( 'webhook_leads' ) ? (bool) $request->get_param( 'webhook_leads' ) : (bool) $events['leads'];
+		$consent = $request->has_param( 'consent_category' ) ? self::param_string( $request, 'consent_category' ) : Attribution::consent_category();
 		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
 			$consent = 'marketing';
 		}
-		$visits = (bool) $request->get_param( 'track_visits' );
+		$visits = $request->has_param( 'track_visits' ) ? (bool) $request->get_param( 'track_visits' ) : 1 === (int) get_option( 'utmatra_track_visits', 1 );
 
 		update_option( 'utmatra_retention_days', $retention );
 		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
@@ -1812,6 +1815,9 @@ class RestController {
 	 * use, or the destination is not a valid http(s) URL.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Caps the slug at 64 characters, the click column width,
+	 *              suffixing a derived slug that collides with a different
+	 *              label after the cut.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1819,6 +1825,29 @@ class RestController {
 		$label    = sanitize_text_field( self::param_string( $request, 'label' ) );
 		$id_param = self::param_string( $request, 'id' );
 		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
+		// Clicks store link_id in a VARCHAR(64) column, so a longer slug would
+		// redirect but never match its own click rows. Cap it here, before the
+		// reserved and duplicate checks.
+		if ( strlen( $id ) > 64 ) {
+			$id = rtrim( substr( $id, 0, 64 ), '-_' );
+			// Two different long labels can share their first 64 characters
+			// (a duplicated link adds " (copy)" at the end), so a derived slug
+			// that collides with another label after the cut gets a numeric
+			// suffix. The same label again still fails as a duplicate.
+			$existing = '' === $id_param ? LinkManager::get( $id ) : null;
+			if ( null !== $existing && ( $existing['label'] ?? '' ) !== $label ) {
+				$base = rtrim( substr( $id, 0, 60 ), '-_' );
+				for ( $n = 2; $n < 100; $n++ ) {
+					$id    = $base . '-' . $n;
+					$taken = LinkManager::get( $id );
+					// A slug already holding this label falls through to the
+					// duplicate error below.
+					if ( null === $taken || ( $taken['label'] ?? '' ) === $label ) {
+						break;
+					}
+				}
+			}
+		}
 
 		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
 			return new WP_REST_Response(

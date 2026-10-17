@@ -254,6 +254,7 @@ class Tracker {
 	 * Main entry-point hooked on `init` (priority 1).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Recognises /go/{slug}/ requests on subdirectory installs.
 	 * @return void
 	 */
 	public static function handle_incoming_request(): void {
@@ -300,8 +301,12 @@ class Tracker {
 		// `init` pass that request still carries its UTM query params but no
 		// utmatra_track $_GET value, so without this guard it would also be
 		// logged here as a passive "incoming" row — double-counting the click.
+		// The rewrite rule matches relative to the home path, so strip it (a
+		// subdirectory install serves /blog/go/{slug}/) before matching.
 		$request_path = (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH );
-		if ( empty( $track_id ) && 1 === preg_match( '#^/go/[a-z0-9_\-]+/?$#', $request_path ) ) {
+		$home_path    = trailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) );
+		$request_path = 0 === strpos( $request_path, $home_path ) ? substr( $request_path, strlen( $home_path ) ) : ltrim( $request_path, '/' );
+		if ( empty( $track_id ) && 1 === preg_match( '#^(?:index\.php/)?go/[a-z0-9_\-]+/?$#', $request_path ) ) {
 			return;
 		}
 
@@ -823,6 +828,8 @@ class Tracker {
 	 * bot. Override the verdict via the `utmatra_is_bot` filter.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 No longer flags the Pinterest in-app browser; `bot` still
+	 *              catches Pinterest's crawlers.
 	 * @param string $ua The user agent string.
 	 * @return bool
 	 */
@@ -856,7 +863,6 @@ class Tracker {
 				'skypeuripreview',
 				'embedly',
 				'vkshare',
-				'pinterest',
 				'bingpreview',
 			);
 			$haystack = strtolower( $ua );

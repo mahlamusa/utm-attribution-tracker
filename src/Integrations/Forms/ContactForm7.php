@@ -4,9 +4,11 @@
  *
  * Appends the visitor's last-touch attribution parameters to every CF7 form
  * as hidden fields (named after the parameter itself: `utm_source`,
- * `gclid`, `landing_page`, …) so submissions carry source data, and
- * resolves the matching `[_utm_source]`-style special mail tags in mail
- * templates from the submitted fields.
+ * `gclid`, `landing_page`, …) so submissions carry source data, replaces
+ * those values with the submitter's own on submit (a page cache can serve
+ * one visitor's prefilled values to everyone), and resolves the matching
+ * `[_utm_source]`-style special mail tags in mail templates from the
+ * submitted fields.
  *
  * Hooks register only when Contact Form 7 is active (`WPCF7_VERSION`
  * defined, checked at `plugins_loaded` priority 20). Without CF7 the class
@@ -28,6 +30,7 @@ defined( 'ABSPATH' ) || exit;
  * ContactForm7
  *
  * @since 1.0.0
+ * @since 1.0.0 Replaces cached attribution prefills with the submitter's own values.
  */
 class ContactForm7 {
 
@@ -48,6 +51,7 @@ class ContactForm7 {
 	 * Bails without adding a single hook when CF7 is absent.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the submit-time override of the attribution fields.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -56,6 +60,7 @@ class ContactForm7 {
 		}
 
 		add_filter( 'wpcf7_form_hidden_fields', array( self::class, 'add_hidden_fields' ) );
+		add_filter( 'wpcf7_posted_data', array( self::class, 'override_posted_fields' ) );
 		add_filter( 'wpcf7_special_mail_tags', array( self::class, 'resolve_mail_tag' ), 10, 3 );
 		add_action( 'wpcf7_mail_sent', array( self::class, 'record_lead' ) );
 	}
@@ -99,15 +104,53 @@ class ContactForm7 {
 	}
 
 	/**
+	 * Replace the appended attribution fields with the submitter's own values.
+	 *
+	 * The fields from add_hidden_fields() carry the attribution of whoever
+	 * rendered the page, so a page cache serves that visitor's campaign to
+	 * everyone, and the beacon keeps it because it only fills empty fields.
+	 * On submit, each appended field present in the posted data is set to
+	 * the submitter's value from the attribution cookie, or emptied when the
+	 * cookie carries none. A name the form itself defines as a form tag is
+	 * left alone: that tag's input follows the appended one, so its value is
+	 * the one CF7 received. Mail tags, Flamingo and later hooks all read the
+	 * posted data, so they get the corrected value.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array<string, mixed> $posted_data The sanitized posted data.
+	 *
+	 * @return array<string, mixed>|mixed The posted data, or the input unchanged when it is not an array.
+	 */
+	public static function override_posted_fields( $posted_data ) {
+		if ( ! is_array( $posted_data ) ) {
+			return $posted_data;
+		}
+
+		$map          = Attribution::field_map();
+		$contact_form = WPCF7_ContactForm::get_current();
+		$tag_names    = $contact_form ? wp_list_pluck( $contact_form->scan_form_tags(), 'name' ) : array();
+
+		foreach ( Attribution::touch_keys() as $param ) {
+			$name = Attribution::field_name( $param );
+			if ( array_key_exists( $name, $posted_data ) && ! in_array( $name, $tag_names, true ) ) {
+				$posted_data[ $name ] = $map[ $name ] ?? '';
+			}
+		}
+
+		return $posted_data;
+	}
+
+	/**
 	 * Resolve the attribution special mail tags from the submitted fields.
 	 *
 	 * Supports every recognised field name, including `_first` variants:
 	 * `[_utm_source]`, `[_utm_campaign_first]`, `[_gclid]`, `[_landing_page]`,
 	 * `[_channel]`, `[_referrer_host]`, etc. CF7 special mail tags carry a
 	 * leading underscore, which is stripped
-	 * to find the field. Reads the value from the submitted POST fields (filled
-	 * server-side or by the beacon), so the mail body reflects exactly what the
-	 * form submitted. A tag already resolved by an earlier handler on the
+	 * to find the field. Reads the value from the submission's posted data
+	 * (filled server-side or by the beacon, then corrected on submit by
+	 * override_posted_fields()), so the mail body matches the stored entry. A tag already resolved by an earlier handler on the
 	 * same filter (CF7's own `_date`, `_time`, `_url`, `_remote_ip`,
 	 * `_user_*`, `_post_*`, `_site_*`, … handlers run first) is passed
 	 * through untouched, so a custom parameter named like one of CF7's
@@ -116,6 +159,7 @@ class ContactForm7 {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Truncates by character, not byte.
+	 * @since 1.0.0 Reads the corrected posted data instead of the raw request.
 	 *
 	 * @param string|null $output The tag output resolved so far, null when unrecognised.
 	 * @param string      $name   The tag name including its leading underscore, e.g. `_utm_source`.
@@ -134,15 +178,13 @@ class ContactForm7 {
 			return $output;
 		}
 
-		// CF7 verifies its own submission; these fields are attribution
-		// metadata read during mail composition — no nonce applies. Non-string
-		// values (crafted array fields) are ignored, and values are capped at
-		// 255 chars to match the attribution writers.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing
-		$value = isset( $_POST[ $field ] ) && is_string( $_POST[ $field ] )
-			? mb_substr( sanitize_text_field( wp_unslash( $_POST[ $field ] ) ), 0, 255 )
-			: '';
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		// Read from the submission's posted data, which override_posted_fields()
+		// has already corrected. Non-string values (crafted array fields) are
+		// ignored, and values are capped at 255 chars to match the attribution
+		// writers.
+		$submission = WPCF7_Submission::get_instance();
+		$posted     = $submission ? $submission->get_posted_data( $field ) : '';
+		$value      = is_string( $posted ) ? mb_substr( sanitize_text_field( $posted ), 0, 255 ) : '';
 
 		return $html ? esc_html( $value ) : $value;
 	}

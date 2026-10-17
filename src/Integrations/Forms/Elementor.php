@@ -7,6 +7,8 @@
  * from HandL's `lite/elementor.php` (`elementor_pro/forms/render/item/hidden`)
  * and adapted to read from Attribution::field_map() instead of raw
  * per-param cookies, matching the adaptation already made for NinjaForms.
+ * On submit those fields are set again from the submitter's own cookie, so
+ * a page cache cannot pass one visitor's prefilled values to everyone.
  *
  * @package Utmatra\Integrations\Forms
  */
@@ -22,6 +24,7 @@ defined( 'ABSPATH' ) || exit;
  * Elementor
  *
  * @since 1.0.0
+ * @since 1.0.0 Replaces cached attribution prefills with the submitter's own values.
  */
 class Elementor {
 
@@ -40,6 +43,7 @@ class Elementor {
 	 * Elementor Pro are both active.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Registers the submit-time override of the attribution fields.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -48,6 +52,7 @@ class Elementor {
 		}
 
 		add_filter( 'elementor_pro/forms/render/item/hidden', array( self::class, 'fill_hidden_field' ), 10, 3 );
+		add_action( 'elementor_pro/forms/process', array( self::class, 'override_hidden_fields' ) );
 		add_action( 'elementor_pro/forms/new_record', array( self::class, 'record_lead' ), 10, 2 );
 	}
 
@@ -55,8 +60,8 @@ class Elementor {
 	 * Record a lead for the recent-leads dashboard widget on successful submission.
 	 *
 	 * Fires on `elementor_pro/forms/new_record` — the hook Elementor Pro
-	 * runs once a submission passes validation and its record is created,
-	 * before the form's configured actions (email, webhook, etc.) run.
+	 * runs once a submission passes validation and the form's configured
+	 * actions (email, webhook, etc.) have run.
 	 * Skips silently when the visitor carries no attribution data (nothing
 	 * to classify) or when $record doesn't expose get_form_settings()
 	 * (a shape change in a future Elementor Pro version). The submitted
@@ -67,6 +72,7 @@ class Elementor {
 	 * Elementor Pro is a paid plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Corrects when the hook fires relative to the form actions.
 	 * @param mixed $record  The Elementor Pro form record instance (`Elementor\Pro\Modules\Forms\Classes\Form_Record`).
 	 * @param mixed $handler The Elementor Pro Ajax handler instance (unused).
 	 * @return void
@@ -159,6 +165,62 @@ class Elementor {
 		}
 
 		return $item;
+	}
+
+	/**
+	 * Replace the submitted attribution Hidden fields with the submitter's own values.
+	 *
+	 * The fill in fill_hidden_field() runs when the form is rendered, so a
+	 * page cache serves the first visitor's attribution to everyone. Fires on
+	 * `elementor_pro/forms/process`, after validation and before the
+	 * submission is saved or any action (email, webhook) runs: every Hidden
+	 * field whose Field ID is a recognised attribution name gets the
+	 * submitter's value from the attribution cookie, or, when the cookie
+	 * carries none, the field's own default value. A default set by a
+	 * dynamic tag is left as submitted when the cookie carries no value,
+	 * since it cannot be resolved again in the AJAX request. Built from the
+	 * Elementor Pro Form_Record documentation; untested locally because
+	 * Elementor Pro is a paid plugin.
+	 *
+	 * @since 1.0.0
+	 * @param mixed $record The Elementor Pro form record instance (`Form_Record`).
+	 * @return void
+	 */
+	public static function override_hidden_fields( $record ): void {
+		if ( ! is_object( $record ) || ! method_exists( $record, 'get' ) || ! method_exists( $record, 'update_field' ) || ! method_exists( $record, 'get_form_settings' ) ) {
+			return;
+		}
+
+		$map      = Attribution::field_map();
+		$names    = Attribution::field_names();
+		$defaults = array();
+
+		foreach ( (array) $record->get_form_settings( 'form_fields' ) as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+
+			$id = ! empty( $item['custom_id'] ) ? $item['custom_id'] : ( $item['_id'] ?? '' );
+
+			// A dynamic-tag default (e.g. Request Parameter) cannot be
+			// re-resolved in the AJAX submit request, so it is marked null
+			// and the submitted value stands when there is no cookie value.
+			$defaults[ $id ] = empty( $item['__dynamic__']['field_value'] ) ? (string) ( $item['field_value'] ?? '' ) : null;
+		}
+
+		foreach ( (array) $record->get( 'fields' ) as $id => $field ) {
+			if ( ! is_array( $field ) || 'hidden' !== ( $field['type'] ?? '' ) || ! in_array( (string) $id, $names, true ) ) {
+				continue;
+			}
+
+			$value = $map[ $id ] ?? ( array_key_exists( $id, $defaults ) ? $defaults[ $id ] : '' );
+			if ( null === $value ) {
+				continue;
+			}
+
+			$record->update_field( $id, 'value', $value );
+			$record->update_field( $id, 'raw_value', $value );
+		}
 	}
 
 	/**
