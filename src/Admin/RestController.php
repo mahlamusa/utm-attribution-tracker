@@ -1811,6 +1811,7 @@ class RestController {
 	 * use, or the destination is not a valid http(s) URL.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Caps the slug at 64 characters, the click column width.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1818,6 +1819,10 @@ class RestController {
 		$label    = sanitize_text_field( self::param_string( $request, 'label' ) );
 		$id_param = self::param_string( $request, 'id' );
 		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
+		// Clicks store link_id in a VARCHAR(64) column, so a longer slug would
+		// redirect but never match its own click rows. Cap it here, before the
+		// reserved and duplicate checks.
+		$id = rtrim( substr( $id, 0, 64 ), '-_' );
 
 		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
 			return new WP_REST_Response(
