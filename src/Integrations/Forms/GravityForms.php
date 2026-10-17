@@ -93,9 +93,11 @@ class GravityForms {
 	 * are sent: every single-input field populated dynamically under a
 	 * recognised attribution name gets the submitter's value from the
 	 * attribution cookie, or, when the cookie carries none, the field's own
-	 * default value. A field whose parameter the site supplied itself (in
-	 * the page's query string or the form's `field_values`) is left alone,
-	 * as Gravity Forms populated it ahead of the cookie. Built from the
+	 * default value. A parameter the site supplied itself (in the page's
+	 * query string or the form's `field_values`) takes that value instead,
+	 * as Gravity Forms populates it ahead of the cookie; a page cache that
+	 * ignores UTM parameters may still have served another visitor's value
+	 * in that case. Built from the
 	 * Gravity Forms developer documentation; untested locally because
 	 * Gravity Forms is a paid plugin.
 	 *
@@ -118,21 +120,22 @@ class GravityForms {
 			}
 
 			$name = (string) ( $field->inputName ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
-			if ( ! in_array( $name, $names, true ) || '' !== ( $supplied[ $name ] ?? '' ) ) {
+			if ( ! in_array( $name, $names, true ) ) {
 				continue;
 			}
 
 			$default = method_exists( $field, 'get_value_default' ) ? $field->get_value_default() : ( $field->defaultValue ?? '' ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Gravity Forms field property.
+			$value   = '' !== ( $supplied[ $name ] ?? '' ) ? $supplied[ $name ] : ( $map[ $name ] ?? (string) $default );
 
 			// The submitted value is replaced, not read, so no nonce applies;
 			// Gravity Forms verifies its own submission. Slashed like the rest
 			// of $_POST, which Gravity Forms unslashes when it reads it.
-			$_POST[ 'input_' . $field->id ] = wp_slash( $map[ $name ] ?? (string) $default ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			$_POST[ 'input_' . $field->id ] = wp_slash( $value ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		}
 	}
 
 	/**
-	 * Parameter values the site supplied for dynamic population itself.
+	 * Non-empty parameter values the site supplied for dynamic population itself.
 	 *
 	 * Gravity Forms populates a field from the page's query string or the
 	 * form's `field_values` (shortcode attribute or block setting) before
@@ -142,26 +145,30 @@ class GravityForms {
 	 * `gform_field_values`.
 	 *
 	 * @since 1.0.0
-	 * @return array<string, mixed> Parameter name => supplied value.
+	 * @return array<string, string> Parameter name => sanitized value, query string over field_values.
 	 */
 	private static function supplied_values(): array {
-		$values = array();
-
-		// Read only to decide whether to leave a field alone; Gravity Forms
-		// verifies its own submission.
-		// phpcs:disable WordPress.Security.NonceVerification
-		$field_values = isset( $_POST['gform_field_values'] ) && is_string( $_POST['gform_field_values'] ) ? sanitize_text_field( wp_unslash( $_POST['gform_field_values'] ) ) : '';
-		$sources      = array(
+		// Read only to rebuild what Gravity Forms populated; Gravity Forms
+		// verifies its own submission. Each source is parsed before its
+		// values are sanitized, so percent-encoded text survives.
+		// phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$sources = array(
+			// Lowest precedence first: a query-string value wins over field_values.
+			isset( $_POST['gform_field_values'] ) && is_string( $_POST['gform_field_values'] ) ? str_replace( '&amp;', '&', wp_unslash( $_POST['gform_field_values'] ) ) : '',
 			(string) wp_parse_url( (string) wp_get_referer(), PHP_URL_QUERY ),
-			isset( $_SERVER['QUERY_STRING'] ) ? sanitize_text_field( wp_unslash( $_SERVER['QUERY_STRING'] ) ) : '',
-			str_replace( '&amp;', '&', $field_values ),
+			isset( $_SERVER['QUERY_STRING'] ) && is_string( $_SERVER['QUERY_STRING'] ) ? wp_unslash( $_SERVER['QUERY_STRING'] ) : '',
 		);
-		// phpcs:enable WordPress.Security.NonceVerification
+		// phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
+		$values = array();
 		foreach ( $sources as $query ) {
 			$parsed = array();
 			wp_parse_str( $query, $parsed );
-			$values = array_merge( $values, array_filter( $parsed, 'is_string' ) );
+			foreach ( $parsed as $key => $value ) {
+				if ( is_string( $value ) && '' !== $value ) {
+					$values[ $key ] = mb_substr( sanitize_text_field( $value ), 0, 255 );
+				}
+			}
 		}
 
 		return $values;
