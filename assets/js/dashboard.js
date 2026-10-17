@@ -1669,11 +1669,16 @@
 	 * days — no period control on this tab by design).
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Retries on the next tab visit after a failed load.
 	 * @return {void}
 	 */
 	function loadJourneys() {
 		journeysLoaded = true;
 		show( elJourneysLoading );
+		if ( elJourneysMsg ) {
+			elJourneysMsg.textContent = '';
+			elJourneysMsg.className   = 'utmatra-add-form__msg';
+		}
 
 		apiFetch( '/journeys?per_page=50&period=365' ).then( function ( body ) {
 			hide( elJourneysLoading );
@@ -1688,6 +1693,8 @@
 				elJourneysWithout.hidden = ! without;
 			}
 		} ).catch( function ( err ) {
+			// Allow the next visit to the tab to retry.
+			journeysLoaded = false;
 			hide( elJourneysLoading );
 			if ( elJourneysMsg ) {
 				elJourneysMsg.textContent = err.message || ( i18n.journeysFailed || 'Could not load journeys.' );
