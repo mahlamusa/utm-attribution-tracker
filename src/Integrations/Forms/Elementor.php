@@ -137,8 +137,10 @@ class Elementor {
 	 * Resolves the field's Field ID (`custom_id`, falling back to `_id`)
 	 * against the tracked attribution field names; when it matches and a
 	 * value is available, sets `field_value`. Fields that don't match a
-	 * tracked parameter, or that have no attribution value, are returned
-	 * untouched so the widget's own default/placeholder wins.
+	 * tracked parameter, that take their default from a dynamic tag, or
+	 * that have no attribution value, are returned untouched so the
+	 * widget's own default/placeholder wins. A dynamic-tag field still gets
+	 * the submitter's cookie value on submit (override_hidden_fields()).
 	 *
 	 * Values come from Attribution::field_map(), which already returns
 	 * sanitize_text_field()-cleaned strings, and Elementor's own form
@@ -146,6 +148,7 @@ class Elementor {
 	 * here to avoid double-escaping values containing `&`.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Leaves fields with a dynamic-tag default to the tag.
 	 * @param array $item Hidden field item data (`custom_id`, `_id`, `field_value`, etc).
 	 * @param int   $item_index Zero-based index of the field within the form.
 	 * @param mixed $form The Elementor Pro form record instance.
@@ -154,7 +157,10 @@ class Elementor {
 	public static function fill_hidden_field( $item, $item_index, $form ): array {
 		$field = ! empty( $item['custom_id'] ) ? $item['custom_id'] : ( $item['_id'] ?? '' );
 
-		if ( ! in_array( $field, Attribution::field_names(), true ) ) {
+		// A dynamic-tag default is the site's own source; filling it from the
+		// cookie would bake this visitor's value into cached HTML, where
+		// override_hidden_fields() cannot tell it apart from the tag's value.
+		if ( ! in_array( $field, Attribution::field_names(), true ) || ! empty( $item['__dynamic__']['field_value'] ) ) {
 			return $item;
 		}
 
@@ -178,11 +184,14 @@ class Elementor {
 	 * submitter's value from the attribution cookie, or, when the cookie
 	 * carries none, the field's own default value. A default set by a
 	 * dynamic tag is left as submitted when the cookie carries no value,
-	 * since it cannot be resolved again in the AJAX request. Built from the
+	 * since it cannot be resolved again in the AJAX request; the render
+	 * fill never writes a cookie value into such a field, so what was
+	 * submitted is the tag's own value. Built from the
 	 * Elementor Pro Form_Record documentation; untested locally because
 	 * Elementor Pro is a paid plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Relies on the render fill skipping dynamic-tag fields.
 	 * @param mixed $record The Elementor Pro form record instance (`Form_Record`).
 	 * @return void
 	 */

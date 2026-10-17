@@ -73,7 +73,8 @@ class ContactForm7 {
 	 * cookie is readable, empty otherwise — so page caches serve HTML that
 	 * still contains the fields and the front-end beacon can fill them
 	 * client-side (it only fills empty fields, so a server-rendered value
-	 * always wins). First-touch `_first` fields are not
+	 * always wins). A name the form already defines as a form tag is not
+	 * appended. First-touch `_first` fields are not
 	 * auto-added; the beacon fills them when a form author adds one manually.
 	 *
 	 * CF7 core esc_attr()s every hidden field name and value at render
@@ -81,6 +82,7 @@ class ContactForm7 {
 	 * values are passed raw here — escaping them too would double-encode.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Skips names the form defines as a form tag.
 	 *
 	 * @param array<string, string> $fields Hidden fields registered so far.
 	 *
@@ -91,11 +93,15 @@ class ContactForm7 {
 			$fields = array();
 		}
 
-		$map = Attribution::field_map();
+		$map          = Attribution::field_map();
+		$contact_form = WPCF7_ContactForm::get_current();
+		$tag_names    = $contact_form ? wp_list_pluck( $contact_form->scan_form_tags(), 'name' ) : array();
 
 		foreach ( Attribution::touch_keys() as $param ) {
 			$name = Attribution::field_name( $param );
-			if ( ! isset( $fields[ $name ] ) ) {
+			// A form tag of the same name owns the field; an appended copy
+			// would post the cached value whenever that tag posts nothing.
+			if ( ! isset( $fields[ $name ] ) && ! in_array( $name, $tag_names, true ) ) {
 				$fields[ $name ] = $map[ $name ] ?? '';
 			}
 		}
@@ -112,11 +118,12 @@ class ContactForm7 {
 	 * On submit, each appended field present in the posted data is set to
 	 * the submitter's value from the attribution cookie, or emptied when the
 	 * cookie carries none. A name the form itself defines as a form tag is
-	 * left alone: that tag's input follows the appended one, so its value is
-	 * the one CF7 received. Mail tags, Flamingo and later hooks all read the
+	 * left alone: add_hidden_fields() appends no copy of it, so the posted
+	 * value is the tag's own. Mail tags, Flamingo and later hooks all read the
 	 * posted data, so they get the corrected value.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Relies on add_hidden_fields() skipping form tag names.
 	 *
 	 * @param array<string, mixed> $posted_data The sanitized posted data.
 	 *
