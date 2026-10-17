@@ -91,12 +91,14 @@ class Formidable {
 	 *
 	 * Fires on `frm_after_create_entry`, once the entry has been saved.
 	 * Repeater rows (child entries) are skipped — the parent entry is the
-	 * lead. Skips silently when the visitor carries no attribution data.
+	 * lead, and so are saved drafts (Formidable Pro). Skips silently when
+	 * the visitor carries no attribution data.
 	 * The submitted values of the form's own fields are passed as `fields`,
 	 * keyed by field label; hidden fields, uploads, passwords and non-input
 	 * elements are left out.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Skips draft entries.
 	 *
 	 * @param int   $entry_id The new entry ID.
 	 * @param int   $form_id  The form ID.
@@ -113,8 +115,14 @@ class Formidable {
 			return;
 		}
 
-		$form      = FrmForm::getOne( $form_id );
-		$entry     = FrmEntry::getOne( $entry_id, true );
+		$form  = FrmForm::getOne( $form_id );
+		$entry = FrmEntry::getOne( $entry_id, true );
+
+		// Pro saves drafts through the same hook; only a submitted entry is a lead.
+		if ( is_object( $entry ) && ! empty( $entry->is_draft ) ) {
+			return;
+		}
+
 		$metas     = is_object( $entry ) && isset( $entry->metas ) && is_array( $entry->metas ) ? $entry->metas : array();
 		$submitted = array();
 

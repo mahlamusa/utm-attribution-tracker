@@ -93,6 +93,7 @@ class GravityForms {
 	 * because Gravity Forms is a paid plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Skips entries flagged as spam.
 	 * @param array $entry The submitted entry, read for the field values.
 	 * @param array $form  The form the entry belongs to.
 	 * @return void
@@ -102,7 +103,13 @@ class GravityForms {
 			return;
 		}
 
-		$entry     = is_array( $entry ) ? $entry : array();
+		$entry = is_array( $entry ) ? $entry : array();
+
+		// The hook also fires for entries the spam filter flagged.
+		if ( 'spam' === ( $entry['status'] ?? '' ) ) {
+			return;
+		}
+
 		$submitted = array();
 
 		foreach ( (array) ( is_array( $form ) ? ( $form['fields'] ?? array() ) : array() ) as $field ) {
