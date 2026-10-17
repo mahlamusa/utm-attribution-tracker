@@ -31,6 +31,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * ConversionWebhook
+ *
+ * @since 1.0.0
  */
 class ConversionWebhook {
 

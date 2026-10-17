@@ -45,12 +45,15 @@ class Plugin {
 	/**
 	 * The singleton instance.
 	 *
+	 * @since 1.0.0
 	 * @var Plugin|null
 	 */
 	private static ?Plugin $instance = null;
 
 	/**
 	 * Private constructor — use instance().
+	 *
+	 * @since 1.0.0
 	 */
 	private function __construct() {
 		$this->init_hooks();

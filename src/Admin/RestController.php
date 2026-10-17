@@ -9,7 +9,11 @@
  *   PUT    utmatra/v1/links/<id>  — update a managed link
  *   DELETE utmatra/v1/links/<id>  — delete a managed link
  *   GET    utmatra/v1/export      — raw event rows for CSV export
- *   POST   utmatra/v1/settings    — save retention days + weekly email toggle
+ *   POST   utmatra/v1/presets     — save a UTM preset
+ *   DELETE utmatra/v1/presets/<id> — delete a UTM preset
+ *   POST   utmatra/v1/test-email  — send a test weekly report email
+ *   POST   utmatra/v1/test-webhook — send a test webhook
+ *   POST   utmatra/v1/settings    — save the dashboard settings
  *   GET    utmatra/v1/diagnostics — Tracking Doctor diagnostic check results
  *   GET    utmatra/v1/events      — paginated, filterable event rows
  *   GET    utmatra/v1/journeys    — conversions with their preceding touches
@@ -18,6 +22,7 @@
  * All routes require the `manage_options` capability.
  *
  * @since 1.0.0
+ * @since 1.0.0 Keeps a link's stored values for parameters no longer configured.
  *
  * @package Utmatra\Admin
  */
@@ -1880,11 +1885,15 @@ class RestController {
 	/**
 	 * PUT utmatra/v1/links/<id> — update a managed link.
 	 *
-	 * Updates the label, destination, and the six UTM fields of an existing
-	 * link. The slug is immutable — renaming would orphan recorded events.
-	 * Returns 404 for an unknown slug and 400 for an invalid destination.
+	 * Updates the label, destination, the six UTM fields and the custom
+	 * parameter values of an existing link. Stored values for custom
+	 * parameters no longer configured are kept, so re-adding the parameter
+	 * restores them. The slug is immutable — renaming would orphan recorded
+	 * events. Returns 404 for an unknown slug and 400 for an invalid
+	 * destination.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Keeps stored values for custom parameters no longer configured.
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response
 	 */
@@ -1892,7 +1901,8 @@ class RestController {
 		global $wpdb;
 		$id = (string) $request->get_param( 'id' );
 
-		if ( null === LinkManager::get( $id ) ) {
+		$stored = LinkManager::get( $id );
+		if ( null === $stored ) {
 			return new WP_REST_Response(
 				array( 'message' => __( 'Link not found.', 'utm-attribution-tracker' ) ),
 				404
@@ -1906,6 +1916,13 @@ class RestController {
 
 		if ( '' === $link['label'] ) {
 			$link['label'] = $id;
+		}
+
+		// Values for parameters no longer configured are not in the form, so
+		// they are carried over: re-adding the parameter brings them back.
+		$kept = array_diff_key( is_array( $stored['custom'] ?? null ) ? $stored['custom'] : array(), array_flip( Tracker::custom_params() ) );
+		if ( array() !== $kept ) {
+			$link['custom'] = ( $link['custom'] ?? array() ) + $kept;
 		}
 
 		LinkManager::save( $id, $link );

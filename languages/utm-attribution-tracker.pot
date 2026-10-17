@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-15T13:19:48+00:00\n"
+"POT-Creation-Date: 2026-10-17T16:53:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utm-attribution-tracker\n"
@@ -34,7 +34,7 @@ msgstr ""
 #: src/Admin/Dashboard.php:58
 #: src/Admin/Dashboard.php:237
 #: src/Integrations/Forms/Bricks.php:82
-#: src/Privacy/PrivacyPolicy.php:72
+#: src/Privacy/PrivacyPolicy.php:90
 msgid "Utmatra"
 msgstr ""
 
@@ -55,47 +55,47 @@ msgstr ""
 msgid "%s ago"
 msgstr ""
 
-#: src/Admin/RestController.php:1197
+#: src/Admin/RestController.php:1199
 msgid "No events recorded for this visitor."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Admin/RestController.php:1477
+#: src/Admin/RestController.php:1488
 msgid "%s is reserved and cannot be used as a custom parameter."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Admin/RestController.php:1482
+#: src/Admin/RestController.php:1493
 msgid "Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s"
 msgstr ""
 
 #. translators: %d: maximum number of custom parameters.
-#: src/Admin/RestController.php:1495
+#: src/Admin/RestController.php:1506
 msgid "You can define up to %d custom parameters."
 msgstr ""
 
-#: src/Admin/RestController.php:1593
+#: src/Admin/RestController.php:1604
 msgid "Please provide a preset name."
 msgstr ""
 
-#: src/Admin/RestController.php:1624
+#: src/Admin/RestController.php:1635
 msgid "Preset not found."
 msgstr ""
 
-#: src/Admin/RestController.php:1748
+#: src/Admin/RestController.php:1760
 msgid "Please provide a valid destination URL (http or https)."
 msgstr ""
 
-#: src/Admin/RestController.php:1821
+#: src/Admin/RestController.php:1859
 msgid "Please provide a valid link slug (incoming, visit, order and lead are reserved)."
 msgstr ""
 
-#: src/Admin/RestController.php:1833
+#: src/Admin/RestController.php:1871
 msgid "A link with this slug already exists."
 msgstr ""
 
-#: src/Admin/RestController.php:1864
-#: src/Admin/RestController.php:1905
+#: src/Admin/RestController.php:1907
+#: src/Admin/RestController.php:1955
 msgid "Link not found."
 msgstr ""
 
@@ -113,129 +113,129 @@ msgstr ""
 msgid "No known full-page cache plugin detected."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:102
+#: src/Diagnostics/Checks.php:103
 #: views/dashboard.php:506
 msgid "Consent"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:119
+#: src/Diagnostics/Checks.php:120
 msgid "The utmatra_enable_cookie filter disables the attribution cookie site-wide; consent settings have no effect until it is removed."
 msgstr ""
 
 #. translators: %s: consent category label (marketing, statistics, or marketing or statistics).
-#: src/Diagnostics/Checks.php:131
+#: src/Diagnostics/Checks.php:132
 #: views/dashboard.php:524
-msgid "No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category."
+msgid "No WP Consent API detected — the attribution cookie is written on every tagged visit and every landing from another site. Install a consent plugin that implements the WP Consent API to gate it on the %s category."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:143
+#: src/Diagnostics/Checks.php:144
 #: views/dashboard.php:529
 msgid "WP Consent API is active but no consent-management plugin has declared a consent type, so the API reports every category as granted and the cookie is written for every visitor."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:153
+#: src/Diagnostics/Checks.php:154
 msgid "WP Consent API is active but this plugin is not registered with it — another plugin may be removing the registration filter."
 msgstr ""
 
 #. translators: 1: consent type (optin or optout), 2: consent category label.
-#: src/Diagnostics/Checks.php:161
-msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled."
+#: src/Diagnostics/Checks.php:162
+msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled."
 msgstr ""
 
 #. translators: 1: consent type (optin or optout), 2: consent category label.
-#: src/Diagnostics/Checks.php:168
-msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Tagged-visit events, which carry no cookie and only a salted IP hash, are recorded regardless of consent."
+#: src/Diagnostics/Checks.php:169
+msgid "WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor's browser, and the server fallback applies the same rule per request. Visit events (tagged visits and landings from other sites), which carry no cookie and only a salted IP hash, are recorded regardless of consent."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:187
+#: src/Diagnostics/Checks.php:188
 msgid "Cookies"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:199
+#: src/Diagnostics/Checks.php:200
 msgid "Site is not served over HTTPS — the attribution cookie cannot be marked Secure."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:208
+#: src/Diagnostics/Checks.php:209
 msgid "Site is served over HTTPS; the attribution cookie can be marked Secure."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:229
+#: src/Diagnostics/Checks.php:230
 msgid "Contact Form 7"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:234
+#: src/Diagnostics/Checks.php:235
 msgid "Gravity Forms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:239
+#: src/Diagnostics/Checks.php:240
 msgid "Ninja Forms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:244
+#: src/Diagnostics/Checks.php:245
 msgid "Elementor Pro Forms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:249
+#: src/Diagnostics/Checks.php:250
 msgid "WPForms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:254
+#: src/Diagnostics/Checks.php:255
 msgid "Fluent Forms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:259
+#: src/Diagnostics/Checks.php:260
 msgid "Formidable Forms"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:264
+#: src/Diagnostics/Checks.php:265
 msgid "Forminator"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:269
+#: src/Diagnostics/Checks.php:270
 msgid "Bricks Builder (untested)"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:288
+#: src/Diagnostics/Checks.php:289
 #: views/dashboard.php:781
 msgid "Forms coverage"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:302
+#: src/Diagnostics/Checks.php:303
 msgid "Utmatra does not yet capture attribution for this plugin's forms."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:321
+#: src/Diagnostics/Checks.php:322
 msgid "No supported form plugin active."
 msgstr ""
 
 #. translators: %d: number of forms.
-#: src/Diagnostics/Checks.php:344
+#: src/Diagnostics/Checks.php:345
 msgid "All %d forms across active integrations are fully covered."
 msgstr ""
 
 #. translators: %1$d: forms missing attribution fields, %2$d: total forms.
-#: src/Diagnostics/Checks.php:351
+#: src/Diagnostics/Checks.php:352
 msgid "%1$d of %2$d forms are missing attribution fields."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:377
+#: src/Diagnostics/Checks.php:379
 msgid "WooCommerce"
 msgstr ""
 
-#: src/Diagnostics/Checks.php:384
+#: src/Diagnostics/Checks.php:386
 msgid "WooCommerce not active."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:402
+#: src/Diagnostics/Checks.php:404
 msgid "No orders yet."
 msgstr ""
 
-#: src/Diagnostics/Checks.php:425
+#: src/Diagnostics/Checks.php:428
 msgid "Recent orders exist but none carry attribution data — check that visitors are landing with UTM parameters before checkout."
 msgstr ""
 
 #. translators: %1$d: orders carrying attribution data, %2$d: orders sampled.
-#: src/Diagnostics/Checks.php:436
+#: src/Diagnostics/Checks.php:439
 msgid "%1$d of the last %2$d orders carry attribution data."
 msgstr ""
 
@@ -269,255 +269,254 @@ msgstr ""
 msgid "Utmatra: %s"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:105
-#: src/Integrations/WooCommerce.php:109
+#: src/Integrations/WooCommerce.php:162
+#: src/Integrations/WooCommerce.php:166
 msgid "Attribution"
 msgstr ""
 
 #. translators: %s: order number.
-#: src/Integrations/WooCommerce.php:307
+#: src/Integrations/WooCommerce.php:415
 msgid "Order #%s"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:310
-msgid "New order"
-msgstr ""
-
-#: src/Integrations/WooCommerce.php:354
+#: src/Integrations/WooCommerce.php:492
 msgid "Campaign attribution (UTM)"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:392
-#: src/Integrations/WooCommerce.php:445
+#: src/Integrations/WooCommerce.php:530
+#: src/Integrations/WooCommerce.php:583
 msgid "No attribution data"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:397
+#: src/Integrations/WooCommerce.php:535
 #: views/dashboard.php:418
 msgid "First touch"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:398
+#: src/Integrations/WooCommerce.php:536
 #: views/dashboard.php:419
 msgid "Last touch"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:423
-#: src/Reports/WeeklyEmail.php:218
+#: src/Integrations/WooCommerce.php:561
+#: src/Reports/WeeklyEmail.php:220
 #: views/dashboard.php:862
 msgid "Source"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:424
+#: src/Integrations/WooCommerce.php:562
 #: views/dashboard.php:866
 msgid "Medium"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:425
-#: src/Reports/WeeklyEmail.php:215
-#: src/Reports/WeeklyEmail.php:306
+#: src/Integrations/WooCommerce.php:563
+#: src/Reports/WeeklyEmail.php:217
+#: src/Reports/WeeklyEmail.php:308
 #: views/dashboard.php:85
 #: views/dashboard.php:375
 #: views/dashboard.php:858
 msgid "Campaign"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:426
+#: src/Integrations/WooCommerce.php:564
 msgid "Campaign ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:427
+#: src/Integrations/WooCommerce.php:565
 #: views/dashboard.php:888
 msgid "Term"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:428
+#: src/Integrations/WooCommerce.php:566
 #: views/dashboard.php:892
 msgid "Content"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:429
+#: src/Integrations/WooCommerce.php:567
 msgid "Google click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:430
+#: src/Integrations/WooCommerce.php:568
 msgid "Facebook click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:431
+#: src/Integrations/WooCommerce.php:569
 msgid "Microsoft click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:432
+#: src/Integrations/WooCommerce.php:570
 msgid "TikTok click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:433
+#: src/Integrations/WooCommerce.php:571
 msgid "LinkedIn click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:434
+#: src/Integrations/WooCommerce.php:572
 msgid "X / Twitter click ID"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:435
+#: src/Integrations/WooCommerce.php:573
 msgid "Channel"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:436
+#: src/Integrations/WooCommerce.php:574
 msgid "Referrer"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:437
+#: src/Integrations/WooCommerce.php:575
 msgid "Landing page"
 msgstr ""
 
-#: src/Integrations/WooCommerce.php:438
+#: src/Integrations/WooCommerce.php:576
 msgid "Time"
 msgstr ""
 
 #. translators: %d: retention window in days.
-#: src/Privacy/PrivacyPolicy.php:48
+#: src/Privacy/PrivacyPolicy.php:52
 msgid "Recorded events are automatically deleted after %d days."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:52
+#: src/Privacy/PrivacyPolicy.php:56
 msgid "Recorded events are kept until manually deleted."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:56
+#: src/Privacy/PrivacyPolicy.php:60
 msgid "This site uses Utmatra to measure where visitors come from and how marketing campaigns perform. When you arrive on the site, the plugin records the first page of your visit, the address of the site you came from (referrer), any campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) in the URL, your browser identification string (user agent), and a salted one-way hash of your IP address."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:58
+#: src/Privacy/PrivacyPolicy.php:62
 msgid "This site uses Utmatra to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:61
+#. translators: %d: cookie lifetime in days.
+#: src/Privacy/PrivacyPolicy.php:69
+msgid "Two first-party cookies are kept for %d day: one holds the campaign that brought you here (campaign parameters, landing page and referring site), the other a random visitor identifier (not derived from your IP address or any personal data), so that your later orders or form submissions can be linked to that campaign. Where the site asks for cookie consent, they are only stored once you agree."
+msgid_plural "Two first-party cookies are kept for %d days: one holds the campaign that brought you here (campaign parameters, landing page and referring site), the other a random visitor identifier (not derived from your IP address or any personal data), so that your later orders or form submissions can be linked to that campaign. Where the site asks for cookie consent, they are only stored once you agree."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Privacy/PrivacyPolicy.php:79
 msgid "The same data is recorded when you submit a form after arriving through a campaign link."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:61
-msgid "When a consent solution is active and you consent to cookies, a random visitor identifier (not derived from your IP address or any personal data) is stored in a first-party cookie so that your later orders or form submissions can be linked to the campaign that brought you here."
-msgstr ""
-
-#: src/Privacy/PrivacyPolicy.php:61
+#: src/Privacy/PrivacyPolicy.php:79
 msgid "The raw IP address is never stored, and the hash cannot be linked to you across other websites."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:62
+#: src/Privacy/PrivacyPolicy.php:80
 msgid "This data is used for aggregate campaign statistics."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:65
+#: src/Privacy/PrivacyPolicy.php:83
 msgid "Attributed orders and form submissions, including the values you entered in the form, are forwarded to an external service configured by the site owner."
 msgstr ""
 
-#: src/Privacy/PrivacyPolicy.php:67
+#: src/Privacy/PrivacyPolicy.php:85
 msgid "It is not shared with third parties."
 msgstr ""
 
 #. translators: %d is the HTTP status code returned by the webhook receiver.
-#: src/Reports/ConversionWebhook.php:230
+#: src/Reports/ConversionWebhook.php:233
 msgid "HTTP %d"
 msgstr ""
 
 #. translators: 1: HTTP status code returned by the webhook receiver, 2: excerpt of the receiver's response body.
-#: src/Reports/ConversionWebhook.php:237
+#: src/Reports/ConversionWebhook.php:240
 msgid "HTTP %1$d: %2$s"
 msgstr ""
 
-#: src/Reports/ConversionWebhook.php:400
+#: src/Reports/ConversionWebhook.php:404
 msgid "Test form"
 msgstr ""
 
-#: src/Reports/ConversionWebhook.php:408
+#: src/Reports/ConversionWebhook.php:412
 msgid "Sent from Utmatra"
 msgstr ""
 
-#: src/Reports/ConversionWebhook.php:424
+#: src/Reports/ConversionWebhook.php:428
 msgid "Enable at least one event to send a test"
 msgstr ""
 
-#: src/Reports/ConversionWebhook.php:429
+#: src/Reports/ConversionWebhook.php:433
 msgid "Enable form leads to test the HubSpot preset"
 msgstr ""
 
-#: src/Reports/ConversionWebhook.php:507
+#: src/Reports/ConversionWebhook.php:511
 msgid "No email field detected"
 msgstr ""
 
 #. translators: %s: site name.
-#: src/Reports/WeeklyEmail.php:117
+#: src/Reports/WeeklyEmail.php:119
 msgid "[%s] Weekly UTM campaign report"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:206
+#: src/Reports/WeeklyEmail.php:208
 msgid "Weekly UTM campaign report"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:207
+#: src/Reports/WeeklyEmail.php:209
 msgid "past 7 days"
 msgstr ""
 
 #. translators: %s: total click count.
-#: src/Reports/WeeklyEmail.php:210
+#: src/Reports/WeeklyEmail.php:212
 msgid "Total clicks: %s"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:214
+#: src/Reports/WeeklyEmail.php:216
 msgid "Top campaigns"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:217
+#: src/Reports/WeeklyEmail.php:219
 msgid "Top sources"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:221
+#: src/Reports/WeeklyEmail.php:223
 #: views/dashboard.php:312
 msgid "Revenue by campaign"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: src/Reports/WeeklyEmail.php:227
+#: src/Reports/WeeklyEmail.php:229
 msgid "Sent by %s. Disable this report from the dashboard settings card."
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:264
+#: src/Reports/WeeklyEmail.php:266
 msgid "vs previous week"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:277
+#: src/Reports/WeeklyEmail.php:279
 msgid "No data recorded this week."
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:283
+#: src/Reports/WeeklyEmail.php:285
 #: views/dashboard.php:378
 #: views/dashboard.php:968
 msgid "Clicks"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:307
+#: src/Reports/WeeklyEmail.php:309
 #: views/dashboard.php:322
 #: views/dashboard.php:978
 msgid "Orders"
 msgstr ""
 
-#: src/Reports/WeeklyEmail.php:308
+#: src/Reports/WeeklyEmail.php:310
 #: views/dashboard.php:307
 #: views/dashboard.php:977
 msgid "Revenue"
 msgstr ""
 
-#: src/Rest/CollectController.php:110
+#: src/Rest/CollectController.php:111
 msgid "Cross-origin requests are not allowed."
 msgstr ""
 
-#: src/Rest/CollectController.php:117
+#: src/Rest/CollectController.php:118
 msgid "Too many requests."
 msgstr ""
 
-#: src/Rest/CollectController.php:145
+#: src/Rest/CollectController.php:146
 msgid "No UTM parameter or click ID present."
 msgstr ""
 

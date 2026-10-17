@@ -521,7 +521,7 @@ $utmatra_kses = array(
 										echo esc_html(
 											sprintf(
 												/* translators: %s: consent category label (marketing, statistics, or marketing or statistics). */
-												__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
+												__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit and every landing from another site. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
 												Attribution::consent_category_label( Attribution::consent_category() )
 											)
 										);

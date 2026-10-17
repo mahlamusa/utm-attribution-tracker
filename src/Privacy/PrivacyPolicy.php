@@ -8,6 +8,7 @@
 namespace Utmatra\Privacy;
 
 use Utmatra\DB\Retention;
+use Utmatra\Tracking\Attribution;
 use Utmatra\Reports\ConversionWebhook;
 
 defined( 'ABSPATH' ) || exit;
@@ -16,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * PrivacyPolicy
  *
  * @since 1.0.0
+ * @since 1.0.0 Describes both cookies and their lifetime.
  */
 class PrivacyPolicy {
 
@@ -23,9 +25,10 @@ class PrivacyPolicy {
 	 * Register suggested privacy policy text with WordPress.
 	 *
 	 * Hooked on `admin_init`. Describes what the plugin stores (salted IP
-	 * hash, user agent, referrer, UTM values, and — only with cookie
-	 * consent — the random visitor identifier cookie), why, and the
-	 * retention period.
+	 * hash, user agent, referrer, UTM values, and, while the cookie master
+	 * switch is on, the attribution and visitor identifier cookies with
+	 * their lifetime; behind a consent solution those wait for consent),
+	 * why, and the retention period.
 	 * The opening sentence depends on the untagged-visit tracking setting:
 	 * on (the default) it says the first page of every visit is recorded,
 	 * off it covers campaign links only. The closing sentence depends on the
@@ -34,6 +37,7 @@ class PrivacyPolicy {
 	 * forwarded to that external service.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Describes both cookies and no longer implies consent is always asked.
 	 * @return void
 	 */
 	public static function register(): void {
@@ -58,7 +62,21 @@ class PrivacyPolicy {
 			$opening = __( 'This site uses Utmatra to measure the performance of marketing campaigns. When you visit a page through a campaign link, the plugin records the campaign parameters (UTM values, advertising click IDs and any additional URL parameters the site owner has configured) from the URL, the address of the page you came from (referrer), your browser identification string (user agent), and a salted one-way hash of your IP address.', 'utm-attribution-tracker' );
 		}
 
-		$content  = '<p>' . $opening . ' ' . __( 'The same data is recorded when you submit a form after arriving through a campaign link.', 'utm-attribution-tracker' ) . ' ' . __( 'When a consent solution is active and you consent to cookies, a random visitor identifier (not derived from your IP address or any personal data) is stored in a first-party cookie so that your later orders or form submissions can be linked to the campaign that brought you here.', 'utm-attribution-tracker' ) . ' ' . __( 'The raw IP address is never stored, and the hash cannot be linked to you across other websites.', 'utm-attribution-tracker' ) . '</p>';
+		$cookies = '';
+		if ( Attribution::enabled() ) {
+			$cookies = ' ' . sprintf(
+				/* translators: %d: cookie lifetime in days. */
+				_n(
+					'Two first-party cookies are kept for %d day: one holds the campaign that brought you here (campaign parameters, landing page and referring site), the other a random visitor identifier (not derived from your IP address or any personal data), so that your later orders or form submissions can be linked to that campaign. Where the site asks for cookie consent, they are only stored once you agree.',
+					'Two first-party cookies are kept for %d days: one holds the campaign that brought you here (campaign parameters, landing page and referring site), the other a random visitor identifier (not derived from your IP address or any personal data), so that your later orders or form submissions can be linked to that campaign. Where the site asks for cookie consent, they are only stored once you agree.',
+					Attribution::cookie_days(),
+					'utm-attribution-tracker'
+				),
+				Attribution::cookie_days()
+			);
+		}
+
+		$content  = '<p>' . $opening . ' ' . __( 'The same data is recorded when you submit a form after arriving through a campaign link.', 'utm-attribution-tracker' ) . $cookies . ' ' . __( 'The raw IP address is never stored, and the hash cannot be linked to you across other websites.', 'utm-attribution-tracker' ) . '</p>';
 		$content .= '<p>' . __( 'This data is used for aggregate campaign statistics.', 'utm-attribution-tracker' ) . ' ';
 
 		if ( '' !== ConversionWebhook::url() ) {

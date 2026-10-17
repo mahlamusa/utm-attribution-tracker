@@ -27,6 +27,7 @@ defined( 'ABSPATH' ) || exit;
  * FluentForms
  *
  * @since 1.0.0
+ * @since 1.0.0 Skips submissions flagged as spam.
  */
 class FluentForms {
 
@@ -57,6 +58,24 @@ class FluentForms {
 	}
 
 	/**
+	 * Whether a stored submission carries the `spam` status.
+	 *
+	 * @since 1.0.0
+	 * @param int $insert_id Submission ID.
+	 * @return bool
+	 */
+	private static function is_spam( $insert_id ): bool {
+		global $wpdb;
+
+		// One indexed lookup per submission; Fluent Forms exposes no API for
+		// the status at this point.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$status = $wpdb->get_var( $wpdb->prepare( "SELECT status FROM {$wpdb->prefix}fluentform_submissions WHERE id = %d", absint( $insert_id ) ) );
+
+		return 'spam' === $status;
+	}
+
+	/**
 	 * Record a lead for the recent-leads dashboard widget on successful submission.
 	 *
 	 * Fires on `fluentform/submission_inserted`, once the submission has
@@ -64,18 +83,21 @@ class FluentForms {
 	 * data. The submitted values of the form's own fields are passed as
 	 * `fields`, keyed by admin label (falling back to the field label, then
 	 * the field name); hidden inputs, uploads, passwords and non-input
-	 * elements are left out.
+	 * elements are left out. A submission an anti-spam check flagged is
+	 * skipped: unless the admin chose to skip processing, Fluent Forms stores
+	 * it with the `spam` status and still fires the hook.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Skips submissions flagged as spam.
 	 *
-	 * @param int    $insert_id Submission ID (unused).
+	 * @param int    $insert_id Submission ID, read for its spam status.
 	 * @param array  $form_data Submitted values keyed by field name.
 	 * @param object $form      The form (`id`, `title`, `form_fields`).
 	 *
 	 * @return void
 	 */
 	public static function record_lead( $insert_id, $form_data, $form ): void {
-		if ( ! Attribution::has_data() || ! is_object( $form ) ) {
+		if ( ! Attribution::has_data() || ! is_object( $form ) || self::is_spam( $insert_id ) ) {
 			return;
 		}
 

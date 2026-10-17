@@ -96,6 +96,7 @@ class Checks {
 	 * API's presence since both are defined by the WP Consent API plugin.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Covers landings from other sites in the cookie and event wording.
 	 * @return array{id: string, label: string, status: string, message: string, details: array}
 	 */
 	public static function consent(): array {
@@ -128,7 +129,7 @@ class Checks {
 				'pass',
 				sprintf(
 					/* translators: %s: consent category label (marketing, statistics, or marketing or statistics). */
-					__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
+					__( 'No WP Consent API detected — the attribution cookie is written on every tagged visit and every landing from another site. Install a consent plugin that implements the WP Consent API to gate it on the %s category.', 'utm-attribution-tracker' ),
 					Attribution::consent_category_label( $category )
 				),
 				$details
@@ -158,14 +159,14 @@ class Checks {
 		if ( $details['gate_events'] ) {
 			$message = sprintf(
 				/* translators: 1: consent type (optin or optout), 2: consent category label. */
-				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled.', 'utm-attribution-tracker' ),
+				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Visit events are also withheld until the visitor consents, because the utmatra_consent_gate_events filter is enabled.', 'utm-attribution-tracker' ),
 				$details['consent_type'],
 				Attribution::consent_category_label( $category )
 			);
 		} else {
 			$message = sprintf(
 				/* translators: 1: consent type (optin or optout), 2: consent category label. */
-				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Tagged-visit events, which carry no cookie and only a salted IP hash, are recorded regardless of consent.', 'utm-attribution-tracker' ),
+				__( 'WP Consent API active (%1$s). The attribution cookie is withheld until the visitor grants %2$s consent; the decision is made in the visitor\'s browser, and the server fallback applies the same rule per request. Visit events (tagged visits and landings from other sites), which carry no cookie and only a salted IP hash, are recorded regardless of consent.', 'utm-attribution-tracker' ),
 				$details['consent_type'],
 				Attribution::consent_category_label( $category )
 			);
