@@ -44,12 +44,39 @@ class Formidable {
 	private const SKIPPED_TYPES = array( 'hidden', 'file', 'password', 'captcha', 'html', 'divider', 'end_divider', 'break', 'submit', 'form', 'summary', 'credit_card', 'signature', 'user_id' );
 
 	/**
+	 * Formidable's `is_draft` value for a submitted entry
+	 * (FrmEntriesHelper::SUBMITTED_ENTRY_STATUS).
+	 *
+	 * @since 1.0.0
+	 * @var int
+	 */
+	private const SUBMITTED_STATUS = 0;
+
+	/**
+	 * Formidable's `is_draft` value for a saved draft
+	 * (FrmEntriesHelper::DRAFT_ENTRY_STATUS).
+	 *
+	 * @since 1.0.0
+	 * @var int
+	 */
+	private const DRAFT_STATUS = 1;
+
+	/**
+	 * Transient prefix marking a draft whose lead is owed once it is submitted.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	private const DRAFT_TRANSIENT = 'utmatra_frm_draft_';
+
+	/**
 	 * Register Formidable hooks — only when Formidable is active.
 	 *
 	 * Hooked on `plugins_loaded` priority 20 (Formidable may load after this
 	 * plugin). Bails without adding a single hook when it is absent.
 	 *
 	 * @since 1.0.0
+	 * @since 1.0.0 Hooks entry updates to record submitted drafts.
 	 * @return void
 	 */
 	public static function maybe_init(): void {
@@ -59,6 +86,7 @@ class Formidable {
 
 		add_action( 'frm_field_input_html', array( self::class, 'mark_hidden_input' ) );
 		add_action( 'frm_after_create_entry', array( self::class, 'record_lead' ), 10, 3 );
+		add_action( 'frm_after_update_entry', array( self::class, 'record_submitted_draft' ), 10, 2 );
 	}
 
 	/**
@@ -91,14 +119,14 @@ class Formidable {
 	 *
 	 * Fires on `frm_after_create_entry`, once the entry has been saved.
 	 * Repeater rows (child entries) are skipped — the parent entry is the
-	 * lead, and so are saved drafts (Formidable Pro). Skips silently when
-	 * the visitor carries no attribution data.
-	 * The submitted values of the form's own fields are passed as `fields`,
-	 * keyed by field label; hidden fields, uploads, passwords and non-input
-	 * elements are left out.
+	 * lead. A saved draft (Formidable Pro) is not a lead yet: it is marked
+	 * so record_submitted_draft() records it once it is submitted. Any other
+	 * non-submitted status (spam) is skipped. Skips silently when the
+	 * visitor carries no attribution data, so a draft saved without
+	 * attribution is never marked.
 	 *
 	 * @since 1.0.0
-	 * @since 1.0.0 Skips draft entries.
+	 * @since 1.0.0 Defers draft entries until they are submitted.
 	 *
 	 * @param int   $entry_id The new entry ID.
 	 * @param int   $form_id  The form ID.
@@ -115,14 +143,70 @@ class Formidable {
 			return;
 		}
 
-		$form  = FrmForm::getOne( $form_id );
-		$entry = FrmEntry::getOne( $entry_id, true );
+		$entry  = FrmEntry::getOne( $entry_id, true );
+		$status = is_object( $entry ) ? (int) ( $entry->is_draft ?? self::SUBMITTED_STATUS ) : self::SUBMITTED_STATUS;
 
-		// Pro saves drafts through the same hook; only a submitted entry is a lead.
-		if ( is_object( $entry ) && ! empty( $entry->is_draft ) ) {
+		if ( self::DRAFT_STATUS === $status ) {
+			// Pro drafts can live longer; a draft submitted after this
+			// expires simply records no lead.
+			set_transient( self::DRAFT_TRANSIENT . absint( $entry_id ), 1, 30 * DAY_IN_SECONDS );
+			return;
+		}
+		if ( self::SUBMITTED_STATUS !== $status ) {
 			return;
 		}
 
+		self::record( $entry, $form_id );
+	}
+
+	/**
+	 * Record the lead for a draft once it is submitted.
+	 *
+	 * Fires on `frm_after_update_entry`. Formidable Pro submits a saved
+	 * draft by updating the entry, so `frm_after_create_entry` never fires
+	 * for it. Acts only on entries record_lead() marked as drafts, so an
+	 * admin editing an entry never records a lead. The mark is cleared
+	 * before recording, so a repeated update cannot record twice.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param int $entry_id The updated entry ID.
+	 * @param int $form_id  The form ID.
+	 *
+	 * @return void
+	 */
+	public static function record_submitted_draft( $entry_id, $form_id ): void {
+		$key = self::DRAFT_TRANSIENT . absint( $entry_id );
+		if ( ! get_transient( $key ) || ! class_exists( 'FrmForm' ) || ! class_exists( 'FrmField' ) || ! class_exists( 'FrmEntry' ) ) {
+			return;
+		}
+
+		$entry  = FrmEntry::getOne( $entry_id, true );
+		$status = is_object( $entry ) ? (int) ( $entry->is_draft ?? self::SUBMITTED_STATUS ) : self::SUBMITTED_STATUS;
+		if ( self::DRAFT_STATUS === $status ) {
+			return;
+		}
+
+		delete_transient( $key );
+		if ( self::SUBMITTED_STATUS !== $status || ! Attribution::has_data() ) {
+			return;
+		}
+
+		self::record( $entry, $form_id );
+	}
+
+	/**
+	 * Pass a submitted entry to the recent-leads recorder.
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param object|null $entry   The entry with its metas, or null when it could not be loaded.
+	 * @param int         $form_id The form ID.
+	 *
+	 * @return void
+	 */
+	private static function record( $entry, $form_id ): void {
+		$form      = FrmForm::getOne( $form_id );
 		$metas     = is_object( $entry ) && isset( $entry->metas ) && is_array( $entry->metas ) ? $entry->metas : array();
 		$submitted = array();
 
