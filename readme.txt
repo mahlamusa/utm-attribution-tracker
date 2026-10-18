@@ -1,4 +1,4 @@
-=== Utmatra - UTM Attribution and Tracking ===
+=== UTM Attribution Tracker ===
 Contributors:      mahlamusa
 Tags:              utm, analytics, attribution, woocommerce, tracking
 Requires at least: 6.5
@@ -52,7 +52,7 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 * **WP Consent API integration** — the attribution cookie is gated in the visitor's browser on a configurable consent category, deleted on withdrawal, and declared to the API so consent banners can list it.
 * **Data retention** — events are pruned automatically after a configurable retention window (180 days by default, 0 = keep forever) from the dashboard settings card.
 * **Suggested privacy policy text** — provided under Settings → Privacy → Policy Guide.
-* **No external services** — no CDN calls and no third-party analytics. Chart.js, the QR library and Action Scheduler ship bundled with the plugin.
+* **No external services by default** — no CDN calls and no third-party analytics. Chart.js, the QR library and Action Scheduler ship bundled with the plugin. The only outbound requests are the optional conversion webhooks, which stay off until you enter a receiver URL (see External services).
 * **Reliable background jobs** — retention pruning and the weekly report run on Action Scheduler (the job queue WooCommerce uses), listed under Tools → Scheduled Actions in the `utmatra` group, and they reschedule themselves if they go missing (after a reactivation, or on a multisite subsite). Action Scheduler keeps its own `actionscheduler_*` tables and a once-a-minute WP-Cron queue runner; they are shared with any other plugin that uses it (such as WooCommerce) and are left in place on uninstall.
 
 == Installation ==
@@ -189,6 +189,31 @@ Values are normalized for consistent reporting: lowercased, with whitespace repl
 4. Add tracked link: UTM fields with presets, the generated short link, and a build-a-URL-only mode.
 5. Settings: tracking, custom parameters, data retention, attribution window, consent, weekly report and webhooks.
 6. Tracking Doctor: local checks for caching, consent, cookies, form coverage and WooCommerce attribution.
+
+== External services ==
+
+The plugin contacts no external service on its own. Tracking, reports, QR codes and charts all run on your site. The one exception is the optional **conversion webhook**, which is off until an administrator saves a receiver URL under Settings → Webhooks. Once a URL is saved, the site sends a JSON POST request to that URL, and only to that URL:
+
+* **When a tracked form is submitted** (lead event): the site URL, the form plugin, form id and title, the submitted field values (these can include a name, email address and phone number; file uploads, passwords and hidden fields are never sent), the visitor's first- and last-touch campaign data (UTM parameters, ad click IDs, custom parameters, channel, referrer host and landing page), the random visitor id, the page URL and a timestamp.
+* **When an attributed WooCommerce order is paid** (order event): the site URL, the order id, total and currency, the first- and last-touch campaign data and a timestamp. No customer details are sent.
+* **When an administrator clicks "Send test webhook"**: a synthetic sample payload.
+
+Order and lead events can each be switched off. The presets only change the format of the request body; a service is contacted only if you paste one of its URLs. When you use one of these services, its terms and privacy policy apply to the data it receives:
+
+* **Zapier** (Catch Hook URL, `hooks.zapier.com`): [Terms of service](https://zapier.com/legal), [Privacy policy](https://zapier.com/privacy).
+* **Make** (custom webhook URL, `hook.*.make.com`): [Terms and conditions](https://www.make.com/en/terms-and-conditions), [Privacy notice](https://www.make.com/en/privacy-notice).
+* **HubSpot** (Forms API v3, `api.hsforms.com`): leads only, mapped onto your HubSpot form fields. When the visitor has HubSpot's own `hubspotutk` cookie, its value is included so HubSpot can link the submission to that visitor. [Terms of service](https://legal.hubspot.com/terms-of-service), [Privacy policy](https://legal.hubspot.com/privacy-policy).
+* **GoHighLevel** (Inbound Webhook trigger, `services.leadconnectorhq.com`): [Terms of service](https://www.gohighlevel.com/terms-of-service), [Privacy policy](https://www.gohighlevel.com/privacy-policy).
+
+== Source code and third-party libraries ==
+
+The full, human-readable source of this plugin, including the bundled libraries, is public on GitHub: [github.com/mahlamusa/utm-attribution-tracker](https://github.com/mahlamusa/utm-attribution-tracker).
+
+Bundled libraries (the two JavaScript files ship minified as published by their authors; their unminified source is linked below):
+
+* **Chart.js** 4.4.0 (`assets/js/vendor/chart.umd.min.js`), MIT license. Source: [github.com/chartjs/Chart.js](https://github.com/chartjs/Chart.js).
+* **QR Code Generator** by Kazuhiko Arase (`assets/js/vendor/qrcode.min.js`), MIT license. Source: [github.com/kazuhikoarase/qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator).
+* **Action Scheduler** (`vendor/woocommerce/action-scheduler`), GPL-3.0, installed with Composer from `composer.json`. Source: [github.com/woocommerce/action-scheduler](https://github.com/woocommerce/action-scheduler).
 
 == Filter and action reference ==
 
