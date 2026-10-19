@@ -23,3 +23,4 @@
 # /assets/ in the SVN repo, not bundled inside the install zip).
 /.wordpress.org/         export-ignore
 /.impeccable.md          export-ignore
+/README.md               export-ignore
