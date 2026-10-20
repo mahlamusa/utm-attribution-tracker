@@ -1196,7 +1196,7 @@ class RestController {
 		if ( array() === $rows ) {
 			return new WP_Error(
 				'utmatra_not_found',
-				__( 'No events recorded for this visitor.', 'utm-attribution-tracker' ),
+				__( 'No events recorded for this visitor.', 'utmatra-utm-attribution-and-tracking' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -1485,12 +1485,12 @@ class RestController {
 					'message' => $reserved
 						? sprintf(
 							/* translators: %s: the rejected custom parameter name. */
-							__( '%s is reserved and cannot be used as a custom parameter.', 'utm-attribution-tracker' ),
+							__( '%s is reserved and cannot be used as a custom parameter.', 'utmatra-utm-attribution-and-tracking' ),
 							$name
 						)
 						: sprintf(
 							/* translators: %s: the rejected custom parameter name. */
-							__( 'Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s', 'utm-attribution-tracker' ),
+							__( 'Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s', 'utmatra-utm-attribution-and-tracking' ),
 							$name
 						),
 				),
@@ -1503,7 +1503,7 @@ class RestController {
 				array(
 					'message' => sprintf(
 						/* translators: %d: maximum number of custom parameters. */
-						__( 'You can define up to %d custom parameters.', 'utm-attribution-tracker' ),
+						__( 'You can define up to %d custom parameters.', 'utmatra-utm-attribution-and-tracking' ),
 						Tracker::MAX_CUSTOM_PARAMS
 					),
 				),
@@ -1601,7 +1601,7 @@ class RestController {
 
 		if ( '' === $id ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a preset name.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Please provide a preset name.', 'utmatra-utm-attribution-and-tracking' ) ),
 				400
 			);
 		}
@@ -1632,7 +1632,7 @@ class RestController {
 
 		if ( ! isset( $presets[ $id ] ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Preset not found.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Preset not found.', 'utmatra-utm-attribution-and-tracking' ) ),
 				404
 			);
 		}
@@ -1757,7 +1757,7 @@ class RestController {
 
 		if ( '' === $destination ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid destination URL (http or https).', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Please provide a valid destination URL (http or https).', 'utmatra-utm-attribution-and-tracking' ) ),
 				400
 			);
 		}
@@ -1856,7 +1856,7 @@ class RestController {
 
 		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid link slug (incoming, visit, order and lead are reserved).', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Please provide a valid link slug (incoming, visit, order and lead are reserved).', 'utmatra-utm-attribution-and-tracking' ) ),
 				400
 			);
 		}
@@ -1868,7 +1868,7 @@ class RestController {
 
 		if ( null !== LinkManager::get( $id ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'A link with this slug already exists.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'A link with this slug already exists.', 'utmatra-utm-attribution-and-tracking' ) ),
 				409
 			);
 		}
@@ -1904,7 +1904,7 @@ class RestController {
 		$stored = LinkManager::get( $id );
 		if ( null === $stored ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Link not found.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Link not found.', 'utmatra-utm-attribution-and-tracking' ) ),
 				404
 			);
 		}
@@ -1952,7 +1952,7 @@ class RestController {
 
 		if ( null === LinkManager::get( $id ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Link not found.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Link not found.', 'utmatra-utm-attribution-and-tracking' ) ),
 				404
 			);
 		}

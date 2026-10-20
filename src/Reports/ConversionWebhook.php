@@ -230,14 +230,14 @@ class ConversionWebhook {
 
 		if ( $ok ) {
 			// translators: %d is the HTTP status code returned by the webhook receiver.
-			self::record_result( true, sprintf( __( 'HTTP %d', 'utm-attribution-tracker' ), $code ) );
+			self::record_result( true, sprintf( __( 'HTTP %d', 'utmatra-utm-attribution-and-tracking' ), $code ) );
 			return true;
 		}
 
 		$excerpt = trim( mb_substr( wp_strip_all_tags( (string) wp_remote_retrieve_body( $response ) ), 0, 120 ) );
 
 		// translators: 1: HTTP status code returned by the webhook receiver, 2: excerpt of the receiver's response body.
-		self::record_result( false, sprintf( __( 'HTTP %1$d: %2$s', 'utm-attribution-tracker' ), $code, $excerpt ) );
+		self::record_result( false, sprintf( __( 'HTTP %1$d: %2$s', 'utmatra-utm-attribution-and-tracking' ), $code, $excerpt ) );
 
 		return false;
 	}
@@ -394,14 +394,14 @@ class ConversionWebhook {
 			$touch = array(
 				'utm_source'   => 'test',
 				'utm_medium'   => 'test',
-				'utm_campaign' => 'utm-attribution-tracker-test',
+				'utm_campaign' => 'utmatra-test',
 			);
 
 			$payload                = self::build_lead_payload(
 				'test',
 				array(
 					'form_id'    => 0,
-					'form_title' => __( 'Test form', 'utm-attribution-tracker' ),
+					'form_title' => __( 'Test form', 'utmatra-utm-attribution-and-tracking' ),
 					'posted'     => $touch,
 					'created_at' => time(),
 					'fields'     => array(
@@ -409,7 +409,7 @@ class ConversionWebhook {
 						'First name' => 'Test',
 						'Last name'  => 'Lead',
 						'Phone'      => '+15555550123',
-						'Message'    => __( 'Sent from Utmatra', 'utm-attribution-tracker' ),
+						'Message'    => __( 'Sent from Utmatra', 'utmatra-utm-attribution-and-tracking' ),
 					),
 				)
 			);
@@ -425,19 +425,19 @@ class ConversionWebhook {
 		}
 
 		if ( ! $events['orders'] ) {
-			self::record_result( false, __( 'Enable at least one event to send a test', 'utm-attribution-tracker' ) );
+			self::record_result( false, __( 'Enable at least one event to send a test', 'utmatra-utm-attribution-and-tracking' ) );
 			return false;
 		}
 
 		if ( 'hubspot' === $preset ) {
-			self::record_result( false, __( 'Enable form leads to test the HubSpot preset', 'utm-attribution-tracker' ) );
+			self::record_result( false, __( 'Enable form leads to test the HubSpot preset', 'utmatra-utm-attribution-and-tracking' ) );
 			return false;
 		}
 
 		$touch = array(
 			'utm_source'   => 'test',
 			'utm_medium'   => 'test',
-			'utm_campaign' => 'utm-attribution-tracker-test',
+			'utm_campaign' => 'utmatra-test',
 		);
 
 		$shaped = self::shape_for_preset(
@@ -508,7 +508,7 @@ class ConversionWebhook {
 		$identity = self::identity_fields( $fields );
 
 		if ( '' === $identity['email'] ) {
-			self::record_result( false, __( 'No email field detected', 'utm-attribution-tracker' ) );
+			self::record_result( false, __( 'No email field detected', 'utmatra-utm-attribution-and-tracking' ) );
 			return null;
 		}
 

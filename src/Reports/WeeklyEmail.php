@@ -116,7 +116,7 @@ class WeeklyEmail {
 
 		$subject = sprintf(
 			/* translators: %s: site name. */
-			__( '[%s] Weekly UTM campaign report', 'utm-attribution-tracker' ),
+			__( '[%s] Weekly UTM campaign report', 'utmatra-utm-attribution-and-tracking' ),
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
 		);
 
@@ -205,28 +205,28 @@ class WeeklyEmail {
 		$heading_style = 'font-size:15px;color:#1d2327;margin:24px 0 8px;';
 
 		$html  = '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;color:#1d2327;max-width:560px;">';
-		$html .= '<h1 style="font-size:18px;margin:0 0 4px;">' . esc_html__( 'Weekly UTM campaign report', 'utm-attribution-tracker' ) . '</h1>';
-		$html .= '<p style="color:#646970;margin:0 0 16px;">' . esc_html( get_bloginfo( 'name' ) ) . ' — ' . esc_html__( 'past 7 days', 'utm-attribution-tracker' ) . '</p>';
+		$html .= '<h1 style="font-size:18px;margin:0 0 4px;">' . esc_html__( 'Weekly UTM campaign report', 'utmatra-utm-attribution-and-tracking' ) . '</h1>';
+		$html .= '<p style="color:#646970;margin:0 0 16px;">' . esc_html( get_bloginfo( 'name' ) ) . ' — ' . esc_html__( 'past 7 days', 'utmatra-utm-attribution-and-tracking' ) . '</p>';
 		$html .= '<p style="font-size:14px;">' . sprintf(
 			/* translators: %s: total click count. */
-			esc_html__( 'Total clicks: %s', 'utm-attribution-tracker' ),
+			esc_html__( 'Total clicks: %s', 'utmatra-utm-attribution-and-tracking' ),
 			'<strong>' . esc_html( number_format_i18n( $total ) ) . '</strong>'
 		) . self::trend_line( $total, $prev_total ) . '</p>';
 
-		$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Top campaigns', 'utm-attribution-tracker' ) . '</h2>';
-		$html .= self::count_table( (array) $top_campaigns, __( 'Campaign', 'utm-attribution-tracker' ) );
+		$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Top campaigns', 'utmatra-utm-attribution-and-tracking' ) . '</h2>';
+		$html .= self::count_table( (array) $top_campaigns, __( 'Campaign', 'utmatra-utm-attribution-and-tracking' ) );
 
-		$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Top sources', 'utm-attribution-tracker' ) . '</h2>';
-		$html .= self::count_table( (array) $top_sources, __( 'Source', 'utm-attribution-tracker' ) );
+		$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Top sources', 'utmatra-utm-attribution-and-tracking' ) . '</h2>';
+		$html .= self::count_table( (array) $top_sources, __( 'Source', 'utmatra-utm-attribution-and-tracking' ) );
 
 		if ( ! empty( $revenue ) ) {
-			$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Revenue by campaign', 'utm-attribution-tracker' ) . '</h2>';
+			$html .= '<h2 style="' . $heading_style . '">' . esc_html__( 'Revenue by campaign', 'utmatra-utm-attribution-and-tracking' ) . '</h2>';
 			$html .= self::revenue_table( (array) $revenue );
 		}
 
 		$html .= '<p style="color:#646970;font-size:12px;margin-top:24px;">' . sprintf(
 			/* translators: %s: plugin name. */
-			esc_html__( 'Sent by %s. Disable this report from the dashboard settings card.', 'utm-attribution-tracker' ),
+			esc_html__( 'Sent by %s. Disable this report from the dashboard settings card.', 'utmatra-utm-attribution-and-tracking' ),
 			'Utmatra'
 		) . '</p>';
 		$html .= '</div>';
@@ -263,7 +263,7 @@ class WeeklyEmail {
 		}
 
 		return ' <span style="color:' . esc_attr( $color ) . ';font-size:12px;font-weight:600;">'
-			. esc_html( $text ) . ' ' . esc_html__( 'vs previous week', 'utm-attribution-tracker' ) . '</span>';
+			. esc_html( $text ) . ' ' . esc_html__( 'vs previous week', 'utmatra-utm-attribution-and-tracking' ) . '</span>';
 	}
 
 	/**
@@ -276,13 +276,13 @@ class WeeklyEmail {
 	 */
 	private static function count_table( array $rows, string $label_header ): string {
 		if ( empty( $rows ) ) {
-			return '<p style="color:#646970;">' . esc_html__( 'No data recorded this week.', 'utm-attribution-tracker' ) . '</p>';
+			return '<p style="color:#646970;">' . esc_html__( 'No data recorded this week.', 'utmatra-utm-attribution-and-tracking' ) . '</p>';
 		}
 
 		$html = '<table style="border-collapse:collapse;width:100%;font-size:13px;">'
 			. '<tr>'
 			. '<th style="text-align:left;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html( $label_header ) . '</th>'
-			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Clicks', 'utm-attribution-tracker' ) . '</th>'
+			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Clicks', 'utmatra-utm-attribution-and-tracking' ) . '</th>'
 			. '</tr>';
 
 		foreach ( $rows as $row ) {
@@ -305,9 +305,9 @@ class WeeklyEmail {
 	private static function revenue_table( array $rows ): string {
 		$html = '<table style="border-collapse:collapse;width:100%;font-size:13px;">'
 			. '<tr>'
-			. '<th style="text-align:left;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Campaign', 'utm-attribution-tracker' ) . '</th>'
-			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Orders', 'utm-attribution-tracker' ) . '</th>'
-			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Revenue', 'utm-attribution-tracker' ) . '</th>'
+			. '<th style="text-align:left;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Campaign', 'utmatra-utm-attribution-and-tracking' ) . '</th>'
+			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Orders', 'utmatra-utm-attribution-and-tracking' ) . '</th>'
+			. '<th style="text-align:right;border-bottom:1px solid #dcdcde;padding:6px 8px;">' . esc_html__( 'Revenue', 'utmatra-utm-attribution-and-tracking' ) . '</th>'
 			. '</tr>';
 
 		foreach ( $rows as $row ) {

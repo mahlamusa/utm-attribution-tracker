@@ -36,7 +36,8 @@
 
 set -e
 
-SLUG="utm-attribution-tracker"
+SLUG="utmatra-utm-attribution-and-tracking"
+MAIN_FILE="utmatra-utm-attribution-and-tracking.php"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 GITPATH="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
 ASSETS_DIR=".wordpress.org"
@@ -82,8 +83,8 @@ if [[ ! -d "$GITPATH/$ASSETS_DIR" ]]; then
     exit 1
 fi
 
-if ! grep -q "^ \* Version: *${VERSION}\$" "$GITPATH/${SLUG}.php"; then
-    echo "ERROR: ${SLUG}.php Plugin Header Version: line does not match ${VERSION}" >&2
+if ! grep -q "^ \* Version: *${VERSION}\$" "$GITPATH/${MAIN_FILE}"; then
+    echo "ERROR: ${MAIN_FILE} Plugin Header Version: line does not match ${VERSION}" >&2
     echo "       Update it (and UTMATRA_VERSION below it) before re-running." >&2
     exit 1
 fi
@@ -129,7 +130,7 @@ svn update --depth immediates tags
 if [[ -d "$SVN_DIR/tags/$VERSION" ]]; then
     echo "ERROR: tags/$VERSION already exists in $SVN_URL." >&2
     echo "       wp.org release tags are immutable. Bump the version" >&2
-    echo "       (readme.txt 'Stable tag:' + ${SLUG}.php header)" >&2
+    echo "       (readme.txt 'Stable tag:' + ${MAIN_FILE} header)" >&2
     echo "       and re-run." >&2
     exit 1
 fi

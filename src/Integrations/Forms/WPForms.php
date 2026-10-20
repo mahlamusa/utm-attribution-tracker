@@ -105,7 +105,7 @@ class WPForms {
 		foreach ( Attribution::field_names() as $name ) {
 			$tags[ $name ] = sprintf(
 				/* translators: %s: attribution field name, e.g. utm_source. */
-				__( 'Utmatra: %s', 'utm-attribution-tracker' ),
+				__( 'Utmatra: %s', 'utmatra-utm-attribution-and-tracking' ),
 				$name
 			);
 		}

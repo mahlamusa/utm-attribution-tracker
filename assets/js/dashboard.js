@@ -8,7 +8,7 @@
  * add/edit drawer), the Journeys tab (conversions with their touch
  * sequences, loaded lazily on first activation), the Settings tab (save
  * bar, test email and webhook) and the Diagnostics tab. Also handles the
- * CSV export. All user-visible strings come from the utmatra-i18n JSON block
+ * CSV export. All user-visible strings come from the utmatraI18n global
  * so they pass through WordPress i18n on the PHP side.
  *
  * @since 1.0.0
@@ -19,9 +19,8 @@
 	// ── Config ────────────────────────────────────────────────────────────────
 	const { apiBase, nonce, wooActive, currencySymbol, settings, cachePlugin } = utmatraData;
 
-	// Translated strings from the PHP JSON block.
-	const i18nEl = document.getElementById( 'utmatra-i18n' );
-	const i18n   = i18nEl ? JSON.parse( i18nEl.textContent ) : {};
+	// Translated strings, added by the dashboard view with wp_add_inline_script().
+	const i18n = window.utmatraI18n || {};
 
 	// ── Palette — primary blue as the first series, neutral accents after ──
 	const COLORS = [

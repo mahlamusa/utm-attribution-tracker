@@ -49,10 +49,10 @@ class Insights {
 			$message = '' !== $campaign
 				? sprintf(
 					/* translators: %s: campaign name from the utm_campaign parameter. */
-					__( 'Tagged traffic (campaign: %s).', 'utm-attribution-tracker' ),
+					__( 'Tagged traffic (campaign: %s).', 'utmatra-utm-attribution-and-tracking' ),
 					$campaign
 				)
-				: __( 'Tagged traffic — campaign parameters present but no campaign name set.', 'utm-attribution-tracker' );
+				: __( 'Tagged traffic — campaign parameters present but no campaign name set.', 'utmatra-utm-attribution-and-tracking' );
 
 			return array(
 				'status'  => $status,
@@ -61,10 +61,10 @@ class Insights {
 		}
 
 		$messages = array(
-			TrafficSource::GOOGLE_ADS       => __( 'From a Google Ads click.', 'utm-attribution-tracker' ),
-			TrafficSource::PAID             => __( 'From a paid campaign.', 'utm-attribution-tracker' ),
-			TrafficSource::DIRECT           => __( 'No campaign data — this lead arrived without UTM parameters or a referrer.', 'utm-attribution-tracker' ),
-			TrafficSource::ORGANIC_REFERRAL => __( 'Organic or referral traffic — no campaign tagging.', 'utm-attribution-tracker' ),
+			TrafficSource::GOOGLE_ADS       => __( 'From a Google Ads click.', 'utmatra-utm-attribution-and-tracking' ),
+			TrafficSource::PAID             => __( 'From a paid campaign.', 'utmatra-utm-attribution-and-tracking' ),
+			TrafficSource::DIRECT           => __( 'No campaign data — this lead arrived without UTM parameters or a referrer.', 'utmatra-utm-attribution-and-tracking' ),
+			TrafficSource::ORGANIC_REFERRAL => __( 'Organic or referral traffic — no campaign tagging.', 'utmatra-utm-attribution-and-tracking' ),
 		);
 
 		return array(

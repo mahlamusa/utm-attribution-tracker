@@ -340,11 +340,11 @@ class Attribution {
 	public static function consent_category_label( string $category ): string {
 		switch ( $category ) {
 			case 'statistics':
-				return __( 'statistics', 'utm-attribution-tracker' );
+				return __( 'statistics', 'utmatra-utm-attribution-and-tracking' );
 			case 'either':
-				return __( 'marketing or statistics', 'utm-attribution-tracker' );
+				return __( 'marketing or statistics', 'utmatra-utm-attribution-and-tracking' );
 			default:
-				return __( 'marketing', 'utm-attribution-tracker' );
+				return __( 'marketing', 'utmatra-utm-attribution-and-tracking' );
 		}
 	}
 
@@ -414,14 +414,14 @@ class Attribution {
 		$category = self::consent_category();
 		$days     = self::cookie_days();
 		/* translators: %d: number of days the attribution cookies live. */
-		$lifetime = sprintf( _n( '%d day', '%d days', $days, 'utm-attribution-tracker' ), $days );
+		$lifetime = sprintf( _n( '%d day', '%d days', $days, 'utmatra-utm-attribution-and-tracking' ), $days );
 
 		wp_add_cookie_info(
 			self::COOKIE_NAME,
 			'Utmatra',
 			'either' === $category ? 'marketing' : $category,
 			$lifetime,
-			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utm-attribution-tracker' )
+			__( 'Stores the campaign parameters of your first and most recent visit so a later purchase or form submission can be attributed to the campaign.', 'utmatra-utm-attribution-and-tracking' )
 		);
 
 		wp_add_cookie_info(
@@ -429,7 +429,7 @@ class Attribution {
 			'Utmatra',
 			'either' === $category ? 'marketing' : $category,
 			$lifetime,
-			__( "Random visitor id that links a visitor's tagged visits to their later orders and form submissions.", 'utm-attribution-tracker' )
+			__( "Random visitor id that links a visitor's tagged visits to their later orders and form submissions.", 'utmatra-utm-attribution-and-tracking' )
 		);
 	}
 

@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Dashboard {
 
-	private const PAGE_SLUG = 'utm-attribution-tracker';
+	private const PAGE_SLUG = 'utmatra';
 
 	/**
 	 * Admin menu icon: the Utmatra "UTM" route (a first-touch ring, link
@@ -54,8 +54,8 @@ class Dashboard {
 	 */
 	public static function register_menu(): void {
 		self::$hook_suffix = (string) add_menu_page(
-			__( 'Utmatra - UTM Attribution and Tracking', 'utm-attribution-tracker' ),
-			__( 'Utmatra', 'utm-attribution-tracker' ),
+			__( 'Utmatra - UTM Attribution and Tracking', 'utmatra-utm-attribution-and-tracking' ),
+			__( 'Utmatra', 'utmatra-utm-attribution-and-tracking' ),
 			'manage_options',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
@@ -81,7 +81,7 @@ class Dashboard {
 			'chartjs',
 			UTMATRA_URL . 'assets/js/vendor/chart.umd.min.js',
 			array(),
-			'4.4.0',
+			'4.5.1',
 			true
 		);
 
@@ -213,7 +213,7 @@ class Dashboard {
 	 */
 	public static function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'utm-attribution-tracker' ) );
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'utmatra-utm-attribution-and-tracking' ) );
 		}
 		require_once UTMATRA_PATH . 'views/dashboard.php';
 	}
@@ -221,7 +221,7 @@ class Dashboard {
 	/**
 	 * Add a "Utmatra" action link on the Plugins screen.
 	 *
-	 * The link always points to `admin.php?page=utm-attribution-tracker` — the
+	 * The link always points to `admin.php?page=utmatra` — the
 	 * page URL is the same whether the plugin registered as a standalone
 	 * top-level menu or as a submenu, since WP builds submenu
 	 * URLs from the page slug, not the parent slug.
@@ -234,7 +234,7 @@ class Dashboard {
 		$links[] = sprintf(
 			'<a href="%s">%s</a>',
 			esc_url( admin_url( 'admin.php?page=' . self::PAGE_SLUG ) ),
-			esc_html__( 'Utmatra', 'utm-attribution-tracker' )
+			esc_html__( 'Utmatra', 'utmatra-utm-attribution-and-tracking' )
 		);
 		return $links;
 	}

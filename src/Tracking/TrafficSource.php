@@ -405,18 +405,18 @@ class TrafficSource {
 	 */
 	public static function channel_labels(): array {
 		return array(
-			self::CHANNEL_DIRECT         => __( 'Direct', 'utm-attribution-tracker' ),
-			self::CHANNEL_ORGANIC_SEARCH => __( 'Organic search', 'utm-attribution-tracker' ),
-			self::CHANNEL_PAID_SEARCH    => __( 'Paid search', 'utm-attribution-tracker' ),
-			self::CHANNEL_PAID_SOCIAL    => __( 'Paid social', 'utm-attribution-tracker' ),
-			self::CHANNEL_ORGANIC_SOCIAL => __( 'Organic social', 'utm-attribution-tracker' ),
-			self::CHANNEL_EMAIL          => __( 'Email', 'utm-attribution-tracker' ),
-			self::CHANNEL_REFERRAL       => __( 'Referral', 'utm-attribution-tracker' ),
-			self::CHANNEL_AI_ASSISTANT   => __( 'AI assistant', 'utm-attribution-tracker' ),
-			self::CHANNEL_DISPLAY        => __( 'Display', 'utm-attribution-tracker' ),
-			self::CHANNEL_AFFILIATE      => __( 'Affiliate', 'utm-attribution-tracker' ),
-			self::CHANNEL_PAID_OTHER     => __( 'Paid (other)', 'utm-attribution-tracker' ),
-			self::CHANNEL_OTHER          => __( 'Other', 'utm-attribution-tracker' ),
+			self::CHANNEL_DIRECT         => __( 'Direct', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_ORGANIC_SEARCH => __( 'Organic search', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_PAID_SEARCH    => __( 'Paid search', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_PAID_SOCIAL    => __( 'Paid social', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_ORGANIC_SOCIAL => __( 'Organic social', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_EMAIL          => __( 'Email', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_REFERRAL       => __( 'Referral', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_AI_ASSISTANT   => __( 'AI assistant', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_DISPLAY        => __( 'Display', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_AFFILIATE      => __( 'Affiliate', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_PAID_OTHER     => __( 'Paid (other)', 'utmatra-utm-attribution-and-tracking' ),
+			self::CHANNEL_OTHER          => __( 'Other', 'utmatra-utm-attribution-and-tracking' ),
 		);
 	}
 

@@ -2,7 +2,7 @@
 <ruleset name="Utmatra">
 	<description>Coding standard for Utmatra.</description>
 
-	<file>utm-attribution-tracker.php</file>
+	<file>utmatra-utm-attribution-and-tracking.php</file>
 	<file>uninstall.php</file>
 	<file>src</file>
 	<file>views</file>
@@ -25,5 +25,5 @@
 	</rule>
 
 	<!-- Plugin minimum PHP is 8.0 (see plugin header). -->
-	<config name="minimum_wp_version" value="6.5"/>
+	<config name="minimum_wp_version" value="6.9"/>
 </ruleset>

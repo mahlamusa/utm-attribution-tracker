@@ -108,14 +108,14 @@ class CollectController {
 	public static function collect( WP_REST_Request $request ): WP_REST_Response {
 		if ( ! self::origin_allowed( $request ) ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Cross-origin requests are not allowed.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Cross-origin requests are not allowed.', 'utmatra-utm-attribution-and-tracking' ) ),
 				403
 			);
 		}
 
 		if ( self::is_rate_limited() ) {
 			return new WP_REST_Response(
-				array( 'message' => __( 'Too many requests.', 'utm-attribution-tracker' ) ),
+				array( 'message' => __( 'Too many requests.', 'utmatra-utm-attribution-and-tracking' ) ),
 				429
 			);
 		}
@@ -143,7 +143,7 @@ class CollectController {
 			$site_host     = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
 			if ( ! $request->get_param( 'visit' ) || 1 !== (int) get_option( 'utmatra_track_visits', 1 ) || $referrer_host === $site_host ) {
 				return new WP_REST_Response(
-					array( 'message' => __( 'No UTM parameter or click ID present.', 'utm-attribution-tracker' ) ),
+					array( 'message' => __( 'No UTM parameter or click ID present.', 'utmatra-utm-attribution-and-tracking' ) ),
 					400
 				);
 			}

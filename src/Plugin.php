@@ -153,6 +153,7 @@ class Plugin {
 
 			// Recent-leads widget on wp-admin → Dashboard → Home.
 			add_action( 'wp_dashboard_setup', array( DashboardWidget::class, 'register' ) );
+			add_action( 'admin_enqueue_scripts', array( DashboardWidget::class, 'enqueue_styles' ) );
 
 			// "Utmatra" row link on the Plugins screen.
 			add_filter( 'plugin_action_links_' . UTMATRA_BASENAME, array( Dashboard::class, 'add_plugin_action_link' ) );

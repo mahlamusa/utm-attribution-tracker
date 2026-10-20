@@ -37,13 +37,13 @@ write_runtime_manifest() {
     echo "==> Writing minimal production composer.json..."
     cat > "$STAGE_DIR/composer.json" <<'EOF'
 {
-    "name": "mahlamusa/utm-attribution-tracker",
+    "name": "mahlamusa/utmatra-utm-attribution-and-tracking",
     "description": "UTM Attribution Tracker: self-hosted UTM and first/last-touch attribution for WordPress.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.0",
-        "woocommerce/action-scheduler": "^3.9"
+        "woocommerce/action-scheduler": "^4.2"
     }
 }
 EOF

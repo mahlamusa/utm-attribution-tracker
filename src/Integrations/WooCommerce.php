@@ -159,11 +159,11 @@ class WooCommerce {
 		foreach ( $columns as $key => $label ) {
 			$out[ $key ] = $label;
 			if ( 'order_status' === $key ) {
-				$out['utmatra'] = __( 'Attribution', 'utm-attribution-tracker' );
+				$out['utmatra'] = __( 'Attribution', 'utmatra-utm-attribution-and-tracking' );
 			}
 		}
 		if ( ! isset( $out['utmatra'] ) ) {
-			$out['utmatra'] = __( 'Attribution', 'utm-attribution-tracker' );
+			$out['utmatra'] = __( 'Attribution', 'utmatra-utm-attribution-and-tracking' );
 		}
 
 		return $out;
@@ -412,7 +412,7 @@ class WooCommerce {
 				'form_id'    => $order->get_id(),
 				'form_title' => sprintf(
 					/* translators: %s: order number. */
-					__( 'Order #%s', 'utm-attribution-tracker' ),
+					__( 'Order #%s', 'utmatra-utm-attribution-and-tracking' ),
 					$order->get_order_number()
 				),
 				'posted'     => $last,
@@ -489,7 +489,7 @@ class WooCommerce {
 		foreach ( $screens as $screen ) {
 			add_meta_box(
 				'utmatra-attribution',
-				__( 'Campaign attribution (UTM)', 'utm-attribution-tracker' ),
+				__( 'Campaign attribution (UTM)', 'utmatra-utm-attribution-and-tracking' ),
 				array( self::class, 'render_metabox' ),
 				$screen,
 				'normal',
@@ -527,13 +527,13 @@ class WooCommerce {
 		}
 
 		if ( empty( $first ) && empty( $last ) ) {
-			echo '<p>' . esc_html__( 'No attribution data', 'utm-attribution-tracker' ) . '</p>';
+			echo '<p>' . esc_html__( 'No attribution data', 'utmatra-utm-attribution-and-tracking' ) . '</p>';
 			return;
 		}
 
 		echo '<div style="display:flex;gap:24px;flex-wrap:wrap;">';
-		self::render_touch_column( __( 'First touch', 'utm-attribution-tracker' ), $first );
-		self::render_touch_column( __( 'Last touch', 'utm-attribution-tracker' ), $last );
+		self::render_touch_column( __( 'First touch', 'utmatra-utm-attribution-and-tracking' ), $first );
+		self::render_touch_column( __( 'Last touch', 'utmatra-utm-attribution-and-tracking' ), $last );
 		echo '</div>';
 	}
 
@@ -558,29 +558,29 @@ class WooCommerce {
 		}
 
 		$labels = array(
-			'utm_source'   => __( 'Source', 'utm-attribution-tracker' ),
-			'utm_medium'   => __( 'Medium', 'utm-attribution-tracker' ),
-			'utm_campaign' => __( 'Campaign', 'utm-attribution-tracker' ),
-			'utm_id'       => __( 'Campaign ID', 'utm-attribution-tracker' ),
-			'utm_term'     => __( 'Term', 'utm-attribution-tracker' ),
-			'utm_content'  => __( 'Content', 'utm-attribution-tracker' ),
-			'gclid'        => __( 'Google click ID', 'utm-attribution-tracker' ),
-			'fbclid'       => __( 'Facebook click ID', 'utm-attribution-tracker' ),
-			'msclkid'      => __( 'Microsoft click ID', 'utm-attribution-tracker' ),
-			'ttclid'       => __( 'TikTok click ID', 'utm-attribution-tracker' ),
-			'li_fat_id'    => __( 'LinkedIn click ID', 'utm-attribution-tracker' ),
-			'twclid'       => __( 'X / Twitter click ID', 'utm-attribution-tracker' ),
-			'ch'           => __( 'Channel', 'utm-attribution-tracker' ),
-			'rh'           => __( 'Referrer', 'utm-attribution-tracker' ),
-			'lp'           => __( 'Landing page', 'utm-attribution-tracker' ),
-			'ts'           => __( 'Time', 'utm-attribution-tracker' ),
+			'utm_source'   => __( 'Source', 'utmatra-utm-attribution-and-tracking' ),
+			'utm_medium'   => __( 'Medium', 'utmatra-utm-attribution-and-tracking' ),
+			'utm_campaign' => __( 'Campaign', 'utmatra-utm-attribution-and-tracking' ),
+			'utm_id'       => __( 'Campaign ID', 'utmatra-utm-attribution-and-tracking' ),
+			'utm_term'     => __( 'Term', 'utmatra-utm-attribution-and-tracking' ),
+			'utm_content'  => __( 'Content', 'utmatra-utm-attribution-and-tracking' ),
+			'gclid'        => __( 'Google click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'fbclid'       => __( 'Facebook click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'msclkid'      => __( 'Microsoft click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'ttclid'       => __( 'TikTok click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'li_fat_id'    => __( 'LinkedIn click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'twclid'       => __( 'X / Twitter click ID', 'utmatra-utm-attribution-and-tracking' ),
+			'ch'           => __( 'Channel', 'utmatra-utm-attribution-and-tracking' ),
+			'rh'           => __( 'Referrer', 'utmatra-utm-attribution-and-tracking' ),
+			'lp'           => __( 'Landing page', 'utmatra-utm-attribution-and-tracking' ),
+			'ts'           => __( 'Time', 'utmatra-utm-attribution-and-tracking' ),
 		);
 
 		echo '<div style="flex:1;min-width:220px;">';
 		echo '<h4 style="margin:0 0 8px;">' . esc_html( $title ) . '</h4>';
 
 		if ( empty( $touch ) ) {
-			echo '<p>' . esc_html__( 'No attribution data', 'utm-attribution-tracker' ) . '</p>';
+			echo '<p>' . esc_html__( 'No attribution data', 'utmatra-utm-attribution-and-tracking' ) . '</p>';
 			echo '</div>';
 			return;
 		}

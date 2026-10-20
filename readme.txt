@@ -1,7 +1,7 @@
-=== UTM Attribution Tracker ===
+=== Utmatra - UTM Attribution and Tracking ===
 Contributors:      mahlamusa
 Tags:              utm, analytics, attribution, woocommerce, tracking
-Requires at least: 6.5
+Requires at least: 6.9
 Tested up to:      7.1
 Requires PHP:      8.0
 Stable tag:        1.0.0
@@ -57,7 +57,7 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 
 == Installation ==
 
-1. Upload the `utm-attribution-tracker` folder to `/wp-content/plugins/`.
+1. Upload the `utmatra-utm-attribution-and-tracking` folder to `/wp-content/plugins/`.
 2. Activate the plugin via **Plugins > Installed Plugins**.
 3. Go to **Utmatra** in the admin sidebar.
 
@@ -207,11 +207,11 @@ Order and lead events can each be switched off. The presets only change the form
 
 == Source code and third-party libraries ==
 
-The full, human-readable source of this plugin, including the bundled libraries, is public on GitHub: [github.com/mahlamusa/utm-attribution-tracker](https://github.com/mahlamusa/utm-attribution-tracker).
+The full, human-readable source of this plugin, including the bundled libraries, is public on GitHub: [github.com/mahlamusa/utmatra-utm-attribution-and-tracking](https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking).
 
 Bundled libraries (the two JavaScript files ship minified as published by their authors; their unminified source is linked below):
 
-* **Chart.js** 4.4.0 (`assets/js/vendor/chart.umd.min.js`), MIT license. Source: [github.com/chartjs/Chart.js](https://github.com/chartjs/Chart.js).
+* **Chart.js** 4.5.1 (`assets/js/vendor/chart.umd.min.js`), MIT license. Source: [github.com/chartjs/Chart.js](https://github.com/chartjs/Chart.js).
 * **QR Code Generator** by Kazuhiko Arase (`assets/js/vendor/qrcode.min.js`), MIT license. Source: [github.com/kazuhikoarase/qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator).
 * **Action Scheduler** (`vendor/woocommerce/action-scheduler`), GPL-3.0, installed with Composer from `composer.json`. Source: [github.com/woocommerce/action-scheduler](https://github.com/woocommerce/action-scheduler).
 

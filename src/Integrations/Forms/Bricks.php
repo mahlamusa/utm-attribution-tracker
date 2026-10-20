@@ -79,7 +79,7 @@ class Bricks {
 			$tags[] = array(
 				'name'  => '{' . $name . '}',
 				'label' => $name,
-				'group' => __( 'Utmatra', 'utm-attribution-tracker' ),
+				'group' => __( 'Utmatra', 'utmatra-utm-attribution-and-tracking' ),
 			);
 		}
 

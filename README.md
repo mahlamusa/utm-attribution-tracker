@@ -1,8 +1,8 @@
-# UTM Attribution Tracker
+# Utmatra - UTM Attribution and Tracking
 
 Self-hosted UTM and campaign tracking for WordPress: short links, QR codes, first/last-touch attribution, WooCommerce revenue attribution, form lead capture and a live dashboard. No third-party analytics service involved.
 
-![Requires WordPress 6.5+](https://img.shields.io/badge/WordPress-6.5%2B-21759b)
+![Requires WordPress 6.9+](https://img.shields.io/badge/WordPress-6.9%2B-21759b)
 ![Requires PHP 8.0+](https://img.shields.io/badge/PHP-8.0%2B-777bb4)
 ![License GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 
@@ -42,21 +42,21 @@ The full documentation (FAQ, filter reference, REST API reference, external serv
 
 ## Requirements
 
-- WordPress 6.5 or later
+- WordPress 6.9 or later
 - PHP 8.0 or later
 - WooCommerce is optional and enables revenue attribution
 
 ## Installation
 
-Download the latest zip from [Releases](https://github.com/mahlamusa/utm-attribution-tracker/releases), then upload it under **Plugins → Add New → Upload Plugin** and activate it. The dashboard is under **Utmatra** in the admin sidebar.
+Download the latest zip from [Releases](https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking/releases), then upload it under **Plugins → Add New → Upload Plugin** and activate it. The dashboard is under **Utmatra** in the admin sidebar.
 
 ## Development
 
-Clone the repository into `wp-content/plugins/utm-attribution-tracker` and install the Composer dependency (Action Scheduler):
+Clone the repository into `wp-content/plugins/utmatra-utm-attribution-and-tracking` and install the Composer dependency (Action Scheduler):
 
 ```bash
-git clone https://github.com/mahlamusa/utm-attribution-tracker.git
-cd utm-attribution-tracker
+git clone https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking.git
+cd utmatra-utm-attribution-and-tracking
 composer install
 ```
 
@@ -73,7 +73,7 @@ Release scripts (they need `composer` and WP-CLI for the translations template):
 
 | Command | What it does |
 | --- | --- |
-| `bash bin/build.sh` | Regenerates `languages/utm-attribution-tracker.pot` |
+| `bash bin/build.sh` | Regenerates `languages/utmatra-utm-attribution-and-tracking.pot` |
 | `bash bin/release.sh` | Builds the install zip in `releases/` |
 | `bash bin/wp-org-publish.sh <version>` | Stages a WordPress.org SVN working copy, without committing |
 
@@ -81,7 +81,7 @@ The shipped plugin is built with `git archive`, so everything marked `export-ign
 
 ## Bundled libraries
 
-- [Chart.js](https://github.com/chartjs/Chart.js) 4.4.0, MIT
+- [Chart.js](https://github.com/chartjs/Chart.js) 4.5.1, MIT
 - [QR Code Generator](https://github.com/kazuhikoarase/qrcode-generator) by Kazuhiko Arase, MIT
 - [Action Scheduler](https://github.com/woocommerce/action-scheduler), GPL-3.0, installed with Composer
 

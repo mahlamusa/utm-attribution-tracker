@@ -1,11 +1,11 @@
 {
-    "name": "mahlamusa/utm-attribution-tracker",
+    "name": "mahlamusa/utmatra-utm-attribution-and-tracking",
     "description": "UTM Attribution Tracker: self-hosted UTM and first/last-touch attribution for WordPress.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=8.0",
-        "woocommerce/action-scheduler": "^3.9"
+        "woocommerce/action-scheduler": "^4.2"
     },
     "config": {
         "platform": {

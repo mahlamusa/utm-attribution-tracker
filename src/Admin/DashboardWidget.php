@@ -41,7 +41,7 @@ class DashboardWidget {
 	 * Display label per integration slug.
 	 *
 	 * Public so the dashboard view can expose the same product names to the
-	 * Journeys tab (the `integrationLabels` key of the utmatra-i18n block);
+	 * Journeys tab (the `integrationLabels` key of the utmatraI18n strings);
 	 * values are vendor product names and deliberately untranslated.
 	 *
 	 * @since 1.0.0
@@ -72,7 +72,7 @@ class DashboardWidget {
 	public static function register(): void {
 		wp_add_dashboard_widget(
 			'utmatra-recent-leads',
-			__( 'Recent leads (Utmatra)', 'utm-attribution-tracker' ),
+			__( 'Recent leads (Utmatra)', 'utmatra-utm-attribution-and-tracking' ),
 			array( self::class, 'render' ),
 			null,
 			null,
@@ -95,11 +95,9 @@ class DashboardWidget {
 		$leads = Recorder::recent( self::PER_INTEGRATION );
 
 		if ( empty( $leads ) ) {
-			echo '<p>' . esc_html__( 'No recent leads yet.', 'utm-attribution-tracker' ) . '</p>';
+			echo '<p>' . esc_html__( 'No recent leads yet.', 'utmatra-utm-attribution-and-tracking' ) . '</p>';
 			return;
 		}
-
-		self::render_styles();
 
 		echo '<ul class="utmatra-lead-list">';
 		foreach ( $leads as $integration => $records ) {
@@ -135,7 +133,7 @@ class DashboardWidget {
 			echo ' &middot; ' . esc_html(
 				sprintf(
 					/* translators: %s: human-readable relative time, e.g. "2 hours". */
-					__( '%s ago', 'utm-attribution-tracker' ),
+					__( '%s ago', 'utmatra-utm-attribution-and-tracking' ),
 					human_time_diff( $created_at, time() )
 				)
 			);
@@ -149,32 +147,29 @@ class DashboardWidget {
 	}
 
 	/**
-	 * Echo the widget's self-contained styles.
+	 * Enqueue the widget's stylesheet on wp-admin → Dashboard.
 	 *
-	 * The widget renders on wp-admin → Dashboard, which never loads this
-	 * plugin's own assets/css/dashboard.css (that stylesheet is enqueued
-	 * only on the plugin's own admin page) — so, matching HandL's approach,
-	 * the styles ship inline instead. Colours reuse the same green/amber/
-	 * blue scheme as the Tracking Doctor diagnostics badges for visual
-	 * consistency across the plugin.
+	 * The widget renders on the core Dashboard, which never loads the plugin
+	 * page's own assets/css/dashboard.css, so it has a small stylesheet of
+	 * its own. Hooked on `admin_enqueue_scripts`; loads only for users who
+	 * can see the widget.
 	 *
 	 * @since 1.0.0
+	 *
+	 * @param string $hook Current admin page hook suffix.
+	 *
 	 * @return void
 	 */
-	private static function render_styles(): void {
-		echo '<style>
-			.utmatra-lead-list { list-style: none; margin: 0; padding: 0; }
-			.utmatra-lead-row { padding: 10px 0; border-bottom: 1px solid #dcdcde; }
-			.utmatra-lead-row:last-child { border-bottom: none; padding-bottom: 0; }
-			.utmatra-lead-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-bottom: 4px; }
-			.utmatra-lead-title { font-weight: 600; color: #1d2327; }
-			.utmatra-lead-meta { color: #646970; font-size: 12px; }
-			.utmatra-lead-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #fff; }
-			.utmatra-lead-badge--google_ads { background: #007017; }
-			.utmatra-lead-badge--paid { background: #0d5ea3; }
-			.utmatra-lead-badge--organic_referral { background: #2271b1; }
-			.utmatra-lead-badge--tagged { background: #996800; }
-			.utmatra-lead-badge--direct { background: #646970; }
-		</style>';
+	public static function enqueue_styles( string $hook ): void {
+		if ( 'index.php' !== $hook || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'utmatra-dashboard-widget',
+			UTMATRA_URL . 'assets/css/dashboard-widget.css',
+			array(),
+			UTMATRA_VERSION
+		);
 	}
 }

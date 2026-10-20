@@ -10,7 +10,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
-TEXT_DOMAIN="utm-attribution-tracker"
+TEXT_DOMAIN="utmatra-utm-attribution-and-tracking"
 
 cd "$ROOT"
 

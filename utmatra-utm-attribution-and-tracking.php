@@ -1,15 +1,15 @@
 <?php
 /**
- * Plugin Name:       UTM Attribution Tracker
- * Plugin URI:        https://github.com/mahlamusa/utm-attribution-tracker
+ * Plugin Name:       Utmatra - UTM Attribution and Tracking
+ * Plugin URI:        https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking
  * Description:       Track UTM-tagged links, click IDs, and first/last-touch attribution across form leads and WooCommerce orders, with a live Chart.js dashboard.
  * Version:           1.0.0
  * Author:            Lindeni Mahlalela
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       utm-attribution-tracker
+ * Text Domain:       utmatra-utm-attribution-and-tracking
  * Domain Path:       /languages
- * Requires at least: 6.5
+ * Requires at least: 6.9
  * Requires PHP:      8.0
  *
  * @package Utmatra
