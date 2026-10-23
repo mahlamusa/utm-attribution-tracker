@@ -38,6 +38,28 @@ Self-hosted UTM and campaign tracking for WordPress: short links, QR codes, firs
 - Configurable data retention (180 days by default).
 - No outbound requests unless you configure a webhook. Chart.js, the QR library and Action Scheduler are bundled.
 
+## Screenshots
+
+**Short links and QR codes.** Every tracked link gets a `/go/` short link and a QR code you can download as a PNG.
+
+![Links tab with a QR code open](.wordpress.org/screenshot-7.png)
+
+**UTM naming presets.** Save a source and medium combination once, and apply it in one click. Values are normalized so `Paid Social` and `paid-social` never split your reports.
+
+![Add tracked link with a preset applied](.wordpress.org/screenshot-8.png)
+
+**Build a URL only.** Get a tagged URL to paste anywhere, without creating a short link.
+
+![Build a tagged URL mode](.wordpress.org/screenshot-9.png)
+
+**Customer journeys.** Every tagged visit that led to an order or form lead.
+
+![Journeys tab](.wordpress.org/screenshot-3.png)
+
+**Tracking Doctor.** Local checks for caching, consent, cookies, form coverage and WooCommerce attribution.
+
+![Tracking Doctor diagnostics](.wordpress.org/screenshot-6.png)
+
 The full documentation (FAQ, filter reference, REST API reference, external services) is in [readme.txt](readme.txt).
 
 ## Requirements

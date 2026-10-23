@@ -189,6 +189,11 @@ Values are normalized for consistent reporting: lowercased, with whitespace repl
 4. Add tracked link: UTM fields with presets, the generated short link, and a build-a-URL-only mode.
 5. Settings: tracking, custom parameters, data retention, attribution window, consent, weekly report and webhooks.
 6. Tracking Doctor: local checks for caching, consent, cookies, form coverage and WooCommerce attribution.
+7. Short links and QR codes: each tracked link gets a pretty /go/ short link and a QR code generated in the browser, with a PNG download.
+8. UTM naming presets: a saved preset fills source and medium in one click, and values are lowercased with spaces replaced by hyphens.
+9. Build a URL only: get a tagged URL to paste anywhere, without creating a short link.
+10. Edit tracked link: the short link, the final tagged URL and the [utmatra_link] shortcode to embed it.
+11. The [utmatra_link] shortcode in the block editor, wrapping custom link text.
 
 == External services ==
 
