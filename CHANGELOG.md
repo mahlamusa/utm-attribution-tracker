@@ -10,13 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Initial release.
 - Cache-proof tracking beacon with a no-JS PHP fallback, bot filtering and click deduplication.
+- Ad click-ID capture (`gclid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`) alongside UTM tags.
 - First/last-touch attribution cookie, gated on the WP Consent API.
 - Channel classification, including AI assistants, and untagged landing-visit recording.
 - Pretty short links with QR codes, the `[utmatra_link]` shortcode, UTM naming presets and a build-a-URL mode.
 - Custom URL parameters captured alongside UTM tags.
-- WooCommerce revenue attribution and form lead capture for Contact Form 7, Gravity Forms, Ninja Forms, Elementor Pro, WPForms, Fluent Forms, Formidable, Forminator and Bricks.
+- WooCommerce revenue attribution with an attribution metabox on the order screen, and form lead capture for Contact Form 7, Gravity Forms, Ninja Forms, Elementor Pro, WPForms, Fluent Forms, Formidable, Forminator and Bricks.
 - Lead and order webhooks for Zapier, Make, HubSpot and GoHighLevel.
 - Customer journeys built from a consent-gated visitor id, and a read-only REST API.
-- Tabbed dashboard with CSV export, weekly email summary, Tracking Doctor diagnostics and data retention.
+- Tabbed Chart.js dashboard with breakdowns by source, campaign, medium, channel, device, landing page, referrer and ad platform, plus a revenue-by-campaign chart.
+- Recent leads widget on the WordPress admin Dashboard.
+- CSV export, weekly email summary, Tracking Doctor diagnostics and data retention.
+- IP addresses stored only as salted SHA-256 hashes, and suggested privacy policy text.
+- Background jobs on bundled Action Scheduler, and no external services or CDN calls by default.
 
 [1.0.0]: https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking/releases/tag/v1.0.0
